@@ -9,17 +9,17 @@
 |---|---|
 | Project | 하니스 자체 빌드 (메타 부트스트랩) |
 | Phase | A — 골격 구축 |
-| Active sub-phase | **A.2 작업 완료 → A.3 진입 대기** (templates/ 7파일) |
+| Active sub-phase | **A.3 작업 완료 → A.4 진입 대기** (scripts/ 6파일 + smoke test 통과) |
 | Strictness | strict |
 | Harness version | v0.4 (approved + committed) |
-| Git | main, HEAD = `aa611d6` (A.1 + ADR-006 commit). templates/ 7파일 untracked |
-| Last updated | 2026-05-25T12:09 by Claude |
+| Git | main, HEAD = `c83eb45` (A.2 commit). scripts/ 6파일 + tokens fix 패치 untracked |
+| Last updated | 2026-05-25T13:25 by Claude |
 
 ## Active gate
 
-- **Gate**: A.2 (`templates/` 7파일 작성) → A.3 (`scripts/`)
-- **Blocked on**: 사용자가 A.2 결과 검토 + 승인. 승인 시 commit + A.3 진입.
-- **Approval needed**: yes — templates/ 7파일
+- **Gate**: A.3 (`scripts/` 6파일 + smoke test 통과) → A.4 (`phases/`)
+- **Blocked on**: 사용자가 A.3 결과 검토 + 승인. 승인 시 commit + A.4 진입.
+- **Approval needed**: yes — scripts/ 6파일
 
 ## Required reads (이 세션 시작 시)
 
@@ -30,6 +30,7 @@
 5. `INBOX/README.md`
 6. `roles/README.md` + 4개 역할 파일 (A.1 결과)
 7. `templates/README.md` + 6개 양식 파일 (A.2 결과)
+8. `scripts/README.md` + 4 main + 1 helper (A.3 결과; smoke-tested)
 7. (참고) `INBOX/processed/codex-feedback-20260525-v0.3-review.md`
 8. (참고) `INBOX/processed/codex-feedback-20260525-seed-review.md`
 
@@ -126,6 +127,13 @@
   mode: strict
   approved_at: 2026-05-25T12:09
   scope: 6 산출물 양식 정식 확정 (HARNESS §4.3 artifact-specific status enum 인스턴스화)
+
+- artifact: scripts/ (6 files — README + codex-review.sh + codex-exec-review.sh + pre-review-gate.sh + new-project.sh + _codex_postprocess.py)
+  version_or_hash: "v0.1"
+  approver: user
+  mode: strict
+  approved_at: 2026-05-25T13:25
+  scope: codex 호출 자동화 wrapper, pre-review-gate(lint/test), new-project 부트스트랩, raw stdout → REVIEW 변환 헬퍼. 모두 chmod +x, smoke-tested.
 ```
 
 ## Decision summary
@@ -149,8 +157,9 @@
 - [x] **A.0f** Codex 재리뷰 (3 new minor)
 - [x] **A.0g** F13/F14/F15 정리 → HARNESS v0.4 (commit `d138d05`)
 - [x] **A.1** `roles/` 5파일 (README + 4 역할)
-- [x] **A.2** `templates/` 7파일 (README + 6 양식: BLUEPRINT/MODULE-PLAN/REVIEW/ADR/POSTMORTEM/STATUS) — §4.3 artifact-specific status enum 정식 확정
-- [ ] **A.3** ← **다음**: `scripts/` — codex-review.sh (config base branch 자동 주입), codex-exec-review.sh (stdout → INBOX 양식 변환), pre-review-gate.sh, new-project.sh
+- [x] **A.2** `templates/` 7파일 — §4.3 status enum 인스턴스화
+- [x] **A.3** `scripts/` 6파일 (codex-review.sh / codex-exec-review.sh / pre-review-gate.sh / new-project.sh / _codex_postprocess.py / README); smoke-tested
+- [ ] **A.4** ← **다음**: `phases/` 00-intake ~ 06-handoff 각 Exit 기준 (완성 시 §9 자동 폐기 → ADR-007로 명문화)
 - [ ] **A.4** `phases/` — 00-intake ~ 06-handoff (완성 시 §9 자동 폐기 → ADR로 명문화)
 - [ ] **A.5** Phase A 전체 cross-review → HARNESS v0.5 정식
 
@@ -162,8 +171,8 @@
 
 ## Next action
 
-- **사용자**: A.2 결과(templates/ 7파일) 검토 + 승인. 승인 시 commit + A.3 진입 지시.
-- **Claude**: 승인 후 commit → A.3 (`scripts/` 4파일 작성).
+- **사용자**: A.3 결과(scripts/ 6파일) 검토 + 승인. 승인 시 commit + A.4 진입 지시.
+- **Claude**: 승인 후 commit → A.4 (`phases/` 7파일 — 00-intake ~ 06-handoff Exit 기준).
 - **Codex**: 대기 (ADR-006에 따라 다음 리뷰는 A.5).
 
 ## Open findings

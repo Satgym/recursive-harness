@@ -8,18 +8,18 @@
 | 항목 | 값 |
 |---|---|
 | Project | 하니스 자체 빌드 (메타 부트스트랩) |
-| Phase | **B — 스킬 풀** |
-| Active sub-phase | **B 작업 완료 → cross-review 시점 결정 대기** |
+| Phase | **C — 프로젝트 타입 템플릿** (web 우선, ADR-005) |
+| Active sub-phase | **B + C 작업 완료 → 통합 cross-review 시점 결정 대기** |
 | Strictness | strict |
-| Harness version | v0.5 (Phase A 종결 commit `2267d76`) |
-| Git | main, HEAD = `2267d76` (v0.5 commit). skills/ 10파일 untracked |
-| Last updated | 2026-05-25T14:28 by Claude |
+| Harness version | v0.5 |
+| Git | main, HEAD = `85e6915` (Phase B commit). project-types/ 8파일 untracked |
+| Last updated | 2026-05-25T14:44 by Claude |
 
 ## Active gate
 
-- **Gate**: Phase B (skills/ 10파일 작성) → 다음 phase (사용자 결정 — cross-review 여부 + Phase C)
-- **Blocked on**: 사용자가 Phase B 결과 검토 + 다음 액션 결정 (commit + cross-review vs commit만 + Phase C 진입).
-- **Approval needed**: yes — skills/ 10파일 + 옵션: codex cross-review 호출 (skills/는 새 산출물 첫 리뷰, §5.4 cost는 누적 318K)
+- **Gate**: Phase C (project-types/ 8파일) → 다음 액션 (cross-review 시점 결정)
+- **Blocked on**: 사용자가 Phase C 결과 검토 + commit + B+C 통합 cross-review 여부 결정
+- **Approval needed**: yes — project-types/ 8파일 + 옵션: B+C 통합 codex cross-review (새 산출물 첫 리뷰)
 
 ## Required reads (이 세션 시작 시)
 
@@ -33,6 +33,7 @@
 8. `scripts/README.md` + 4 main + 1 helper (A.3 결과; smoke-tested)
 9. `phases/README.md` + 7 phases (A.4 결과 — 00-intake ~ 06-handoff Exit 기준 정식 명세)
 10. `skills/README.md` + 9 skills (Phase B 결과 — procedural docs)
+11. `project-types/README.md` + `_generic/` (3) + `web-service/` (4, api-spec 포함) (Phase C 결과)
 7. (참고) `INBOX/processed/codex-feedback-20260525-v0.3-review.md`
 8. (참고) `INBOX/processed/codex-feedback-20260525-seed-review.md`
 
@@ -185,6 +186,13 @@
   mode: strict
   approved_at: 2026-05-25T14:28
   scope: 9 procedural docs + index. 각 skill의 Purpose / When / Inputs / Procedure / Outputs / Failure modes / Related 6섹션 양식.
+
+- artifact: project-types/ (8 files — README + _generic/{intake,test,module} + web-service/{intake,test,module,api-spec})
+  version_or_hash: "v0.1"
+  approver: user
+  mode: strict
+  approved_at: 2026-05-25T14:44
+  scope: ADR-005에 따라 web-service 깊이 (API spec-first 강조) + _generic 골격. firmware/ai-model/cli-tool/data-pipeline은 실 필요 시 추가.
 ```
 
 ## Decision summary
@@ -217,24 +225,26 @@
 - [ ] **A.4** `phases/` — 00-intake ~ 06-handoff (완성 시 §9 자동 폐기 → ADR로 명문화)
 - [ ] **A.5** Phase A 전체 cross-review → HARNESS v0.5 정식
 
-### Phase B — 스킬 풀 (✓ 작업 완료, cross-review 시점 미정)
-- [x] **B** `skills/` 10파일 (README + 9 skills)
-- [ ] **B-review** (선택) — codex cross-review 받을지 결정
-- [ ] **B-commit** — 사용자 승인 후 commit
+### Phase B — 스킬 풀 (✓ 작업 완료 + commit `85e6915`)
+- [x] **B** `skills/` 10파일
+
+### Phase C — 프로젝트 타입 템플릿 (✓ 작업 완료, commit + review 대기)
+- [x] **C** `project-types/` 8파일 (`_generic/` 3 + `web-service/` 4 + README; ADR-005)
+- [ ] **C-commit** — 사용자 승인 후 commit
+- [ ] **B+C review** (선택) — 통합 codex cross-review (새 산출물 첫 리뷰)
 
 ### 이후 phases
-- **Phase C**: `project-types/` (web 우선)
-- **Phase D**: 자기보호 메커니즘 정식화 (drift / postmortem / conflict 실 운영 노하우 축적)
+- **Phase D**: 자기보호 메커니즘 정식화 — drift / postmortem / conflict 실 운영 노하우 축적 (Phase E 이전 또는 Phase E와 병행)
 - **Phase E**: Dogfood + v1.0 (HARNESS §10 기준)
 
 ## Next action
 
-- **사용자**: Phase B 결과(skills/ 10파일) 검토 + 다음 액션 결정:
-  1. 승인 → commit만 + 바로 Phase C 진입 (codex 호출 생략, 다음 통합 라운드로 묶음)
-  2. 승인 → commit + codex cross-review (skills/ 새 산출물 첫 리뷰) → finding 처리 → Phase C
+- **사용자**: Phase C 결과 검토 + 다음 액션 결정:
+  1. 승인 → commit + B+C 통합 cross-review (추천) → finding 처리 → Phase D 또는 E
+  2. 승인 → commit + Phase D 직진 (cross-review는 더 미룸)
   3. 일부 수정 요청
 - **Claude**: 사용자 결정에 따라 진행
-- **Codex**: 옵션 2 선택 시 호출 대기. 그 외 대기.
+- **Codex**: 옵션 1 선택 시 호출 대기
 
 ## Open findings
 

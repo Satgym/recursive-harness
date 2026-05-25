@@ -66,6 +66,31 @@
 
 이 파일은 [project-types/web-service/api-spec-template.md](api-spec-template.md)를 참고해 작성.
 
+## HC-8 / HC-9 보호 hook (의무)
+
+HC-8 외부 mutation 작업 (외부 API write / push / message send / payment / mail 등)이 발생하는 service entry에는:
+
+```python
+# 예: service layer entry
+def perform_external_mutation(...):
+    if not user_approval_recorded_in_status(scope=...):    # HC-8: 사용자 명시 승인이 STATUS/ADR에 기록되어야
+        raise UnauthorizedExternalEffect(...)
+    if not using_non_prod_credentials() and not user_prod_approval():  # prod credentials는 별도 승인
+        raise ProdCredentialNotApproved(...)
+    if supports_dry_run and not dry_run_executed():
+        # dry_run은 *추가* 보호 (대체 아님). 가능하면 먼저 실행
+        ...
+    # 그 다음 실 외부 호출
+```
+
+HC-9 destructive 작업 (rm / drop / truncate / 데이터 무효화)은 위 + **irreversible-action checklist**:
+- [ ] 백업 / snapshot 확인됨
+- [ ] 영향 범위 명시 (몇 row / 어느 user / 어느 환경)
+- [ ] 복구 절차 + rollback window
+- [ ] (가능하면) soft-delete 대안 우선 검토됨
+
+dry_run flag 단독으로는 사용자 승인을 **대체할 수 없음** (HARNESS HC-8/HC-9).
+
 ## 일반적인 함정 (anti-patterns)
 
 - ❌ handler가 DB query 직접 호출 (M-repository 우회)
@@ -74,3 +99,5 @@
 - ❌ M-schema와 실제 응답이 drift (contract test 부재)
 - ❌ 시크릿이 코드/로그에 평문 (HC-7 위반)
 - ❌ 사용자 입력을 검증 없이 DB / 외부 API로 전달
+- ❌ HC-8 mutation을 `if dry_run: return` 만으로 보호 (dry_run ≠ user approval, F34)
+- ❌ HC-9 destructive를 confirmation 없이 (irreversible-action checklist 누락)

@@ -75,13 +75,19 @@
 | 산출물 | 위치 |
 |---|---|
 | 설정 | `.harness/config.toml` |
+| Intake 결과 | `.harness/docs/intake.md` |
 | Blueprint | `.harness/docs/blueprint.md` |
 | Module Plan | `.harness/docs/modules/<name>/plan.md` |
 | 리뷰 | `.harness/reviews/<phase>-<date>-<slug>.md` |
 | ADR | `.harness/decisions/ADR-NNNN-<slug>.md` |
 | 현황 | `.harness/status.md` |
 | Postmortem | `.harness/postmortems/YYYY-MM-DD-<slug>.md` |
+| INBOX (Codex 능동 피드백) | `.harness/inbox/` (`.harness/inbox/processed/` 포함) |
 | 하니스 버전 pin | `.harness/VERSION-PIN` |
+| (web-service) API 명세 | `.harness/docs/api/openapi.yaml` (또는 도구별) |
+| project-type 참조 자료 | `.harness/docs/test-strategy.md`, `module-skeleton.md` (read-only 참조) |
+
+> 본 레포(하니스 self-build)의 INBOX는 root `INBOX/` 그대로. project-level INBOX는 `.harness/inbox/`.
 
 ### 4.3 Artifact front-matter 표준
 

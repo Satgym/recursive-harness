@@ -90,10 +90,17 @@
 - 스크린샷 자동 저장 위치: `.harness/screens/<date>-<scenario>/`
 - staging 환경에서의 smoke test: ...
 
-## 9. 협업·소비자 흐름
-- 프론트엔드 팀이 API spec만으로 작업 시작 가능한가? ⭐ (yes여야 함)
-- 모바일 클라이언트 / B2B 파트너 등 외부 소비자?
-- API 명세 변경 시 알림 채널: ...
+## 9. 협업·소비자 흐름 (spec-first 운영 가능성 ⭐)
+
+> yes/no 대신 *실제 산출물 / 명령 경로*로 채움. 비어 있으면 "프론트엔드가 spec만으로 작업 시작 가능"이 false.
+
+- [ ] **`openapi.yaml` (또는 SDL) lint PASS** — 명령: `redocly lint .harness/docs/api/openapi.yaml` (또는 등가)
+- [ ] **Mock server 실행 명령** — 예: `prism mock .harness/docs/api/openapi.yaml -p 4010`
+- [ ] **Request / response fixture 예시 위치** — `.harness/docs/api/examples/` (또는 명시)
+- [ ] **Generated client / types 위치** — 예: `frontend/src/api-client/` (openapi-generator로)
+- [ ] **CORS / credentials policy** — origin allowlist, `withCredentials` 여부 명시
+- [ ] **Breaking-change 알림 채널** — Slack / 이메일 / PR 라벨 / API spec changelog
+- 모바일 클라이언트 / B2B 파트너 등 외부 소비자: ...
 
 ## 10. Open questions / Strictness
 - Open questions: ...

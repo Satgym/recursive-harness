@@ -12,7 +12,8 @@
 #                           [--severity <enum>] [--target <text>]
 
 set -euo pipefail
-ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"     # project root (cwd for config/output)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"      # harness scripts/ dir (F27)
 cd "$ROOT"
 
 # --- argument helpers (F22) ---
@@ -99,10 +100,10 @@ BASE="${BASE:-$(read_config git.base_branch main)}"
 MODEL="$(read_config models.review)"
 EFFORT="$(read_config reasoning.review high)"
 
-# --- pre-review gate (HC-1, §5.4) ---
-if [[ $SKIP_GATE -eq 0 && -x scripts/pre-review-gate.sh ]]; then
+# --- pre-review gate (HC-1, §5.4) — invoke sibling from harness scripts dir (F27) ---
+if [[ $SKIP_GATE -eq 0 && -x "$SCRIPT_DIR/pre-review-gate.sh" ]]; then
   echo "[codex-review] running pre-review-gate..." >&2
-  if ! scripts/pre-review-gate.sh; then
+  if ! "$SCRIPT_DIR/pre-review-gate.sh"; then
     echo "[codex-review] pre-review-gate FAILED — fix issues first or pass --no-gate" >&2
     exit 3
   fi
@@ -162,5 +163,5 @@ fi
 [[ -n "$PROMPT_FILE" ]] && PP_ARGS+=(--prompt-source "$PROMPT_FILE") || PP_ARGS+=(--prompt-source "default")
 PP_ARGS+=(--invoked-at "$INVOKED_AT")
 
-python3 "$ROOT/scripts/_codex_postprocess.py" "$RAW" "$DEST" "${PP_ARGS[@]}"
+python3 "$SCRIPT_DIR/_codex_postprocess.py" "$RAW" "$DEST" "${PP_ARGS[@]}"
 echo "[codex-review] saved: $DEST" >&2

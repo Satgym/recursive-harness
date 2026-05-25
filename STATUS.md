@@ -8,18 +8,18 @@
 | 항목 | 값 |
 |---|---|
 | Project | 하니스 자체 빌드 (메타 부트스트랩) |
-| Phase | **C — 프로젝트 타입 템플릿** (web 우선, ADR-005) |
-| Active sub-phase | **B + C 작업 완료 → 통합 cross-review 시점 결정 대기** |
+| Phase | **C → BC.2 처리 완료** |
+| Active sub-phase | **BC.2 작업 완료 → commit + Phase D 진입 대기** |
 | Strictness | strict |
-| Harness version | v0.5 |
-| Git | main, HEAD = `85e6915` (Phase B commit). project-types/ 8파일 untracked |
-| Last updated | 2026-05-25T14:44 by Claude |
+| Harness version | v0.5 (호환 변경만, 메이저 증가 없음) |
+| Git | main, HEAD = `62aa964` (Phase C commit). BC.2 변경 + .harness/reviews/bc1-... + .harness/prompts/bc1-... untracked |
+| Last updated | 2026-05-25T17:29 by Claude |
 
 ## Active gate
 
-- **Gate**: Phase C (project-types/ 8파일) → 다음 액션 (cross-review 시점 결정)
-- **Blocked on**: 사용자가 Phase C 결과 검토 + commit + B+C 통합 cross-review 여부 결정
-- **Approval needed**: yes — project-types/ 8파일 + 옵션: B+C 통합 codex cross-review (새 산출물 첫 리뷰)
+- **Gate**: BC.2 (BC.1 8 findings 모두 resolved) → commit + Phase D 진입
+- **Blocked on**: 사용자가 BC.2 결과 검토 + commit 승인 + (옵션) 재리뷰 여부
+- **Approval needed**: yes — BC.2 변경 (web-service test/module HC-8 강화, new-project.sh 전면 갱신, wrapper sibling path, skills paths, INBOX 위치, api-spec CRUD)
 
 ## Required reads (이 세션 시작 시)
 
@@ -193,6 +193,20 @@
   mode: strict
   approved_at: 2026-05-25T14:44
   scope: ADR-005에 따라 web-service 깊이 (API spec-first 강조) + _generic 골격. firmware/ai-model/cli-tool/data-pipeline은 실 필요 시 추가.
+
+- artifact: .harness/reviews/bc1-20260525-integrated.md (Codex BC.1 cross-review)
+  version_or_hash: "codex-session-019e5db9"
+  approver: codex-review
+  mode: strict
+  approved_at: 2026-05-25T17:00
+  scope: B+C 통합 cross-review — 8 findings (F27~F34), 1 blocker (HC-8 F34), 2 major, 5 minor, verdict ready_for_phase_D=no
+
+- artifact: BC.2 patch (HARNESS §4.2 + scripts/new-project.sh + scripts/codex-review.sh + scripts/codex-exec-review.sh + skills/{plan-blueprint,plan-module,request-codex-review,resume-session,checkpoint-handoff} + project-types/web-service/{test-strategy,module-skeleton,intake-checklist,api-spec-template} + project-types/_generic/module-skeleton)
+  version_or_hash: "bc.2"
+  approver: user
+  mode: strict
+  approved_at: 2026-05-25T17:29
+  scope: BC.1 8 findings (F27~F34) 모두 resolved. F34 (HC-8 blocker)는 dry-run≠user-approval 명확화. F27/F28는 new-project.sh + sibling path + Phase 00 artifact 매핑으로 실 사용 가능. smoke-test 통과 (pre-review-gate 5/5 + new-project.sh 실 실행).
 ```
 
 ## Decision summary
@@ -228,23 +242,21 @@
 ### Phase B — 스킬 풀 (✓ 작업 완료 + commit `85e6915`)
 - [x] **B** `skills/` 10파일
 
-### Phase C — 프로젝트 타입 템플릿 (✓ 작업 완료, commit + review 대기)
-- [x] **C** `project-types/` 8파일 (`_generic/` 3 + `web-service/` 4 + README; ADR-005)
-- [ ] **C-commit** — 사용자 승인 후 commit
-- [ ] **B+C review** (선택) — 통합 codex cross-review (새 산출물 첫 리뷰)
+### Phase C — 프로젝트 타입 템플릿 (✓ commit `62aa964`)
+- [x] **C** `project-types/` 8파일 + commit
+- [x] **BC.1** B+C 통합 cross-review (codex `019e5db9`, tokens 129,594, 1 blocker + 2 major + 5 minor)
+- [x] **BC.2** 8 findings 모두 resolved + smoke test 통과
+- [ ] **BC.2 commit** — 사용자 승인 후
 
 ### 이후 phases
-- **Phase D**: 자기보호 메커니즘 정식화 — drift / postmortem / conflict 실 운영 노하우 축적 (Phase E 이전 또는 Phase E와 병행)
+- **Phase D**: 자기보호 메커니즘 정식화 — drift / postmortem / conflict 실 운영 노하우 축적
 - **Phase E**: Dogfood + v1.0 (HARNESS §10 기준)
 
 ## Next action
 
-- **사용자**: Phase C 결과 검토 + 다음 액션 결정:
-  1. 승인 → commit + B+C 통합 cross-review (추천) → finding 처리 → Phase D 또는 E
-  2. 승인 → commit + Phase D 직진 (cross-review는 더 미룸)
-  3. 일부 수정 요청
-- **Claude**: 사용자 결정에 따라 진행
-- **Codex**: 옵션 1 선택 시 호출 대기
+- **사용자**: BC.2 결과 검토 + 승인 → commit + Phase D 또는 Phase E 진입 결정. (재리뷰는 토큰 비용 추가, 권장 skip)
+- **Claude**: 승인 후 commit → Phase D (자기보호 메커니즘 정식화) 또는 Phase E (Dogfood + v1.0)로
+- **Codex**: 대기 (재리뷰 호출되면 BC.2-verify 라운드)
 
 ## Open findings
 
@@ -254,17 +266,30 @@
 |---|---|---|---|
 | F16 | major | §9 deprecation HARNESS 본문 미반영 | **resolved** (HARNESS §0/HC-4/§3 + 헤더 + §8 v0.5) |
 | F17 | major | CLAUDE.md `deferred(<이유>)` 잔존 | **resolved** (CLAUDE.md INBOX 의무 갱신) |
-| F18 | major | ADR-007 approval ↔ STATUS 충돌 + HEAD stale + 중복 키 | **resolved** (ADR-007 Approval 채움 + 중복 키 제거 + HEAD 갱신) |
-| F19 | minor | approver enum에 claude-reviewer 없음 | **resolved** (HARNESS §4.3 + §7 approver enum 확장) |
-| F20 | major | postprocess REVIEW 필수 필드 누락 | **resolved** (_codex_postprocess.py argparse 확장 + 양쪽 wrapper 전달) |
-| F21 | major | tomllib silent ignore (python 3.9) | **resolved** (read_config가 python3.11/12/13 탐색 + tomli fallback + 명시적 stderr WARNING) |
-| F22 | minor | wrapper 인자 검증 부족 | **resolved** (need_value helper + source mutual exclusion) |
-| F23 | major | pre-review-gate 0 checks도 PASS | **resolved** (attempted_count > 0 검증 + --allow-no-checks 옵션 + harness self-smoke 5 checks) |
-| F24 | minor | new-project.sh escape | **resolved** (NAME/TYPE regex 검증 + awk로 sed-safe 치환) |
-| F25 | minor | phases/02 "A.5 통합 리뷰" 잔존 | **resolved** ("다음 정식 cross-review 또는 periodic audit"로 일반화) |
-| F26 | minor | ADR.template front-matter 없음 | **resolved** (standalone ADR용 front-matter 가이드 주석 추가) |
+| F18 | major | ADR-007 approval ↔ STATUS 충돌 + HEAD stale + 중복 키 | **resolved** |
+| F19 | minor | approver enum에 claude-reviewer 없음 | **resolved** |
+| F20 | major | postprocess REVIEW 필수 필드 누락 | **resolved** |
+| F21 | major | tomllib silent ignore (python 3.9) | **resolved** |
+| F22 | minor | wrapper 인자 검증 부족 | **resolved** |
+| F23 | major | pre-review-gate 0 checks도 PASS | **resolved** (self-smoke 5 checks) |
+| F24 | minor | new-project.sh escape | **resolved** |
+| F25 | minor | phases/02 "A.5 통합 리뷰" 잔존 | **resolved** |
+| F26 | minor | ADR.template front-matter 없음 | **resolved** |
 
-**남은 open: 0개** ✓ (모두 resolved, A.5c spot-check는 §5.4 사용자 확인 필요 시에만)
+### BC.1 통합 cross-review (codex `019e5db9`, .harness/reviews/bc1-20260525-integrated.md)
+
+| ID | severity | 제목 | 상태 |
+|---|---|---|---|
+| F27 | major | 생성 프로젝트가 scripts/ 명령 실행 불가 | **resolved** (new-project.sh 갱신 + skills/phases `$HARNESS_ROOT/scripts/...` + wrapper SCRIPT_DIR sibling) |
+| F28 | major | Phase 00 artifact 이름·위치 mismatch | **resolved** (intake-checklist→intake.md / api-spec→openapi.yaml placeholder) |
+| F29 | minor | _generic module-skeleton 의존 방향 모순 | **resolved** (depends-on 명확화 + 의존성 역전 설명 + 그래프 라벨) |
+| F30 | minor | malformed REVIEW validation 부재 | **resolved** (skills/request-codex-review step 5 추가) |
+| F31 | minor | API spec template 너무 thin | **resolved** (CRUD + 표준 errors + X-Request-Id + auth variants + ErrorCode enum) |
+| F32 | minor | frontend collab gate 측정 불가 | **resolved** (intake §9 artifact-based 체크리스트) |
+| F33 | minor | 생성 프로젝트에 INBOX 위치 없음 | **resolved** (HARNESS §4.2 .harness/inbox/ + new-project.sh + skills) |
+| F34 | **blocker** | HC-8 위반 (dry-run ≠ user approval) | **resolved** (web-service/test-strategy §10 강화 + module-skeleton HC-8/9 hook 의무) |
+
+**남은 open: 0개** ✓ (HC 위반 0, blocker 0)
 
 ## INBOX
 
@@ -274,7 +299,7 @@
 ## Notes
 
 ### Codex 토큰·재리뷰
-- **Cumulative tokens**: A.0a = 79,748 / A.0f = 131,909 / A.5 = 107,011 / **누적 = 318,668**
+- **Cumulative tokens**: A.0a = 79,748 / A.0f = 131,909 / A.5 = 107,011 / BC.1 = 129,594 / **누적 = 448,262**
 - **재리뷰 횟수** (HARNESS 대상, §5.4): 3회 (A.0a, A.0f, A.5). A.5c spot-check가 4회째 — 사용자 명시 확인 필요.
 - **HARNESS.md 대상 cross-review**: 2회 (A.0a seed, A.0f v0.3). 3회 째 가능, 4회 째 §5.4에 따라 사용자 확인 필요.
 

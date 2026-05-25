@@ -56,4 +56,8 @@ API 명세 우선 정책 (intake §2.1)을 강제하려면 *contract test*가 �
 ## 10. 검증 hooks (Phase 03 Implement 동안)
 - 각 endpoint 구현 시점에 OpenAPI spec 갱신 → contract test 즉시 PASS 확인
 - 새 endpoint마다 자동 e2e 시나리오 1개 (smoke)
-- 모든 outgoing 외부 호출은 mock 또는 명시적 실 환경 (HC-8)
+- **외부 호출 (HC-8)**: 디폴트는 *mock*. 실 외부 mutation은 다음 조건을 *모두* 만족해야 허용:
+  1. 그 실행에 대한 **사용자 명시 승인이 STATUS Approved artifacts 또는 ADR에 기록**됨 (실행 1회분 scope)
+  2. **non-prod 자격증명**만 사용 (prod 자격증명은 별도의 명시 승인 필요)
+  3. (지원되는 경우) **dry-run 병행** — dry-run은 *추가* 보호 layer이지 사용자 승인의 *대체*가 아님
+- **Destructive 작업 (HC-9)**: 위 조건 + **irreversible-action checklist** 통과 (백업 확인 / 영향 범위 명시 / 복구 절차 / rollback window). dry-run만으론 부족.

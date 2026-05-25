@@ -25,12 +25,11 @@
    2. `HARNESS.md` (현재 적용 헌법; STATUS에 pin된 version)
    3. `STATUS.md` (가장 중요 — 단일 진실 출처)
    4. `DECISIONS.md` (ADR 누적)
-2. **INBOX 점검**:
-   ```bash
-   ls INBOX/
-   # unread = INBOX/codex-feedback-*.md with front-matter status: open
-   ```
-   unread 발견 시 STATUS *Open findings*와 일치하는지 cross-check.
+2. **INBOX 점검** (위치는 컨텍스트에 따라):
+   - **프로젝트 컨텍스트** (`.harness/`가 존재): `ls .harness/inbox/` — unread = `.harness/inbox/codex-feedback-*.md` with `status: open`
+   - **하니스 self-build**: `ls INBOX/` — unread = `INBOX/codex-feedback-*.md` with `status: open`
+   - 둘 다 `processed/` 하위와 README.md는 제외
+   - unread 발견 시 STATUS *Open findings*와 일치하는지 cross-check
 3. **STATUS *Current* 파악**:
    - 현재 Phase / Active sub-phase
    - Last updated 시각 + by 누구 (자기 자신인지 다른 에이전트인지)

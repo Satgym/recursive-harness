@@ -42,14 +42,16 @@
 8. **STATUS *Open findings***:
    - 처리된 항목 상태 갱신
    - carry-over는 그대로 두되 출처 명시
-9. **INBOX 정리**:
+9. **INBOX 정리** (위치는 컨텍스트에 따라):
+   - **프로젝트**: `.harness/inbox/` (HARNESS §4.2)
+   - **하니스 self-build**: `INBOX/`
    - 모든 unread 파일을 `resolved` / `disputed` / `deferred` + `deferred_reason` 중 하나로 status 결정
-   - 처리 완료된 파일 `INBOX/processed/`로 이동:
+   - 처리 완료된 파일을 그 디렉토리의 `processed/` 하위로 이동:
      ```bash
-     git mv INBOX/codex-feedback-*.md INBOX/processed/   # tracked인 경우
-     mv INBOX/codex-feedback-*.md INBOX/processed/       # untracked인 경우
+     git mv <inbox>/codex-feedback-*.md <inbox>/processed/   # tracked
+     mv <inbox>/codex-feedback-*.md <inbox>/processed/       # untracked
      ```
-   - STATUS *INBOX* 카운트 갱신 (unread 정의: `INBOX/codex-feedback-*.md` with `status: open`)
+   - STATUS *INBOX* 카운트 갱신 (unread 정의는 컨텍스트의 codex-feedback-*.md with `status: open`)
 10. **STATUS *Notes*** 갱신:
     - Cumulative Codex tokens
     - 재리뷰 횟수

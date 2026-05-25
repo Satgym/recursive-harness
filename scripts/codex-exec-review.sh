@@ -11,7 +11,8 @@
 #                                [--skip-git-repo-check]
 
 set -euo pipefail
-ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"     # project root (cwd for config/output)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"      # harness scripts/ dir (F27)
 cd "$ROOT"
 
 need_value() {
@@ -117,5 +118,5 @@ PP_ARGS=()
 PP_ARGS+=(--prompt-source "$PROMPT_FILE")
 PP_ARGS+=(--invoked-at "$INVOKED_AT")
 
-python3 "$ROOT/scripts/_codex_postprocess.py" "$RAW" "$DEST" "${PP_ARGS[@]}"
+python3 "$SCRIPT_DIR/_codex_postprocess.py" "$RAW" "$DEST" "${PP_ARGS[@]}"
 echo "[codex-exec-review] saved: $DEST" >&2

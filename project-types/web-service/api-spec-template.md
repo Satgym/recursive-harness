@@ -2,7 +2,7 @@
 
 > [intake-checklist §2.1](intake-checklist.md)의 "API 명세 우선" 원칙을 실현. 명세 파일은 `.harness/docs/api/openapi.yaml` (또는 도구별 위치)에 저장.
 
-## OpenAPI 3.1 minimal example
+## OpenAPI 3.1 minimal example (CRUD + 표준 error responses + X-Request-Id)
 
 ```yaml
 openapi: 3.1.0
@@ -11,8 +11,8 @@ info:
   version: 0.1.0  # 명세 자체의 버전 (코드 버전과 별개)
   description: |
     See .harness/docs/blueprint.md for module boundaries.
-    Auth: <Bearer JWT | session cookie | API key>
-    Errors: see #/components/schemas/Error
+    Auth: <Bearer JWT | session cookie | API key | OAuth2>
+    Every error response carries `X-Request-Id` header for log correlation.
 servers:
   - url: https://api.<domain>/v1
     description: prod
@@ -25,8 +25,10 @@ security:
 paths:
   /health:
     get:
+      operationId: getHealth
+      tags: [meta]
       summary: Liveness check
-      security: []     # 무인증
+      security: []
       responses:
         '200':
           description: ok
@@ -40,6 +42,8 @@ paths:
 
   /<resource>:
     get:
+      operationId: list<Resource>
+      tags: [<resource>]
       summary: List <resource>
       parameters:
         - in: query
@@ -51,6 +55,8 @@ paths:
       responses:
         '200':
           description: ok
+          headers:
+            X-Request-Id: { $ref: '#/components/headers/RequestId' }
           content:
             application/json:
               schema:
@@ -60,9 +66,73 @@ paths:
                   items:
                     type: array
                     items: { $ref: '#/components/schemas/<Resource>' }
-                  next_cursor:
-                    type: string
+                  next_cursor: { type: string }
+        '400': { $ref: '#/components/responses/BadRequest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '500': { $ref: '#/components/responses/ServerError' }
+    post:
+      operationId: create<Resource>
+      tags: [<resource>]
+      summary: Create <resource>
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/<Resource>Create' }
+      responses:
+        '201':
+          description: created
+          headers:
+            X-Request-Id: { $ref: '#/components/headers/RequestId' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/<Resource>' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationFailed' }
+
+  /<resource>/{id}:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema: { type: string, format: uuid }
+    get:
+      operationId: get<Resource>
+      tags: [<resource>]
+      responses:
+        '200':
+          description: ok
+          headers:
+            X-Request-Id: { $ref: '#/components/headers/RequestId' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/<Resource>' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    patch:
+      operationId: update<Resource>
+      tags: [<resource>]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/<Resource>Update' }
+      responses:
+        '200': { description: ok, content: { application/json: { schema: { $ref: '#/components/schemas/<Resource>' } } } }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationFailed' }
+    delete:
+      operationId: delete<Resource>
+      tags: [<resource>]
+      responses:
+        '204': { description: deleted }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
 
 components:
   securitySchemes:
@@ -70,32 +140,114 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
+    CookieAuth:
+      type: apiKey
+      in: cookie
+      name: session
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+    OAuth2:
+      type: oauth2
+      flows:
+        authorizationCode:
+          authorizationUrl: https://auth.<domain>/authorize
+          tokenUrl: https://auth.<domain>/token
+          scopes:
+            read: read access
+            write: write access
+
+  headers:
+    RequestId:
+      schema: { type: string }
+      description: trace correlation id; mirrors response body request_id
 
   schemas:
     <Resource>:
       type: object
+      additionalProperties: false
       required: [id]
       properties:
         id: { type: string, format: uuid }
         # ...
 
+    <Resource>Create:
+      type: object
+      additionalProperties: false
+      required: [...]
+      properties: {}
+
+    <Resource>Update:
+      type: object
+      additionalProperties: false
+      properties: {}
+
+    ErrorCode:
+      type: string
+      enum:
+        - validation_failed
+        - unauthorized
+        - forbidden
+        - not_found
+        - conflict
+        - rate_limited
+        - server_error
+        # ... 도메인 별 추가
+
     Error:
       type: object
       required: [code, message, request_id]
       properties:
-        code: { type: string, description: machine-readable }
+        code: { $ref: '#/components/schemas/ErrorCode' }
         message: { type: string }
-        request_id: { type: string, description: trace correlation id }
+        request_id: { type: string }
         details:
-          type: object
-          additionalProperties: true
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [field, reason]
+            properties:
+              field:  { type: string }
+              reason: { type: string }
+              # i18n key, etc.
 
   responses:
+    BadRequest:
+      description: Malformed request
+      headers: { X-Request-Id: { $ref: '#/components/headers/RequestId' } }
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
     Unauthorized:
       description: Missing or invalid credentials
-      content:
-        application/json:
-          schema: { $ref: '#/components/schemas/Error' }
+      headers: { X-Request-Id: { $ref: '#/components/headers/RequestId' } }
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+    Forbidden:
+      description: Authenticated but not allowed
+      headers: { X-Request-Id: { $ref: '#/components/headers/RequestId' } }
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+    NotFound:
+      description: Resource not found
+      headers: { X-Request-Id: { $ref: '#/components/headers/RequestId' } }
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+    Conflict:
+      description: State conflict
+      headers: { X-Request-Id: { $ref: '#/components/headers/RequestId' } }
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+    ValidationFailed:
+      description: Body failed validation
+      headers: { X-Request-Id: { $ref: '#/components/headers/RequestId' } }
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+    RateLimited:
+      description: Too many requests
+      headers:
+        Retry-After: { schema: { type: integer } }
+        X-Request-Id: { $ref: '#/components/headers/RequestId' }
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+    ServerError:
+      description: Server failure
+      headers: { X-Request-Id: { $ref: '#/components/headers/RequestId' } }
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
 ```
 
 ## 규칙

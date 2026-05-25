@@ -35,7 +35,7 @@
 3. **Codex 리뷰**:
    - **strict / balanced 모드**: 필수
      ```bash
-     scripts/codex-exec-review.sh --phase 02-module-plan --slug "<name>" \
+     "$HARNESS_ROOT/scripts/codex-exec-review.sh" --phase 02-module-plan --slug "<name>" \
          --prompt-file .harness/prompts/module-review.md \
          --review-round "M<n>-plan-r1" --target ".harness/docs/modules/<name>/plan.md"
      ```

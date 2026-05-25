@@ -19,6 +19,7 @@ Codex에 정식 리뷰를 의뢰. 코드 변경은 `codex review`, 텍스트(Blu
 ## Procedure
 
 1. **사전 점검**:
+   - `$HARNESS_ROOT` 환경변수 설정 (또는 `.harness/config.toml [harness] root`에서 자동 인지)
    - `.harness/config.toml`에 `[models]`이 채워져 있는지 (없으면 codex CLI 디폴트 사용 — 알림)
    - 누적 토큰이 §5.4 cost guardrail에 가까운지 (현 누적은 STATUS Notes)
    - HARNESS 대상 review 횟수가 3 초과면 사용자 명시 확인
@@ -27,7 +28,7 @@ Codex에 정식 리뷰를 의뢰. 코드 변경은 `codex review`, 텍스트(Blu
    - `scripts/pre-review-gate.sh` PASS 보장 (wrapper가 자동 호출)
    - 호출:
      ```bash
-     scripts/codex-review.sh \
+     "$HARNESS_ROOT/scripts/codex-review.sh" \
          --phase 04 --slug "<module-or-scope>" \
          --base main \
          --review-round "<e.g. M3-cr-r1>" \
@@ -38,7 +39,7 @@ Codex에 정식 리뷰를 의뢰. 코드 변경은 `codex review`, 텍스트(Blu
    - PROMPT 파일을 `.harness/prompts/<phase>-<slug>.md`에 준비
    - 호출:
      ```bash
-     scripts/codex-exec-review.sh \
+     "$HARNESS_ROOT/scripts/codex-exec-review.sh" \
          --phase 01-blueprint --slug initial \
          --prompt-file .harness/prompts/blueprint-review.md \
          --review-round blueprint-r1 \
@@ -47,11 +48,19 @@ Codex에 정식 리뷰를 의뢰. 코드 변경은 `codex review`, 텍스트(Blu
 4. **결과 저장**:
    - wrapper가 `_codex_postprocess.py`로 raw stdout을 REVIEW 양식으로 변환해 `.harness/reviews/<phase>-<date>-<slug>.md`에 저장
    - codex_meta 모든 필드(model / session_id / tokens / base_ref / invoked_at / prompt_source 등) 보존됨 (§5.3)
-5. **STATUS 갱신**:
+5. **REVIEW validation** (F30):
+   - 다음을 모두 검증 — 실패 시 "리뷰 받음"으로 인정 X:
+     - [ ] front-matter 필수 키: `artifact: review`, `date`, `author`, `status`, `codex_meta`
+     - [ ] `codex_meta` 필수 sub-key: `model`, `session_id`, `tokens_used`, `invoked_at`, `prompt_source`
+     - [ ] severity / status enum이 canonical (blocker|major|minor|nit|info; open|resolved|deferred|disputed)
+     - [ ] finding ID monotonicity (이전 라운드 최대 ID + 1부터 시작, 누락·중복 없음)
+     - [ ] "tokens used" 또는 토큰 카운트 추출 성공
+   - 실패 시 raw 파일 경로를 STATUS *Open findings*에 "invalid review attempt"로 등재 + review 파일 자체는 `status: invalid` (또는 `disputed`)로 표시 후 재호출 또는 사용자 escalation
+6. **STATUS 갱신**:
    - *Open findings*에 새 finding을 출처 명시로 등재
    - *Notes*에 토큰 누적 갱신
    - INBOX 카운트 영향 없음 (정식 리뷰는 `.harness/reviews/`, INBOX는 능동 피드백 채널)
-6. **다음 단계**: [skills/apply-review.md](apply-review.md)
+7. **다음 단계**: [skills/apply-review.md](apply-review.md)
 
 ## Outputs / Side effects
 

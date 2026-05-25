@@ -37,7 +37,7 @@
    - PROMPT 파일을 `.harness/prompts/blueprint-review.md`로 준비 (대상 명시, REVIEW 양식 요구)
    - 호출:
      ```bash
-     scripts/codex-exec-review.sh --phase 01-blueprint --slug initial \
+     "$HARNESS_ROOT/scripts/codex-exec-review.sh" --phase 01-blueprint --slug initial \
          --prompt-file .harness/prompts/blueprint-review.md \
          --review-round blueprint-r1 --target ".harness/docs/blueprint.md"
      ```

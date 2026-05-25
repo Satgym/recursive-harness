@@ -291,6 +291,15 @@
 
 **남은 open: 0개** ✓ (HC 위반 0, blocker 0)
 
+### Phase E (Dogfood) 발견 — 하니스 자체 결함 후보
+
+| ID | severity | 제목 | 상태 |
+|---|---|---|---|
+| F40 | minor | wrapper의 `ROOT="$(git rev-parse --show-toplevel)"`가 monorepo sub-project (예: `examples/todo-api/`)에선 *상위 repo*를 가리킴 → `.harness/config.toml` 못 찾음 | **resolved** (codex-review.sh + codex-exec-review.sh에 `find_project_root()` 추가, 가장 가까운 `.harness/` 조상 탐색) |
+| F41 | minor | `plan-blueprint` skill / web-service bootstrap이 "Blueprint codex review 전 minimal API spec 채우기"를 명시 강제 안 함 → spec-first 프로젝트에서 빈 명세로 contract test 통과 가능 (todo-api bp.1에서 발견 — codex가 F35로 잡음) | open (Phase E 종결 시 처리 또는 후속 라운드) |
+
+**메타 dogfood 학습 채널** — todo-api 진행 중 발견되는 하니스 자체 결함을 이 표에 누적 (HARNESS §10 dogfood 임시 변경 한도 3회 — F40은 *발견 즉시 fix*라 한도 미포함).
+
 ## INBOX
 
 - **0 unread** ✓

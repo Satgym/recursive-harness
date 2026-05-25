@@ -12,7 +12,17 @@
 #                           [--severity <enum>] [--target <text>]
 
 set -euo pipefail
-ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"     # project root (cwd for config/output)
+
+# Find nearest .harness/ ancestor as project root (handles monorepo sub-projects).
+find_project_root() {
+  local dir="$PWD"
+  while [[ "$dir" != "/" ]]; do
+    [[ -d "$dir/.harness" ]] && { echo "$dir"; return 0; }
+    dir="$(dirname "$dir")"
+  done
+  git rev-parse --show-toplevel 2>/dev/null || pwd
+}
+ROOT="$(find_project_root)"                                     # project root (cwd for config/output)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"      # harness scripts/ dir (F27)
 cd "$ROOT"
 

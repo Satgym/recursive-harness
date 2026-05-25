@@ -34,7 +34,8 @@ date: 2026-05-25
 author: codex
 severity: blocker | major | minor | nit | info
 target: <어떤 파일/phase/모듈에 대한 피드백인지>
-status: open
+status: open | resolved | deferred | disputed
+deferred_reason: <text, status=deferred일 때만>
 ---
 
 ## Summary
@@ -55,9 +56,9 @@ status: open
 1. 세션 시작 시 `ls INBOX/` 실행 (디렉토리만 비어있는지 확인)
 2. 새 피드백 파일 발견 → STATUS.md "Open findings"에 항목 추가, "INBOX" 카운트 갱신
 3. 각 피드백 처리:
-   - 반영 → 해당 파일 상단의 `status: open` → `status: resolved` 로 변경
-   - 보류 → `status: deferred(<이유>)` 변경, STATUS의 Open findings에는 남김
-   - 분쟁 → `status: disputed`, ADR로 결론 기록
+   - 반영 → 해당 파일 front-matter의 `status: open` → `status: resolved` 변경
+   - 보류 → `status: deferred` + `deferred_reason: <이유>`를 별도 필드로 기록. STATUS의 Open findings에는 남김
+   - 분쟁 → `status: disputed`, HARNESS.md §11 분쟁 프로토콜 적용, 결론은 ADR로 명문화
 4. 처리 끝난 파일은 `INBOX/processed/`로 이동 (시간 순으로 쌓임)
 
 ## 디렉토리 구조

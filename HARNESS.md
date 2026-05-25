@@ -1,8 +1,8 @@
-# HARNESS.md — 하니스 헌법 (v0.3)
+# HARNESS.md — 하니스 헌법 (v0.4)
 
 > 이 파일은 Claude와 Codex 모두가 따르는 **절대 규칙**과 **워크플로우 정의**다.
 > 변경은 §6 "하니스 수정 절차"를 거쳐야 한다.
-> **v0.2 → v0.3**: A.0e 처리 — F7(분쟁 프로토콜) + 추가 제안 5개 통합. 변경 내역은 §8 참조.
+> **v0.3 → v0.4**: A.0g micro-patch — F13/F14/F15 정리. 변경 내역은 §8 참조.
 
 ---
 
@@ -93,7 +93,7 @@ artifact: blueprint | module_plan | review | adr | status | postmortem | harness
 version: vX.Y                # 또는 'sha256:<hash>'
 date: 2026-05-25
 author: claude | codex | user
-status: draft | approved | superseded | rejected | open | resolved | deferred | disputed
+status: <artifact-specific enum, 아래 참조>
 approval:                    # 승인된 경우만
   approver: user | codex-review | claude-self-test
   approved_at: 2026-05-25T11:03
@@ -102,11 +102,26 @@ approval:                    # 승인된 경우만
 supersedes: <id, optional>   # 예: ADR-003
 amends: <id, optional>
 references: [<file_or_id>, ...]
+deferred_reason: <text, optional>   # status=deferred일 때만 사용
 ---
 ```
 
-- HARNESS.md, AGENTS.md, CLAUDE.md, DECISIONS.md, INBOX/README.md 자체는 본문 상단에 버전을 텍스트로 보유(현재 형태) — front-matter 의무는 아님. 정형 산출물에만 적용.
-- STATUS.md는 본문 첫 표(Current)가 front-matter 역할을 대신.
+### Artifact-specific status enum
+
+`status` 값은 산출물 타입별로 분리된다 (Phase A.2 templates에서 정식 확정):
+
+| artifact | 허용 status |
+|---|---|
+| `blueprint`, `module_plan` | `draft \| approved \| superseded \| rejected` |
+| `adr` | `proposed \| accepted \| superseded \| rejected` |
+| `review`, `inbox_feedback` | `open \| resolved \| deferred \| disputed` |
+| `postmortem` | `open \| resolved` |
+| `status`, `harness_doc` | front-matter 불필요 (본문 상단 버전 표기로 대체) |
+
+`status=deferred`인 경우 동일 front-matter의 `deferred_reason` 필드에 사유를 *분리* 기록한다. `status: deferred(<이유>)` 같은 결합 표기는 금지 (canonical 위반).
+
+- HARNESS.md, AGENTS.md, CLAUDE.md, DECISIONS.md, INBOX/README.md 자체는 본문 상단에 버전 텍스트로 보유 — front-matter 의무 없음.
+- STATUS.md는 본문 첫 표(Current)가 front-matter 역할 대신.
 
 ## 5. Codex 호출 규약 (+ Review determinism + Cost guardrails)
 
@@ -210,8 +225,9 @@ STATUS.md는 다음 섹션을 **모두** 포함해야 한다 (없으면 양식 �
 
 - **v0.1** (2026-05-25): 초기 6개 문서 골격
 - **v0.2** (2026-05-25): Codex seed-review 5개 핵심 finding 반영 — HC-7/8/9 신설(F11), Strictness 통일(F3), §7 STATUS 양식 + Approval record(F2/F9), §9 Bootstrap exception(F1), §5 Review determinism(추가 제안 #7)
-- **v0.3** (2026-05-25, 본 파일): A.0e 통합 — F7 분쟁 프로토콜(§11), Postmortem triggers(§6.3-6.4), Cost guardrails(§5.4), Dogfood criteria(§10), Branch/git policy(§12), Artifact front-matter 표준(§4.3)
-- v0.4 (예정): A.0f Codex 재리뷰 반영 + Phase A.1~A.5 완료 통합
+- **v0.3** (2026-05-25): A.0e 통합 — F7 분쟁 프로토콜(§11), Postmortem triggers(§6.3-6.4), Cost guardrails(§5.4), Dogfood criteria(§10), Branch/git policy(§12), Artifact front-matter 표준(§4.3)
+- **v0.4** (2026-05-25, 본 파일): A.0g micro-patch — F13 §12.2 base branch 모순 해소, F14 §4.3 artifact-specific status enum 분리 + `deferred_reason` 필드 신설, F15 §9 임시 게이트가 §11 disputed 처리 cross-ref
+- v0.5 (예정): Phase A.1~A.5 완료 통합 후 정식 cross-review 반영
 
 ## 9. Bootstrap exception (Phase A 한정)
 
@@ -224,6 +240,7 @@ A.x 완료 후 다음 조건을 모두 만족하면 A.(x+1) 진입 가능:
 3. Blocker findings는 모두 `resolved` 또는 사용자가 명시 승인한 `deferred`
 4. STATUS.md의 *Approved artifacts*에 본 sub-phase 결과가 등재 (사용자 승인 표시)
 5. STATUS.md의 *Active gate*가 다음 sub-phase를 가리키도록 갱신
+6. **Disputed findings는 §11에 따라 처리**. `severity ∈ {blocker, major}`로 disputed인 항목이 있으면 A.(x+1) 진입 차단 — 사용자 결정 필요
 
 ### 폐기 시점
 Phase A.4 (`phases/` 정식 문서) 완성 후 §9는 **자동 폐기**된다. 폐기는 다음 ADR로 명문화.
@@ -269,9 +286,9 @@ Claude와 Codex의 의견이 충돌할 때:
 - 하니스 자체 빌드는 본 v0.3 시점에 git init 수행 (ADR-001 실행)
 
 ### 12.2 Branch 모델
-- **base branch**: `main` (디폴트). 변경 시 `.harness/config.toml`의 `[git]` 섹션에 명시
+- **base branch**: 디폴트 `main`. `.harness/config.toml`의 `[git] base_branch`에서 오버라이드 가능
 - **feature branch**: `<phase>/<sub-phase>` 또는 `module/<name>` (예: `phase-a/roles`, `module/auth`)
-- **Cross-review base**: 항상 `main`. `codex review --base main`을 표준 명령으로
+- **Cross-review base**: 항상 *configured base branch* (디폴트 `main`). 표준 명령: `codex review --base "$(yq '.git.base_branch // "main"' .harness/config.toml)"` 또는 `scripts/codex-review.sh`가 config에서 읽어 자동 주입 (A.3 작성 시 구현)
 
 ### 12.3 Commit
 - 메시지 형태: `<type>(<scope>): <subject>` (type ∈ `harness | plan | code | docs | test | fix | refactor | review`)

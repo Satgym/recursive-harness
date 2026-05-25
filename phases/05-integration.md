@@ -1,0 +1,51 @@
+# Phase 05 — Integration
+
+> 단위 모듈을 결합하여 시스템 수준에서 동작 검증. Blueprint 의존성 그래프가 실제로 작동함을 확인.
+
+## Entry 입력
+
+- Phase 03/04를 통과한 모듈들 (≥ 2개; 단일 모듈만으론 본 phase 의미 약함)
+- Blueprint §4 Dependency graph
+- Blueprint §5 Test strategy (integration / e2e 부분)
+- Blueprint §6 Observability 약속
+
+## Activities
+
+1. **결합 환경 준비** — DI / config / fixture 로 실 의존성 (또는 mock vs real boundary 정책에 따라).
+2. **Integration test 실행** — Blueprint test strategy에 명시된 시나리오.
+3. **E2E 시나리오** (해당 시) — 사용자 관점 happy path + 핵심 실패 경로.
+4. **Observability 검증** — 약속한 로그 구조 / metric / 디버그 hook이 실제로 산출되는지 확인. 캡쳐 디렉토리 / 콘솔 prefix 동작.
+5. **Performance / Resource 점검** (관련 시) — 펌웨어라면 메모리/플래시 예산, 웹이라면 응답 시간, AI 모델이라면 평가셋 score.
+6. **Postmortem 트리거 점검** — Phase 03/04 진행 중 §6.3 트리거에 해당하는 사건이 있었는지 회고. 있었다면 `postmortems/<date>-<slug>.md` 작성 + `status: resolved`까지.
+
+## Outputs
+
+- Integration test 결과 (CI 로그 또는 로컬 실행 캡쳐)
+- (해당 시) 성능 / 자원 측정 결과
+- (해당 시) Postmortem 파일
+
+## Exit 기준
+
+- [ ] Integration test PASS
+- [ ] E2E 시나리오 PASS (Blueprint에 명시된 경우)
+- [ ] Observability hook 동작 확인 (실 실행 캡쳐로 증거)
+- [ ] 성능 / 자원 제약 (Blueprint §2) 위반 없음
+- [ ] 발생한 모든 Postmortem이 `status: resolved`
+- [ ] HC-8 (외부 mutation) / HC-9 (destructive) 작업이 본 phase에 있었다면 모두 사용자 승인됨
+
+## 주도 역할
+
+- **claude-implementer** (테스트 실행 + 결과 정리)
+- **codex-reviewer** (선택; 통합 결과에 대한 리뷰는 04 라운드와 분리, 또는 누적)
+- **user** (HC-8/9 발생 시 승인)
+
+## 발생 가능한 드리프트 / 위험
+
+- ❌ Integration test가 unit test의 합으로 위장 → 실제 모듈 boundary 미검증
+- ❌ Observability를 "코드는 있는데 동작 확인 안 함" → Phase E dogfood에서 무의미한 hook 발견
+- ❌ 성능 제약 위반을 "다음 release"로 미룸 (Blueprint와 결정 ADR 없이) → 드리프트
+- ❌ Postmortem 트리거를 인지 못함 → 반복 사고 시 누적 위험
+
+## 다음 phase
+
+[06-handoff.md](06-handoff.md) — 세션 / 모듈 / phase 종료 시 핸드오프.

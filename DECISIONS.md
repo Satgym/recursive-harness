@@ -18,6 +18,26 @@
 
 ---
 
+## ADR-007 — §9 Bootstrap exception 폐기 (Phase A.4 완료)
+
+**Date**: 2026-05-25 · **Status**: accepted · **Amends**: HARNESS.md §9
+
+**Context**: HARNESS.md §9 본문은 "Phase A.4 (`phases/` 정식 문서) 완성 후 자동 폐기"가 명시되어 있다. A.4가 완성되어 `phases/00-intake.md` ~ `phases/06-handoff.md` 7개 + `phases/README.md`가 작성되었으므로 §9 폐기 조건이 만족됐다.
+
+**Decision**: ADR-007 발행 시점부터 HARNESS §9 임시 게이트는 **deprecated**. 모든 phase 진행은 `phases/<phase>.md`의 정식 Exit 기준을 따른다.
+
+§9 본문은 HARNESS micro-patch로 deprecation 헤더가 추가되었으며 (status: deprecated 표시), 향후 HARNESS v0.5 정식판(A.5 통합 cross-review 후)에서 §9 전체가 archival 섹션으로 이동되거나 별도 보관 (역사적 가치 보존).
+
+**Consequences**:
+- 이후 모든 sub-phase 진행은 [phases/](phases/)의 Exit 기준에 따름 — 모드별 승인 매트릭스(phases/README.md)가 §9 대체
+- 현 진행 Phase A의 잔여 sub-phase(A.5)는 phases/04-cross-review.md의 정식 Exit 기준 적용 — A.5 통합 cross-review가 §9 폐기 후 *첫 정식 cross-review*
+- ADR-006(Phase A 동안 codex 리뷰 시점 = A.0a/A.0f/A.5)도 A.5 완료 후 자연 종료 — 그 후엔 모듈마다 phase 04 cross-review가 표준
+- v0.5 HARNESS 정식판에서 §9 본문을 archival 섹션 또는 `docs/history/` 같은 별도 위치로 이동 검토 (사용자 결정 사항)
+
+**Approval**: pending — A.4 사용자 검토 후 timestamp 채움
+
+---
+
 ## ADR-006 — Phase A sub-phase별 Codex 리뷰 시점
 
 **Date**: 2026-05-25 · **Status**: accepted · **Amends**: — · **Supersedes**: —

@@ -9,17 +9,18 @@
 |---|---|
 | Project | 하니스 자체 빌드 (메타 부트스트랩) |
 | Phase | A — 골격 구축 |
-| Active sub-phase | **A.3 작업 완료 → A.4 진입 대기** (scripts/ 6파일 + smoke test 통과) |
+| Active sub-phase | **A.4 작업 완료 → A.5 진입 대기** (phases/ 8파일 + ADR-007 + §9 deprecation) |
 | Strictness | strict |
-| Harness version | v0.4 (approved + committed) |
-| Git | main, HEAD = `c83eb45` (A.2 commit). scripts/ 6파일 + tokens fix 패치 untracked |
-| Last updated | 2026-05-25T13:25 by Claude |
+| Harness version | v0.4 (HARNESS §9 deprecation 노트 패치는 staging, A.4 commit에 포함) |
+| Git | main, HEAD = `95ab860` (A.3 commit). phases/ 8파일 + DECISIONS.md (ADR-007) + HARNESS.md (§9 patch) + STATUS 변경 untracked |
+| Last updated | 2026-05-25T13:44 by Claude |
 
 ## Active gate
 
-- **Gate**: A.3 (`scripts/` 6파일 + smoke test 통과) → A.4 (`phases/`)
-- **Blocked on**: 사용자가 A.3 결과 검토 + 승인. 승인 시 commit + A.4 진입.
-- **Approval needed**: yes — scripts/ 6파일
+- **Gate**: A.4 (`phases/` 8파일 + ADR-007 §9 deprecation) → **A.5 (Phase A 통합 cross-review)**
+- **Blocked on**: 사용자가 A.4 결과 검토 + 승인. 승인 시 commit + A.5 진입.
+- **Approval needed**: yes — phases/ 8파일, ADR-007, HARNESS §9 deprecation patch
+- **§9 → phases/ 전환 효과**: A.5는 §9 폐기 후 *첫 정식 cross-review*. [phases/04-cross-review.md](phases/04-cross-review.md)의 Exit 기준이 적용됨
 
 ## Required reads (이 세션 시작 시)
 
@@ -31,6 +32,7 @@
 6. `roles/README.md` + 4개 역할 파일 (A.1 결과)
 7. `templates/README.md` + 6개 양식 파일 (A.2 결과)
 8. `scripts/README.md` + 4 main + 1 helper (A.3 결과; smoke-tested)
+9. `phases/README.md` + 7 phases (A.4 결과 — 00-intake ~ 06-handoff Exit 기준 정식 명세)
 7. (참고) `INBOX/processed/codex-feedback-20260525-v0.3-review.md`
 8. (참고) `INBOX/processed/codex-feedback-20260525-seed-review.md`
 
@@ -134,6 +136,29 @@
   mode: strict
   approved_at: 2026-05-25T13:25
   scope: codex 호출 자동화 wrapper, pre-review-gate(lint/test), new-project 부트스트랩, raw stdout → REVIEW 변환 헬퍼. 모두 chmod +x, smoke-tested.
+
+- artifact: phases/ (8 files — README + 00-intake + 01-blueprint + 02-module-plan + 03-implement + 04-cross-review + 05-integration + 06-handoff)
+  version_or_hash: "v0.1"
+  approver: user
+  mode: strict
+  approved_at: 2026-05-25T13:44
+  scope: 7단계 phase Entry/Activities/Outputs/Exit 정식 명세 + 모드별 승인 매트릭스. §9 Bootstrap exception을 대체.
+
+- artifact: DECISIONS.md (ADR-007)
+  version_or_hash: "v0.1+ADR-007"
+  approver: user
+  approved_at: 2026-05-25T13:44
+  mode: strict
+  approved_at: 2026-05-25T13:44
+  scope: §9 Bootstrap exception 폐기 명문화. phases/ 정식 게이트가 §9를 대체.
+
+- artifact: HARNESS.md §9 deprecation patch
+  version_or_hash: "v0.4+A.4-patch"
+  approver: user
+  approved_at: 2026-05-25T13:44
+  mode: strict
+  approved_at: 2026-05-25T13:44
+  scope: §9 헤더에 deprecated 상태 표시 + ADR-007 참조. 본문은 v0.5에서 archival 검토.
 ```
 
 ## Decision summary
@@ -144,6 +169,7 @@
 - **ADR-004**: Strictness `strict/balanced/autonomous`, 디폴트 strict. Blueprint는 모든 모드 사용자 승인 (v0.2)
 - **ADR-005**: 프로젝트 타입 우선순위 — `web-service` 깊이, 나머지 `_generic` 골격만
 - **ADR-006**: Phase A codex 리뷰는 A.0a / A.0f / A.5 3시점에만 (sub-phase별 별도 리뷰 면제)
+- **ADR-007**: §9 Bootstrap exception 폐기 (A.4 완료) — 정식 phase Exit 기준으로 전환
 
 ## Roadmap
 
@@ -158,8 +184,9 @@
 - [x] **A.0g** F13/F14/F15 정리 → HARNESS v0.4 (commit `d138d05`)
 - [x] **A.1** `roles/` 5파일 (README + 4 역할)
 - [x] **A.2** `templates/` 7파일 — §4.3 status enum 인스턴스화
-- [x] **A.3** `scripts/` 6파일 (codex-review.sh / codex-exec-review.sh / pre-review-gate.sh / new-project.sh / _codex_postprocess.py / README); smoke-tested
-- [ ] **A.4** ← **다음**: `phases/` 00-intake ~ 06-handoff 각 Exit 기준 (완성 시 §9 자동 폐기 → ADR-007로 명문화)
+- [x] **A.3** `scripts/` 6파일; smoke-tested
+- [x] **A.4** `phases/` 8파일 (README + 00~06) + ADR-007 (§9 폐기) + HARNESS §9 deprecation patch
+- [ ] **A.5** ← **다음**: **Phase A 통합 cross-review** — §9 폐기 후 첫 정식 cross-review (phases/04 Exit 기준 적용). Codex가 roles/templates/scripts/phases 전체 + HARNESS v0.4 차이를 한 번에 검증 → 결과를 반영해 HARNESS v0.5 정식판으로 태깅
 - [ ] **A.4** `phases/` — 00-intake ~ 06-handoff (완성 시 §9 자동 폐기 → ADR로 명문화)
 - [ ] **A.5** Phase A 전체 cross-review → HARNESS v0.5 정식
 
@@ -171,9 +198,9 @@
 
 ## Next action
 
-- **사용자**: A.3 결과(scripts/ 6파일) 검토 + 승인. 승인 시 commit + A.4 진입 지시.
-- **Claude**: 승인 후 commit → A.4 (`phases/` 7파일 — 00-intake ~ 06-handoff Exit 기준).
-- **Codex**: 대기 (ADR-006에 따라 다음 리뷰는 A.5).
+- **사용자**: A.4 결과 검토 + 승인. 승인 시 commit → A.5(Phase A 통합 cross-review) 진입 지시. A.5는 codex 호출이라 약 ~200K 토큰 추가 예상 (누적 211,657 → ~410K).
+- **Claude**: 승인 후 commit → A.5 진입. `codex exec` 호출 (phases/04 Exit 기준 적용), 결과 처리 후 HARNESS v0.5.
+- **Codex**: A.5에서 다음 호출 예정 (ADR-006 마지막 적용 인스턴스).
 
 ## Open findings
 

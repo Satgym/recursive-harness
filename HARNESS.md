@@ -229,7 +229,11 @@ STATUS.md는 다음 섹션을 **모두** 포함해야 한다 (없으면 양식 �
 - **v0.4** (2026-05-25, 본 파일): A.0g micro-patch — F13 §12.2 base branch 모순 해소, F14 §4.3 artifact-specific status enum 분리 + `deferred_reason` 필드 신설, F15 §9 임시 게이트가 §11 disputed 처리 cross-ref
 - v0.5 (예정): Phase A.1~A.5 완료 통합 후 정식 cross-review 반영
 
-## 9. Bootstrap exception (Phase A 한정)
+## 9. Bootstrap exception (Phase A 한정) — **DEPRECATED**
+
+> **Status**: deprecated since 2026-05-25 by [ADR-007](DECISIONS.md). Phase A.4 완료([phases/](phases/) 정식 문서)로 자동 폐기. 모든 phase 진행은 `phases/<phase>.md`의 정식 Exit 기준을 따른다.
+>
+> 본 §9는 history record로 유지. HARNESS v0.5 (A.5 통합 cross-review 후)에서 archival 섹션 또는 별도 보관소로 이동 검토.
 
 Phase A의 sub-phase 진행 동안엔 정식 Blueprint/Module Plan/phases 양식이 아직 없으므로, HC-1/HC-4의 정식 게이트를 다음 **임시 게이트**로 대체:
 

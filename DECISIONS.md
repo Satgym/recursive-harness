@@ -34,7 +34,7 @@
 - ADR-006(Phase A 동안 codex 리뷰 시점 = A.0a/A.0f/A.5)도 A.5 완료 후 자연 종료 — 그 후엔 모듈마다 phase 04 cross-review가 표준
 - v0.5 HARNESS 정식판에서 §9 본문을 archival 섹션 또는 `docs/history/` 같은 별도 위치로 이동 검토 (사용자 결정 사항)
 
-**Approval**: pending — A.4 사용자 검토 후 timestamp 채움
+**Approval**: user @ 2026-05-25T13:44, mode=strict
 
 ---
 

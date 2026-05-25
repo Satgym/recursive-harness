@@ -1,15 +1,15 @@
-# HARNESS.md — 하니스 헌법 (v0.4)
+# HARNESS.md — 하니스 헌법 (v0.5)
 
 > 이 파일은 Claude와 Codex 모두가 따르는 **절대 규칙**과 **워크플로우 정의**다.
 > 변경은 §6 "하니스 수정 절차"를 거쳐야 한다.
-> **v0.3 → v0.4**: A.0g micro-patch — F13/F14/F15 정리. 변경 내역은 §8 참조.
+> **v0.4 → v0.5**: A.5b 정리 — F16/F19 (§9 deprecation 본문 일관화 + approver enum 확장). Phase A 종결판. 변경 내역은 §8 참조.
 
 ---
 
 ## 0. 메타-원칙
 
 이 하니스는 자기 자신도 하니스 규칙으로 빌드한다 (메타 부트스트랩, dogfood).
-다만 §9 "Bootstrap exception"이 정의하는 임시 게이트가 Phase A 동안 적용된다.
+모든 phase 진행은 [phases/](phases/)의 정식 Exit 기준을 따른다. (Phase A 빌드 중 사용된 §9 Bootstrap exception은 ADR-007로 deprecated — §9는 history record로만 보존.)
 
 ## 1. 절대 규칙 (Hard Constraints)
 
@@ -18,7 +18,7 @@
 | HC-1 | **Plan-First, Code-Late** | Blueprint 승인 전 코드 X. Module Plan 승인 전 해당 모듈 코드 X |
 | HC-2 | **File-Persistent** | 모든 결정·계획·리뷰는 파일로 영속화. 대화 기억에 의존 금지 |
 | HC-3 | **Drift-Aware** | phase 경계와 세션 시작 시 "지금 Blueprint와 일치하나?" 자가점검 |
-| HC-4 | **Gate-Bound** | phase 간 이동은 해당 phase의 Exit 기준 만족 필수 (Phase A 동안은 §9 임시 게이트) |
+| HC-4 | **Gate-Bound** | phase 간 이동은 [phases/<phase>.md](phases/)의 Exit 기준 만족 필수 (§9는 ADR-007로 deprecated) |
 | HC-5 | **Role-Default** | Claude=구현자, Codex=리뷰어. 역할 스왑은 명시적 결정 + ADR |
 | HC-6 | **Status-Updated** | 모든 작업 종료 시 STATUS.md 갱신 (생략 시 그 작업은 미완으로 간주) |
 | HC-7 | **Secrets-Redacted** | 시크릿/자격증명/PII는 모든 산출물·로그·리뷰에서 즉시 redact. 어떤 모드에서도 평문 저장 금지 |
@@ -58,7 +58,7 @@
 [06 Handoff]   STATUS.md 갱신 → 다음 모듈로 또는 종료
 ```
 
-각 phase Exit 기준은 `phases/<phase>.md`에 상세 명시 (Phase A.4에서 작성 예정). 그 전까지는 §9 임시 게이트 적용.
+각 phase Exit 기준은 [phases/](phases/)에 정식 명시 (00-intake.md ~ 06-handoff.md). §9 Bootstrap exception은 ADR-007로 deprecated (history record).
 
 ## 4. 산출물 표준 위치 & Front-matter 표준
 
@@ -95,7 +95,7 @@ date: 2026-05-25
 author: claude | codex | user
 status: <artifact-specific enum, 아래 참조>
 approval:                    # 승인된 경우만
-  approver: user | codex-review | claude-self-test
+  approver: user | codex-review | claude-reviewer | claude-self-test
   approved_at: 2026-05-25T11:03
   mode: strict | balanced | autonomous
   scope: <text>
@@ -212,7 +212,7 @@ STATUS.md는 다음 섹션을 **모두** 포함해야 한다 (없으면 양식 �
 ```yaml
 - artifact: <상대 경로>
   version_or_hash: "v0.2"
-  approver: user | codex-review | claude-self-test
+  approver: user | codex-review | claude-reviewer | claude-self-test
   mode: strict | balanced | autonomous
   approved_at: 2026-05-25T15:30
   scope: <어디까지 승인되는지>
@@ -226,8 +226,8 @@ STATUS.md는 다음 섹션을 **모두** 포함해야 한다 (없으면 양식 �
 - **v0.1** (2026-05-25): 초기 6개 문서 골격
 - **v0.2** (2026-05-25): Codex seed-review 5개 핵심 finding 반영 — HC-7/8/9 신설(F11), Strictness 통일(F3), §7 STATUS 양식 + Approval record(F2/F9), §9 Bootstrap exception(F1), §5 Review determinism(추가 제안 #7)
 - **v0.3** (2026-05-25): A.0e 통합 — F7 분쟁 프로토콜(§11), Postmortem triggers(§6.3-6.4), Cost guardrails(§5.4), Dogfood criteria(§10), Branch/git policy(§12), Artifact front-matter 표준(§4.3)
-- **v0.4** (2026-05-25, 본 파일): A.0g micro-patch — F13 §12.2 base branch 모순 해소, F14 §4.3 artifact-specific status enum 분리 + `deferred_reason` 필드 신설, F15 §9 임시 게이트가 §11 disputed 처리 cross-ref
-- v0.5 (예정): Phase A.1~A.5 완료 통합 후 정식 cross-review 반영
+- **v0.4** (2026-05-25): A.0g micro-patch — F13 §12.2 base branch 모순 해소, F14 §4.3 artifact-specific status enum 분리 + `deferred_reason` 필드 신설, F15 §9 임시 게이트가 §11 disputed 처리 cross-ref
+- **v0.5** (2026-05-25, 본 파일): Phase A 종결판. A.5 통합 cross-review 반영 — F16 (§0/HC-4/§3에서 §9 deprecated 일관화), F19 (§4.3/§7 approver enum에 `claude-reviewer` 추가). 기타 F17/F18/F20-F26은 CLAUDE/DECISIONS/scripts/templates/phases 변경으로 처리
 
 ## 9. Bootstrap exception (Phase A 한정) — **DEPRECATED**
 

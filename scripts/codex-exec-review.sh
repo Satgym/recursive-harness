@@ -1,45 +1,66 @@
 #!/usr/bin/env bash
 # codex-exec-review.sh — Wrapper around `codex exec` for text-level review
-# of Blueprint / Module Plan / ADR / harness docs.
+# of Blueprint / Module Plan / ADR / harness docs. Same metadata guarantees as
+# codex-review.sh (§5.3 review determinism).
 #
 # Usage:
 #   scripts/codex-exec-review.sh --prompt-file <path>
 #                                [--phase <id>] [--slug <name>]
+#                                [--review-round <e.g. A.5>] [--prior-review <path>]
+#                                [--severity <enum>] [--target <text>]
 #                                [--skip-git-repo-check]
 
 set -euo pipefail
 ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 cd "$ROOT"
 
+need_value() {
+  if [[ -z "${2:-}" || "$2" == --* ]]; then
+    echo "Error: $1 requires a value" >&2
+    exit 2
+  fi
+}
+
 PHASE=""; SLUG="exec-review"; PROMPT_FILE=""; SKIP_GIT=0
+REVIEW_ROUND=""; PRIOR_REVIEW=""; SEVERITY=""; TARGET=""
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --phase) PHASE="$2"; shift 2;;
-    --slug) SLUG="$2"; shift 2;;
-    --prompt-file) PROMPT_FILE="$2"; shift 2;;
-    --skip-git-repo-check) SKIP_GIT=1; shift;;
-    -h|--help) sed -n '2,/^set/p' "$0" | sed '$d'; exit 0;;
+    --phase)                 need_value "$1" "${2:-}"; PHASE="$2"; shift 2;;
+    --slug)                  need_value "$1" "${2:-}"; SLUG="$2"; shift 2;;
+    --prompt-file)           need_value "$1" "${2:-}"; PROMPT_FILE="$2"; shift 2;;
+    --review-round)          need_value "$1" "${2:-}"; REVIEW_ROUND="$2"; shift 2;;
+    --prior-review)          need_value "$1" "${2:-}"; PRIOR_REVIEW="$2"; shift 2;;
+    --severity)              need_value "$1" "${2:-}"; SEVERITY="$2"; shift 2;;
+    --target)                need_value "$1" "${2:-}"; TARGET="$2"; shift 2;;
+    --skip-git-repo-check)   SKIP_GIT=1; shift;;
+    -h|--help)               sed -n '2,/^set -euo/p' "$0" | sed '$d' | sed 's/^# //'; exit 0;;
     *) echo "Unknown arg: $1" >&2; exit 2;;
   esac
 done
 
 if [[ -z "$PROMPT_FILE" || ! -f "$PROMPT_FILE" ]]; then
-  echo "Required: --prompt-file <path>" >&2
+  echo "Required: --prompt-file <existing path>" >&2
   exit 2
 fi
 
+# --- config helper with tomllib + tomli fallback (F21) ---
 read_config() {
-  python3 - "$1" "${2:-}" <<'PY' 2>/dev/null || echo "${2:-}"
+  local key="$1" default="${2:-}"
+  local py_script
+  py_script='
 import sys, os
 try:
     import tomllib
 except ImportError:
-    sys.exit(1)
+    try:
+        import tomli as tomllib
+    except ImportError:
+        print("__NO_TOML__"); sys.exit(0)
 key, default = sys.argv[1], sys.argv[2]
-path = ".harness/config.toml"
-if not os.path.exists(path):
+p = ".harness/config.toml"
+if not os.path.exists(p):
     print(default); sys.exit(0)
-with open(path, "rb") as f:
+with open(p, "rb") as f:
     c = tomllib.load(f)
 v = c
 for k in key.split("."):
@@ -48,7 +69,19 @@ for k in key.split("."):
     else:
         print(default); sys.exit(0)
 print(v)
-PY
+'
+  local py out
+  for py in python3.13 python3.12 python3.11 python3; do
+    command -v "$py" >/dev/null 2>&1 || continue
+    out="$("$py" -c "$py_script" "$key" "$default" 2>/dev/null)" || continue
+    if [[ "$out" == "__NO_TOML__" ]]; then
+      continue
+    fi
+    echo "$out"
+    return 0
+  done
+  echo "[config] WARNING: no python with tomllib/tomli; .harness/config.toml is being IGNORED. Install python 3.11+ or 'pip install tomli'." >&2
+  echo "$default"
 }
 
 MODEL="$(read_config models.exec)"
@@ -68,10 +101,21 @@ DEST="$DEST_DIR/${PHASE:+${PHASE}-}${DATE}-${SLUG}.md"
 RAW="$(mktemp -t codex-exec-review.XXXXXX)"
 trap 'rm -f "$RAW"' EXIT
 
+INVOKED_AT="$(date -u +%Y-%m-%dT%H:%M)"
 echo "[codex-exec-review] cmd: ${CMD[*]} < $PROMPT_FILE" >&2
 echo "[codex-exec-review] dest: $DEST" >&2
 
 "${CMD[@]}" < "$PROMPT_FILE" 2>&1 | tee "$RAW"
 
-python3 "$ROOT/scripts/_codex_postprocess.py" "$RAW" "$DEST"
+PP_ARGS=()
+[[ -n "$PHASE" ]]         && PP_ARGS+=(--phase "$PHASE")
+[[ -n "$SLUG" ]]          && PP_ARGS+=(--slug "$SLUG")
+[[ -n "$REVIEW_ROUND" ]]  && PP_ARGS+=(--review-round "$REVIEW_ROUND")
+[[ -n "$PRIOR_REVIEW" ]]  && PP_ARGS+=(--prior-review "$PRIOR_REVIEW")
+[[ -n "$SEVERITY" ]]      && PP_ARGS+=(--severity "$SEVERITY")
+[[ -n "$TARGET" ]]        && PP_ARGS+=(--target "$TARGET")
+PP_ARGS+=(--prompt-source "$PROMPT_FILE")
+PP_ARGS+=(--invoked-at "$INVOKED_AT")
+
+python3 "$ROOT/scripts/_codex_postprocess.py" "$RAW" "$DEST" "${PP_ARGS[@]}"
 echo "[codex-exec-review] saved: $DEST" >&2

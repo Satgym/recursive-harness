@@ -1,3 +1,24 @@
+<!--
+TWO MODES:
+  (A) DECISIONS.md inline ADR — front-matter 불필요. 본 파일 아래의 `## ADR-...` 블록을 사용.
+  (B) standalone ADR file (.harness/decisions/ADR-NNNN-<slug>.md) — 위 inline 형식 *위에* 다음 YAML front-matter 부착:
+
+---
+artifact: adr
+version: v1
+date: YYYY-MM-DD
+author: claude | codex | user
+status: proposed | accepted | superseded | rejected
+supersedes: ADR-NNN  # optional
+amends: ADR-NNN      # optional
+approval:
+  approver: user | codex-review | claude-reviewer | claude-self-test
+  approved_at: YYYY-MM-DDTHH:MM
+  mode: strict | balanced | autonomous
+references: [<file_or_id>, ...]
+---
+-->
+
 ## ADR-<NNN> — <Title>
 
 **Date**: <YYYY-MM-DD> · **Status**: proposed   <!-- proposed | accepted | superseded | rejected -->

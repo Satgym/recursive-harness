@@ -26,9 +26,9 @@
 - 머신용 필드값은 canonical 영어 enum 사용: `severity / status / role / phase / strictness` (구체 목록은 AGENTS.md 절대 규칙 참조). 본문/설명은 한국어 OK
 
 ## INBOX 처리 의무
-- 세션 시작 시 `ls INBOX/` 확인
+- 세션 시작 시 `ls INBOX/` 확인 (unread = `INBOX/codex-feedback-*.md` with `status: open`)
 - 새 파일 발견 → STATUS.md "Open findings"에 항목 추가
-- 처리 완료 후 파일 상단 `status`를 `resolved` 또는 `deferred(<이유>)`로 변경하고 `INBOX/processed/`로 이동
+- 처리 완료 후 파일 front-matter의 `status`를 `resolved` / `disputed` / `deferred` (+ `deferred_reason: <text>`) 중 하나로 변경하고 `INBOX/processed/`로 이동. `deferred(<이유>)` 합성 표기는 금지(canonical enum 위반).
 
 ## 메모리 vs 프로젝트 문서
 - 사용자 선호도/스타일: `~/.claude/.../memory/` (자동 메모리 시스템)

@@ -1,0 +1,19 @@
+# .harness/config.toml — harness self-build dogfood configuration
+# This file makes the harness repo a harness-managed project recursively.
+
+project_name = "harness-self-build"
+project_type = "_generic"
+
+[strictness]
+mode = "strict"
+
+[git]
+base_branch = "main"
+
+[models]
+# Use codex CLI defaults (currently gpt-5.5 per user's available models).
+# Override here when user upgrades.
+
+[reasoning]
+review = "high"     # A.5 integrated cross-review needs deep reasoning
+exec   = "high"

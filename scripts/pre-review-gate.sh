@@ -1,57 +1,89 @@
 #!/usr/bin/env bash
 # pre-review-gate.sh — Run lint / typecheck / unit tests before a cross-review.
-# Detects project type from layout; runs whatever tooling is available.
-# Exits 0 only if all attempted checks pass.
+# Detects project type from layout. Counts attempted checks; "0 attempted" is
+# treated as FAIL unless `--allow-no-checks` is given (F23 fix).
+#
+# Usage:
+#   scripts/pre-review-gate.sh [--allow-no-checks]
 
 set -uo pipefail
 ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 cd "$ROOT"
 
+ALLOW_NO_CHECKS=0
+for arg in "$@"; do
+  case "$arg" in
+    --allow-no-checks) ALLOW_NO_CHECKS=1;;
+    -h|--help) sed -n '2,/^set -uo/p' "$0" | sed '$d' | sed 's/^# //'; exit 0;;
+    *) echo "Unknown arg: $arg" >&2; exit 2;;
+  esac
+done
+
 ok=1
+attempted=0
 fail() { echo "[gate] FAIL: $*" >&2; ok=0; }
 pass() { echo "[gate] PASS: $*" >&2; }
+attempt() { attempted=$((attempted+1)); }
 
 # --- JS / TS ---
 if [[ -f package.json ]] && command -v npm >/dev/null 2>&1; then
   echo "[gate] detected JS/TS (package.json)" >&2
-  npm run -s lint --if-present       && pass "npm lint"       || fail "npm lint"
-  npm run -s typecheck --if-present  && pass "npm typecheck"  || fail "npm typecheck"
-  npm test --silent --if-present     && pass "npm test"       || fail "npm test"
+  attempt; npm run -s lint --if-present      && pass "npm lint"      || fail "npm lint"
+  attempt; npm run -s typecheck --if-present && pass "npm typecheck" || fail "npm typecheck"
+  attempt; npm test --silent --if-present    && pass "npm test"      || fail "npm test"
 fi
 
 # --- Python ---
 if [[ -f pyproject.toml || -f setup.py ]]; then
   echo "[gate] detected Python" >&2
-  command -v ruff   >/dev/null && { ruff check .       && pass "ruff"   || fail "ruff"; }
-  command -v mypy   >/dev/null && { mypy .             && pass "mypy"   || fail "mypy"; }
-  command -v pytest >/dev/null && { pytest -q          && pass "pytest" || fail "pytest"; }
+  command -v ruff   >/dev/null && { attempt; ruff check .  && pass "ruff"   || fail "ruff"; }
+  command -v mypy   >/dev/null && { attempt; mypy .        && pass "mypy"   || fail "mypy"; }
+  command -v pytest >/dev/null && { attempt; pytest -q     && pass "pytest" || fail "pytest"; }
 fi
 
 # --- Rust ---
 if [[ -f Cargo.toml ]] && command -v cargo >/dev/null 2>&1; then
   echo "[gate] detected Rust" >&2
-  cargo clippy --quiet -- -D warnings && pass "clippy"     || fail "clippy"
-  cargo test --quiet                  && pass "cargo test" || fail "cargo test"
+  attempt; cargo clippy --quiet -- -D warnings && pass "clippy"     || fail "clippy"
+  attempt; cargo test --quiet                  && pass "cargo test" || fail "cargo test"
 fi
 
 # --- Go ---
 if [[ -f go.mod ]] && command -v go >/dev/null 2>&1; then
   echo "[gate] detected Go" >&2
-  go vet ./...   && pass "go vet"  || fail "go vet"
-  go test ./...  && pass "go test" || fail "go test"
+  attempt; go vet ./...   && pass "go vet"  || fail "go vet"
+  attempt; go test ./...  && pass "go test" || fail "go test"
 fi
 
-# --- Harness self ---
-# 본 레포(HARNESS.md + roles/ + templates/ + scripts/)에는 아직 자동 lint/test 없음.
-# A.5 통합 cross-review 이후 shellcheck, markdownlint 등 도입 검토 (Phase D 후보).
-if [[ -f HARNESS.md && -d roles && -d templates ]] && ! [[ -f package.json || -f pyproject.toml || -f Cargo.toml || -f go.mod ]]; then
-  echo "[gate] harness self (no auto-checks yet; TODO: shellcheck / markdownlint)" >&2
+# --- Harness self (this repo) ---
+# If we look like the harness repo (HARNESS.md + roles + templates + scripts + phases),
+# run minimal self smoke checks. F23: ensures attempted_count > 0.
+if [[ -f HARNESS.md && -d roles && -d templates && -d scripts && -d phases ]]; then
+  echo "[gate] detected harness self-build" >&2
+  for sh in scripts/*.sh; do
+    attempt; bash -n "$sh" && pass "bash -n $sh" || fail "bash -n $sh"
+  done
+  for py in scripts/*.py; do
+    [[ -f "$py" ]] || continue
+    attempt; python3 -m py_compile "$py" && pass "py_compile $py" || fail "py_compile $py"
+  done
+fi
+
+# --- Empty-checks policy (F23) ---
+if [[ $attempted -eq 0 ]]; then
+  if [[ $ALLOW_NO_CHECKS -eq 1 ]]; then
+    echo "[gate] WARNING: 0 checks attempted (allowed via --allow-no-checks)" >&2
+    exit 0
+  else
+    echo "[gate] FAIL: 0 checks attempted. Add tooling or pass --allow-no-checks (HC-4 / phases/04 Entry intent)" >&2
+    exit 1
+  fi
 fi
 
 if [[ $ok -eq 1 ]]; then
-  echo "[gate] ALL PASS"
+  echo "[gate] ALL PASS ($attempted checks)"
   exit 0
 else
-  echo "[gate] one or more checks FAILED — fix before requesting codex review" >&2
+  echo "[gate] one or more checks FAILED ($attempted attempted) — fix before requesting codex review" >&2
   exit 1
 fi

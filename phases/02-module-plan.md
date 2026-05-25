@@ -34,7 +34,7 @@
 - [ ] Test plan에 unit + (필요 시) integration 모두 매핑됨
 - [ ] **strict 모드**: Codex 리뷰 통과 + 사용자 승인
 - [ ] **balanced 모드**: Codex 리뷰 통과 (사용자 승인 갈음)
-- [ ] **autonomous 모드**: claude-self-test 완료 (cross-review 대체 불가, A.5 통합 리뷰에서 사후 검증)
+- [ ] **autonomous 모드**: claude-self-test 완료 (cross-review 대체 불가, 다음 정식 cross-review 또는 periodic audit에서 사후 검증)
 - [ ] STATUS Approved artifacts에 module plan 등재
 
 ## 주도 역할

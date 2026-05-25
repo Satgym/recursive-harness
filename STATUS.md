@@ -9,18 +9,17 @@
 |---|---|
 | Project | 하니스 자체 빌드 (메타 부트스트랩) |
 | Phase | A — 골격 구축 |
-| Active sub-phase | **A.4 작업 완료 → A.5 진입 대기** (phases/ 8파일 + ADR-007 + §9 deprecation) |
+| Active sub-phase | **A.5b 완료 → v0.5 commit + Phase B 진입 대기** |
 | Strictness | strict |
-| Harness version | v0.4 (HARNESS §9 deprecation 노트 패치는 staging, A.4 commit에 포함) |
-| Git | main, HEAD = `95ab860` (A.3 commit). phases/ 8파일 + DECISIONS.md (ADR-007) + HARNESS.md (§9 patch) + STATUS 변경 untracked |
-| Last updated | 2026-05-25T13:44 by Claude |
+| Harness version | **v0.5** (Phase A 종결판, commit 대기) |
+| Git | main, HEAD = `15bf6fb` (A.4 commit). A.5+A.5b 모든 변경 untracked |
+| Last updated | 2026-05-25T14:10 by Claude |
 
 ## Active gate
 
-- **Gate**: A.4 (`phases/` 8파일 + ADR-007 §9 deprecation) → **A.5 (Phase A 통합 cross-review)**
-- **Blocked on**: 사용자가 A.4 결과 검토 + 승인. 승인 시 commit + A.5 진입.
-- **Approval needed**: yes — phases/ 8파일, ADR-007, HARNESS §9 deprecation patch
-- **§9 → phases/ 전환 효과**: A.5는 §9 폐기 후 *첫 정식 cross-review*. [phases/04-cross-review.md](phases/04-cross-review.md)의 Exit 기준이 적용됨
+- **Gate**: A.5b (11 findings 모두 resolved) → **v0.5 commit + Phase B 진입**
+- **Blocked on**: 사용자가 A.5b 결과 검토 + 승인. 승인 시 commit + Phase B(`skills/`) 진입.
+- **Approval needed**: yes — HARNESS v0.5, CLAUDE/DECISIONS/scripts/templates/phases 변경. v0.5 태그가 Phase A 종결.
 
 ## Required reads (이 세션 시작 시)
 
@@ -147,7 +146,6 @@
 - artifact: DECISIONS.md (ADR-007)
   version_or_hash: "v0.1+ADR-007"
   approver: user
-  approved_at: 2026-05-25T13:44
   mode: strict
   approved_at: 2026-05-25T13:44
   scope: §9 Bootstrap exception 폐기 명문화. phases/ 정식 게이트가 §9를 대체.
@@ -155,10 +153,30 @@
 - artifact: HARNESS.md §9 deprecation patch
   version_or_hash: "v0.4+A.4-patch"
   approver: user
-  approved_at: 2026-05-25T13:44
   mode: strict
   approved_at: 2026-05-25T13:44
   scope: §9 헤더에 deprecated 상태 표시 + ADR-007 참조. 본문은 v0.5에서 archival 검토.
+
+- artifact: .harness/config.toml + .harness/prompts/a5-integrated-review.md
+  version_or_hash: "dogfood-v0.1"
+  approver: user
+  mode: strict
+  approved_at: 2026-05-25T13:44
+  scope: A.5 dogfood — harness 자신을 프로젝트로 다루는 임시 .harness/. NOTE F21(아래 Open findings) 미해결로 reasoning.review="high" 설정이 실제 호출엔 적용되지 않음 (medium 사용됨).
+
+- artifact: .harness/reviews/a5-20260525-integrated.md (Codex A.5 cross-review)
+  version_or_hash: "codex-session-019e5d7c"
+  approver: codex-review
+  mode: strict
+  approved_at: 2026-05-25T13:50
+  scope: A.5 통합 cross-review 결과 — 11 findings (F16~F26), 0 blocker, 6 major, 5 minor, HC 위반 없음, verdict ready_for_v0.5=no
+
+- artifact: HARNESS.md v0.5 + CLAUDE.md A.5b patch + DECISIONS.md ADR-007 approval + scripts/ (5 files) + templates/ADR.template.md + phases/02-module-plan.md (A.5b 모든 finding 처리)
+  version_or_hash: "v0.5"
+  approver: user
+  mode: strict
+  approved_at: 2026-05-25T14:22
+  scope: A.5 11 findings (F16~F26) 모두 resolved. Phase A 종결판 = HARNESS v0.5. pre-review-gate self-smoke 5 checks PASS.
 ```
 
 ## Decision summary
@@ -185,8 +203,9 @@
 - [x] **A.1** `roles/` 5파일 (README + 4 역할)
 - [x] **A.2** `templates/` 7파일 — §4.3 status enum 인스턴스화
 - [x] **A.3** `scripts/` 6파일; smoke-tested
-- [x] **A.4** `phases/` 8파일 (README + 00~06) + ADR-007 (§9 폐기) + HARNESS §9 deprecation patch
-- [ ] **A.5** ← **다음**: **Phase A 통합 cross-review** — §9 폐기 후 첫 정식 cross-review (phases/04 Exit 기준 적용). Codex가 roles/templates/scripts/phases 전체 + HARNESS v0.4 차이를 한 번에 검증 → 결과를 반영해 HARNESS v0.5 정식판으로 태깅
+- [x] **A.4** `phases/` 8파일 + ADR-007 (§9 폐기) + HARNESS §9 deprecation patch
+- [x] **A.5** Phase A 통합 cross-review 수령 (codex `019e5d7c`, tokens 107,011, 11 findings)
+- [x] **A.5b** F16~F26 모두 resolved → HARNESS v0.5 + CLAUDE/DECISIONS/scripts/templates/phases patch + pre-review-gate 5 checks PASS
 - [ ] **A.4** `phases/` — 00-intake ~ 06-handoff (완성 시 §9 자동 폐기 → ADR로 명문화)
 - [ ] **A.5** Phase A 전체 cross-review → HARNESS v0.5 정식
 
@@ -198,13 +217,29 @@
 
 ## Next action
 
-- **사용자**: A.4 결과 검토 + 승인. 승인 시 commit → A.5(Phase A 통합 cross-review) 진입 지시. A.5는 codex 호출이라 약 ~200K 토큰 추가 예상 (누적 211,657 → ~410K).
-- **Claude**: 승인 후 commit → A.5 진입. `codex exec` 호출 (phases/04 Exit 기준 적용), 결과 처리 후 HARNESS v0.5.
-- **Codex**: A.5에서 다음 호출 예정 (ADR-006 마지막 적용 인스턴스).
+- **사용자**: A.5b 결과 검토 + 승인. 승인 시 commit (Phase A 종결, v0.5 태그) → Phase B(`skills/`) 진입 지시.
+- **Claude**: 승인 후 commit + Phase B로. Phase B는 skills/ 9종 작성 (kickoff-project / plan-blueprint / plan-module / request-codex-review / apply-review / checkpoint-handoff / resume-session / drift-check / harness-amend).
+- **Codex**: A.5c spot-check은 §5.4 사용자 확인 필요 (현재 HARNESS review 3회 누적). 디폴트는 skip — Phase B 종결 시 다음 codex 호출.
 
 ## Open findings
 
-- **0 open** (모두 closed/processed)
+### A.5 통합 cross-review (codex `019e5d7c`, `.harness/reviews/a5-20260525-integrated.md`)
+
+| ID | severity | 제목 | 상태 |
+|---|---|---|---|
+| F16 | major | §9 deprecation HARNESS 본문 미반영 | **resolved** (HARNESS §0/HC-4/§3 + 헤더 + §8 v0.5) |
+| F17 | major | CLAUDE.md `deferred(<이유>)` 잔존 | **resolved** (CLAUDE.md INBOX 의무 갱신) |
+| F18 | major | ADR-007 approval ↔ STATUS 충돌 + HEAD stale + 중복 키 | **resolved** (ADR-007 Approval 채움 + 중복 키 제거 + HEAD 갱신) |
+| F19 | minor | approver enum에 claude-reviewer 없음 | **resolved** (HARNESS §4.3 + §7 approver enum 확장) |
+| F20 | major | postprocess REVIEW 필수 필드 누락 | **resolved** (_codex_postprocess.py argparse 확장 + 양쪽 wrapper 전달) |
+| F21 | major | tomllib silent ignore (python 3.9) | **resolved** (read_config가 python3.11/12/13 탐색 + tomli fallback + 명시적 stderr WARNING) |
+| F22 | minor | wrapper 인자 검증 부족 | **resolved** (need_value helper + source mutual exclusion) |
+| F23 | major | pre-review-gate 0 checks도 PASS | **resolved** (attempted_count > 0 검증 + --allow-no-checks 옵션 + harness self-smoke 5 checks) |
+| F24 | minor | new-project.sh escape | **resolved** (NAME/TYPE regex 검증 + awk로 sed-safe 치환) |
+| F25 | minor | phases/02 "A.5 통합 리뷰" 잔존 | **resolved** ("다음 정식 cross-review 또는 periodic audit"로 일반화) |
+| F26 | minor | ADR.template front-matter 없음 | **resolved** (standalone ADR용 front-matter 가이드 주석 추가) |
+
+**남은 open: 0개** ✓ (모두 resolved, A.5c spot-check는 §5.4 사용자 확인 필요 시에만)
 
 ## INBOX
 
@@ -214,7 +249,8 @@
 ## Notes
 
 ### Codex 토큰·재리뷰
-- **Cumulative tokens**: A.0a = 79,748 / A.0f = 131,909 / **누적 = 211,657**
+- **Cumulative tokens**: A.0a = 79,748 / A.0f = 131,909 / A.5 = 107,011 / **누적 = 318,668**
+- **재리뷰 횟수** (HARNESS 대상, §5.4): 3회 (A.0a, A.0f, A.5). A.5c spot-check가 4회째 — 사용자 명시 확인 필요.
 - **HARNESS.md 대상 cross-review**: 2회 (A.0a seed, A.0f v0.3). 3회 째 가능, 4회 째 §5.4에 따라 사용자 확인 필요.
 
 ### §9 #2 해석 — A.1 별도 리뷰 vs 통합

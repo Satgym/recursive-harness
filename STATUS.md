@@ -8,18 +8,18 @@
 | 항목 | 값 |
 |---|---|
 | Project | 하니스 자체 빌드 (메타 부트스트랩) |
-| Phase | A — 골격 구축 |
-| Active sub-phase | **A.5b 완료 → v0.5 commit + Phase B 진입 대기** |
+| Phase | **B — 스킬 풀** |
+| Active sub-phase | **B 작업 완료 → cross-review 시점 결정 대기** |
 | Strictness | strict |
-| Harness version | **v0.5** (Phase A 종결판, commit 대기) |
-| Git | main, HEAD = `15bf6fb` (A.4 commit). A.5+A.5b 모든 변경 untracked |
-| Last updated | 2026-05-25T14:10 by Claude |
+| Harness version | v0.5 (Phase A 종결 commit `2267d76`) |
+| Git | main, HEAD = `2267d76` (v0.5 commit). skills/ 10파일 untracked |
+| Last updated | 2026-05-25T14:28 by Claude |
 
 ## Active gate
 
-- **Gate**: A.5b (11 findings 모두 resolved) → **v0.5 commit + Phase B 진입**
-- **Blocked on**: 사용자가 A.5b 결과 검토 + 승인. 승인 시 commit + Phase B(`skills/`) 진입.
-- **Approval needed**: yes — HARNESS v0.5, CLAUDE/DECISIONS/scripts/templates/phases 변경. v0.5 태그가 Phase A 종결.
+- **Gate**: Phase B (skills/ 10파일 작성) → 다음 phase (사용자 결정 — cross-review 여부 + Phase C)
+- **Blocked on**: 사용자가 Phase B 결과 검토 + 다음 액션 결정 (commit + cross-review vs commit만 + Phase C 진입).
+- **Approval needed**: yes — skills/ 10파일 + 옵션: codex cross-review 호출 (skills/는 새 산출물 첫 리뷰, §5.4 cost는 누적 318K)
 
 ## Required reads (이 세션 시작 시)
 
@@ -32,6 +32,7 @@
 7. `templates/README.md` + 6개 양식 파일 (A.2 결과)
 8. `scripts/README.md` + 4 main + 1 helper (A.3 결과; smoke-tested)
 9. `phases/README.md` + 7 phases (A.4 결과 — 00-intake ~ 06-handoff Exit 기준 정식 명세)
+10. `skills/README.md` + 9 skills (Phase B 결과 — procedural docs)
 7. (참고) `INBOX/processed/codex-feedback-20260525-v0.3-review.md`
 8. (참고) `INBOX/processed/codex-feedback-20260525-seed-review.md`
 
@@ -177,6 +178,13 @@
   mode: strict
   approved_at: 2026-05-25T14:22
   scope: A.5 11 findings (F16~F26) 모두 resolved. Phase A 종결판 = HARNESS v0.5. pre-review-gate self-smoke 5 checks PASS.
+
+- artifact: skills/ (10 files — README + kickoff-project + plan-blueprint + plan-module + request-codex-review + apply-review + checkpoint-handoff + resume-session + drift-check + harness-amend)
+  version_or_hash: "v0.1"
+  approver: user
+  mode: strict
+  approved_at: 2026-05-25T14:28
+  scope: 9 procedural docs + index. 각 skill의 Purpose / When / Inputs / Procedure / Outputs / Failure modes / Related 6섹션 양식.
 ```
 
 ## Decision summary
@@ -191,7 +199,7 @@
 
 ## Roadmap
 
-### Phase A — 골격 구축
+### Phase A — 골격 구축 (✓ 종결, v0.5 태그)
 - [x] **A.0** 사용자 5개 결정 + 씨앗 문서 6종
 - [x] **A.0a** Codex seed-review 수령
 - [x] **A.0b** Blocker + 핵심 major → HARNESS v0.2
@@ -209,17 +217,24 @@
 - [ ] **A.4** `phases/` — 00-intake ~ 06-handoff (완성 시 §9 자동 폐기 → ADR로 명문화)
 - [ ] **A.5** Phase A 전체 cross-review → HARNESS v0.5 정식
 
+### Phase B — 스킬 풀 (✓ 작업 완료, cross-review 시점 미정)
+- [x] **B** `skills/` 10파일 (README + 9 skills)
+- [ ] **B-review** (선택) — codex cross-review 받을지 결정
+- [ ] **B-commit** — 사용자 승인 후 commit
+
 ### 이후 phases
-- **Phase B**: `skills/` 9종
 - **Phase C**: `project-types/` (web 우선)
-- **Phase D**: 자기보호 메커니즘 정식화
-- **Phase E**: Dogfood + v1.0
+- **Phase D**: 자기보호 메커니즘 정식화 (drift / postmortem / conflict 실 운영 노하우 축적)
+- **Phase E**: Dogfood + v1.0 (HARNESS §10 기준)
 
 ## Next action
 
-- **사용자**: A.5b 결과 검토 + 승인. 승인 시 commit (Phase A 종결, v0.5 태그) → Phase B(`skills/`) 진입 지시.
-- **Claude**: 승인 후 commit + Phase B로. Phase B는 skills/ 9종 작성 (kickoff-project / plan-blueprint / plan-module / request-codex-review / apply-review / checkpoint-handoff / resume-session / drift-check / harness-amend).
-- **Codex**: A.5c spot-check은 §5.4 사용자 확인 필요 (현재 HARNESS review 3회 누적). 디폴트는 skip — Phase B 종결 시 다음 codex 호출.
+- **사용자**: Phase B 결과(skills/ 10파일) 검토 + 다음 액션 결정:
+  1. 승인 → commit만 + 바로 Phase C 진입 (codex 호출 생략, 다음 통합 라운드로 묶음)
+  2. 승인 → commit + codex cross-review (skills/ 새 산출물 첫 리뷰) → finding 처리 → Phase C
+  3. 일부 수정 요청
+- **Claude**: 사용자 결정에 따라 진행
+- **Codex**: 옵션 2 선택 시 호출 대기. 그 외 대기.
 
 ## Open findings
 

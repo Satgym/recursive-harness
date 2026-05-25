@@ -9,17 +9,17 @@
 |---|---|
 | Project | 하니스 자체 빌드 (메타 부트스트랩) |
 | Phase | A — 골격 구축 |
-| Active sub-phase | **A.1 작업 완료 → A.2 진입 대기** |
+| Active sub-phase | **A.2 작업 완료 → A.3 진입 대기** (templates/ 7파일) |
 | Strictness | strict |
 | Harness version | v0.4 (approved + committed) |
-| Git | main, HEAD = `d138d05` (A.0g commit). roles/ 5파일 untracked, commit 대기 |
-| Last updated | 2026-05-25T11:39 by Claude |
+| Git | main, HEAD = `aa611d6` (A.1 + ADR-006 commit). templates/ 7파일 untracked |
+| Last updated | 2026-05-25T12:09 by Claude |
 
 ## Active gate
 
-- **Gate**: A.1 (`roles/` 5파일 작성) → A.2 (`templates/`)
-- **Blocked on**: 사용자가 A.1 결과 검토 + 승인 + Codex 리뷰 시점 결정 (Notes 참조)
-- **Approval needed**: yes — roles/ 5파일, STATUS 변경, 그리고 §9 #2 적용 방식 (별도 리뷰 vs 통합)
+- **Gate**: A.2 (`templates/` 7파일 작성) → A.3 (`scripts/`)
+- **Blocked on**: 사용자가 A.2 결과 검토 + 승인. 승인 시 commit + A.3 진입.
+- **Approval needed**: yes — templates/ 7파일
 
 ## Required reads (이 세션 시작 시)
 
@@ -29,6 +29,7 @@
 4. `AGENTS.md` / `CLAUDE.md`
 5. `INBOX/README.md`
 6. `roles/README.md` + 4개 역할 파일 (A.1 결과)
+7. `templates/README.md` + 6개 양식 파일 (A.2 결과)
 7. (참고) `INBOX/processed/codex-feedback-20260525-v0.3-review.md`
 8. (참고) `INBOX/processed/codex-feedback-20260525-seed-review.md`
 
@@ -118,6 +119,13 @@
   mode: strict
   approved_at: 2026-05-25T11:39
   scope: ADR-006 — Phase A sub-phase별 codex 리뷰 시점 (3 timepoints: A.0a / A.0f / A.5)
+
+- artifact: templates/ (7 files — README + BLUEPRINT + MODULE-PLAN + REVIEW + ADR + POSTMORTEM + STATUS)
+  version_or_hash: "v0.1"
+  approver: user
+  mode: strict
+  approved_at: 2026-05-25T12:09
+  scope: 6 산출물 양식 정식 확정 (HARNESS §4.3 artifact-specific status enum 인스턴스화)
 ```
 
 ## Decision summary
@@ -140,9 +148,9 @@
 - [x] **A.0e** F7 + 추가 제안 5개 → HARNESS v0.3 + git init
 - [x] **A.0f** Codex 재리뷰 (3 new minor)
 - [x] **A.0g** F13/F14/F15 정리 → HARNESS v0.4 (commit `d138d05`)
-- [x] **A.1** `roles/` 5파일 작성 (README + 4 역할)
-- [ ] **A.2** ← **다음**: `templates/` — BLUEPRINT, MODULE-PLAN, REVIEW, ADR, POSTMORTEM, STATUS 양식 (이 때 §4.3 artifact-specific status enum 정식 확정)
-- [ ] **A.3** `scripts/` — codex-review.sh (config base branch 자동 주입), codex-exec-review.sh (stdout → INBOX 양식 변환), pre-review-gate.sh, new-project.sh
+- [x] **A.1** `roles/` 5파일 (README + 4 역할)
+- [x] **A.2** `templates/` 7파일 (README + 6 양식: BLUEPRINT/MODULE-PLAN/REVIEW/ADR/POSTMORTEM/STATUS) — §4.3 artifact-specific status enum 정식 확정
+- [ ] **A.3** ← **다음**: `scripts/` — codex-review.sh (config base branch 자동 주입), codex-exec-review.sh (stdout → INBOX 양식 변환), pre-review-gate.sh, new-project.sh
 - [ ] **A.4** `phases/` — 00-intake ~ 06-handoff (완성 시 §9 자동 폐기 → ADR로 명문화)
 - [ ] **A.5** Phase A 전체 cross-review → HARNESS v0.5 정식
 
@@ -154,11 +162,9 @@
 
 ## Next action
 
-- **사용자**: A.1 결과 검토 + 두 가지 결정:
-  1. roles/ 5파일 승인 여부 → 승인 시 commit
-  2. A.1 별도 Codex 리뷰 받을지, 아니면 A.5 통합 cross-review까지 미룰지 (Notes 참조)
-- **Claude**: 사용자 결정에 따라 commit (+ optional 리뷰 호출) → A.2 진입
-- **Codex**: 사용자가 결정에 따라 호출 또는 대기
+- **사용자**: A.2 결과(templates/ 7파일) 검토 + 승인. 승인 시 commit + A.3 진입 지시.
+- **Claude**: 승인 후 commit → A.3 (`scripts/` 4파일 작성).
+- **Codex**: 대기 (ADR-006에 따라 다음 리뷰는 A.5).
 
 ## Open findings
 

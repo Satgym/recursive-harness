@@ -18,6 +18,29 @@
 
 ---
 
+## ADR-006 — Phase A sub-phase별 Codex 리뷰 시점
+
+**Date**: 2026-05-25 · **Status**: accepted · **Amends**: — · **Supersedes**: —
+
+**Context**: HARNESS.md §9 (Bootstrap exception) 임시 게이트 Exit #2는 "Codex review를 받음"이라 명시되어 있다. 엄격 해석하면 모든 sub-phase(A.0b/c/d/e/g, A.1, A.2, A.3, A.4)마다 별도 codex 리뷰가 필요하나, 다수가 wording-level 또는 단일 디렉토리 추가 수준의 *증분 변경*이라 매번 리뷰는 토큰 낭비이고 cost guardrail(§5.4)과도 어긋난다.
+
+**Decision**: Phase A 동안의 codex 리뷰는 다음 3시점에만 받는다.
+1. **A.0a — seed review**: v0.1 씨앗 6문서 검토 (이미 완료, 12 findings + 7 proposals)
+2. **A.0f — v0.3 re-review**: PART A 이전 finding 닫힘 검증 + PART B 신규 §에 대한 새 finding 탐색 (이미 완료, 3 minor findings)
+3. **A.5 — Phase A 통합 cross-review**: roles/ + templates/ + scripts/ + phases/ 전체에 대해 마지막 통합 검증, HARNESS v0.5 정식화
+
+그 외 sub-phase(A.0b/c/d/e/g, A.1, A.2, A.3, A.4)는 별도 codex 리뷰 없이 진행. 단 진행 중 의문/위험이 발견되면 즉시 STATUS *Open findings* 또는 `INBOX/`에 기록 → A.5에서 처리.
+
+**Consequences**:
+- 비용 효율: 누적 토큰 ~211K (현재) → A.5 단일 라운드로 추가 ~200K 이내 추정 (저렴).
+- A.5에서 누적 finding이 많을 가능성 → 처리 라운드(A.5b/c/d 등) 길어질 수 있음. cost guardrail §5.4의 "재리뷰 3회 초과 시 사용자 확인"이 일찍 발동될 수 있음.
+- A.2/A.3/A.4 작업 중 발견되는 *작은 의문*은 INBOX 능동 피드백(C 채널) 또는 STATUS Open findings로 항상 보존되어야 누락 방지.
+- A.4 완료 시 §9 자동 폐기 → ADR-006도 자연 종료 (정식 phase Exit 기준이 §9를 대체).
+
+**Approval**: user @ 2026-05-25T11:39, mode=strict
+
+---
+
 ## ADR-005 — 프로젝트 타입 우선순위
 
 **Date**: 2026-05-25 · **Status**: accepted

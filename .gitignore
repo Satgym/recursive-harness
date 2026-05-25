@@ -1,0 +1,18 @@
+# OS noise
+.DS_Store
+Thumbs.db
+*.swp
+*~
+
+# Editor noise
+.vscode/*.log
+.idea/
+
+# 하니스 자체의 운영 데이터 — commit 대상이 아님
+# (codex 비대화형 출력에서 stdout 캡쳐한 tmp 등)
+*.tmp
+*.bak
+.cache/
+
+# .claude는 settings.local만 보호 (settings 공유본은 commit 가능)
+.claude/settings.local.json

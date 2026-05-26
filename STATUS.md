@@ -293,12 +293,19 @@
 
 ### Phase E (Dogfood) 발견 — 하니스 자체 결함 후보
 
-| ID | severity | 제목 | 상태 |
-|---|---|---|---|
-| F40 | minor | wrapper의 `ROOT="$(git rev-parse --show-toplevel)"`가 monorepo sub-project (예: `examples/todo-api/`)에선 *상위 repo*를 가리킴 → `.harness/config.toml` 못 찾음 | **resolved** (codex-review.sh + codex-exec-review.sh에 `find_project_root()` 추가, 가장 가까운 `.harness/` 조상 탐색) |
-| F41 | minor | `plan-blueprint` skill / web-service bootstrap이 "Blueprint codex review 전 minimal API spec 채우기"를 명시 강제 안 함 → spec-first 프로젝트에서 빈 명세로 contract test 통과 가능 (todo-api bp.1에서 발견 — codex가 F35로 잡음) | open (Phase E 종결 시 처리 또는 후속 라운드) |
+| ID | severity | 제목 | 상태 | 발견 dogfood |
+|---|---|---|---|---|
+| F40 | minor | wrapper의 `ROOT="$(git rev-parse --show-toplevel)"`가 monorepo sub-project (예: `examples/todo-api/`)에선 *상위 repo*를 가리킴 → `.harness/config.toml` 못 찾음 | **resolved** (codex-review.sh + codex-exec-review.sh에 `find_project_root()` 추가, 가장 가까운 `.harness/` 조상 탐색) | todo-api |
+| F41 | minor | `plan-blueprint` skill / web-service bootstrap이 "Blueprint codex review 전 minimal API spec 채우기"를 명시 강제 안 함 → spec-first 프로젝트에서 빈 명세로 contract test 통과 가능 (todo-api bp.1에서 발견 — codex가 F35로 잡음) | open (Phase E 종결 시 처리 또는 후속 라운드) | todo-api |
+| F42 | minor | `codex-exec-review.sh`를 *repo root* (`/Users/satgym/work/harness/`)에서 호출하면 `find_project_root()`가 git toplevel로 fall-through → `cd "$ROOT"` 후 `.harness/prompts/...` relative path는 존재 안 함 → "Required: --prompt-file <existing path>" 에러. F40 fix가 *위 → 아래* monorepo 케이스는 해결했지만 *root → 어떤 sub-project?* 케이스는 모호. **개선안**: root에서 호출 시 (a) `--project examples/<name>` 인자 의무, (b) 또는 `.harness/` sub-dir 자동 탐색 (단 다중 sub-project 시 모호함 — 사용자 confirm), (c) 또는 명확한 error message ("not a starpin project root; cd into examples/<name>/") | open — Phase E 종결 또는 후속 라운드에서 처리 (현재 manual cd로 우회 가능) | starpin Phase 02 |
+| F43 | info | HARNESS §5.4 재리뷰 빈도 "3회 초과 시 사용자 확인" — autonomous 모드에서 *누가* 이 의무를 발동하는지 mechanism 부재. starpin Phase 02 batch1+m4+batch2 합 5회였으나 *산출물 단위*로 보면 동일 산출물 3회 미만 — 발동 안 함. autonomous에서 self-test에 `codex_round_count_per_artifact` 추적 추가 후보. **개선안**: HARNESS §5.4 본문에 "autonomous 모드는 self-test의 `drift_trigger_check`에 codex_round_count_per_artifact 항목으로 갈음" 명문화. | open — Phase E 종결 시 base HARNESS §5.4 amend 후보 | starpin Phase 02 (ADR-005 작성 중 발견) |
+| F44 | info | ADR-005 v1.1에서 만든 self-test schema (`capability_sensing` / `base_drift_signals` / `base_promotion_signals` / `drift_trigger_check`)가 *autonomous 모드 모든 프로젝트에 generalize 가능* — base `templates/SELF-TEST.template.md` 또는 base `skills/autonomous-self-test.md` promotion 후보. 단 starpin이 autonomous v0.6 *첫 dogfood*이라 ≥1 검증 evidence만 누적; ≥2 precedent 필요 (HARNESS §13.6) — todo-api Phase 02 재개 또는 다른 autonomous 프로젝트에서 동일 패턴 사용되면 promotion ADR 작성. | tracked — promotion candidate | starpin Phase 02 (ADR-005 v1.1 작성 시 발견) |
+| F45 | minor | `claim-exclusivity-contract` v0.3 Step 2 enforcement matrix는 `backend/src/claim/api.ts`의 transfer-API-grep을 *claim invariant 검증의 일부*로 명시하지만, 실제 enforcement는 *jest unit test* (M4 plan §5.1)에서만 이루어짐 — skill 자체엔 transfer grep step 없음. M4 plan §3.2 claim-admin-paths.yaml의 `transfer_scan` entry도 *informational*로 표기. → I-2 (영구 — no transfer) invariant가 *skill로 결정적 enforce되지 않음*. 개선안: skill을 v0.4로 bump, Step 6 신규 ("transfer-scan in YAML.transfer_scan paths") 추가. 그 시점에 `transfer_scan` entry를 informational → enforced로 격상. | tracked — `claim-exclusivity-contract` v0.4 후보 (M4 implement 시점) | starpin Phase 02 (Designer sensing call afccb16c) |
+| F46 | minor | `geolocation-pii-redaction` v0.4의 sinks_deny regex가 Sentry-Cocoa의 *modern API*를 놓침. 현재 패턴 `Sentry\.(captureMessage\|captureException\|setExtra\|setContext\|addBreadcrumb\|configureScope)`는 *legacy Sentry namespace* 만 매치 — modern iOS Sentry SDK는 `SentrySDK.capture(error:)` / `SentrySDK.capture(message:)` / `SentrySDK.configureScope { scope in scope.setExtra(...) }` 사용. Firebase Crashlytics Swift도 `Crashlytics.crashlytics().log(...)` / `setCustomValue(_:forKey:)` 사용 — 현 패턴 `FirebaseCrashlytics\.getInstance\(\)\.(log\|setCustomKey)`는 *Android API only*. → M6 client-app iOS code에서 token/GPS가 silently leak될 risk. 개선안: skill을 v0.5로 bump, `SentrySDK\.` + `Crashlytics\.crashlytics\(\)` + `setCustomValue` 패턴 추가 (Designer round 의무). | tracked — `geolocation-pii-redaction` v0.5 patch *즉시* (Phase 03 M1 전; M6 implement 전엔 필수) | starpin Phase 02 (Designer sensing call afccb16c) |
 
-**메타 dogfood 학습 채널** — todo-api 진행 중 발견되는 하니스 자체 결함을 이 표에 누적 (HARNESS §10 dogfood 임시 변경 한도 3회 — F40은 *발견 즉시 fix*라 한도 미포함).
+**메타 dogfood 학습 채널** — todo-api + temp-sensor + starpin 진행 중 발견되는 하니스 자체 결함을 이 표에 누적 (HARNESS §10 dogfood 임시 변경 한도 3회 — F40/F42는 *변경 발생 안 함, 추적만*이라 한도 미포함). F45/F46은 *local skill 변경*이라 base 한도와 무관.
+
+**Designer sensing source** — `afccb16c` (2026-05-26T13:00 — starpin Phase 02 closure 직후, Phase 03 진입 전 능동 sensing). 7 권장 액션 출처. 본 표의 F45/F46이 그 결과 등재.
 
 ## INBOX
 

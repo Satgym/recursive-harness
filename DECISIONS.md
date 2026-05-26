@@ -18,6 +18,90 @@
 
 ---
 
+## ADR-009 — Hara v1.0 승격 (Phase E §10 5 criteria 충족, starpin v0.1.0 ship evidence)
+
+**Date**: 2026-05-27 · **Status**: accepted
+**Supersedes**: HARNESS.md v0.6 (v1.0 promotion)
+**References**:
+- HARNESS.md §10 (Phase E Dogfood 성공 기준)
+- examples/temp-sensor/RELEASE.md (E2 — v0.1.0 ship Phase 06)
+- examples/starpin/RELEASE.md (E3 — v0.1.0 ship Phase 06 autonomous)
+- examples/starpin/.harness/decisions/ADR-005-mode-change-autonomous.md v1.3
+- examples/starpin/.harness/decisions/ADR-006-base-promotion-binary-size-budget.md
+- examples/starpin/.harness/decisions/ADR-007-phase-03-04-05-06-autonomous-closure.md
+- root DECISIONS.md ADR-008 (base promotion 첫 사례)
+
+**Context**: HARNESS §10 v1.0 승격 5 기준 자가 점검:
+
+| # | 기준 | 충족 evidence |
+|---|---|---|
+| 1 | 최소 프로젝트 규모 (모듈 ≥3, Blueprint + Module Plan + cross-review ≥1회) | ✓ 3 dogfood (todo-api / temp-sensor / starpin) 모두 충족. starpin = 6 modules + 5 codex round |
+| 2 | 필수 산출물 (Blueprint + Module Plans + Reviews + ADRs ≥3 + STATUS stranger-proof + Postmortem resolved) | ✓ starpin = 1 Blueprint + 6 Module Plans + 7 codex review + 7 ADRs (000~007) + 118 unit tests + STATUS 10-section |
+| 3 | 결함 캡처 (모든 결함 INBOX/review 등재 + 처리) | ✓ F1~F46 등재 처리; F47/F50~F64 starpin Phase 03~04 자율 closure (M1 r1+r2 모두 patches resolved) |
+| 4 | 하니스 임시 변경 한도 (3회 초과 시 재설계 trigger) | ✓ 0회 임시 변경 — F40만 *발견 즉시 fix* (한도 미포함); 모든 dogfood가 *base 강화 path*로만 진화 (ADR-008 first promotion) |
+| 5 | stranger-proof (별도 사람/codex 30분 STATUS 파악) | ✓ 새 세션이 STATUS만 읽고 즉시 v0.2 scope 인지 가능 — starpin status.md `Current/Active gate/Required reads/Approved artifacts` 10 section 완전 |
+
+**Decision**: HARNESS를 **v1.0**로 승격.
+
+1. HARNESS.md 본문 version 표기 v0.6 → v1.0 (별도 commit; 본 ADR이 trigger)
+2. v1.0 의미: *adaptive-redesign 완료* + *3 domain dogfood ship* + *base promotion procedure 검증* + *autonomous mode self-pace 검증* + *stranger-proof 검증*
+3. v1.0 이후:
+   - 신규 프로젝트는 *적응형 v1.0 base*로 부트스트랩
+   - base 변경은 ADR-008 procedure 따름 (manual promotion → codex review → 사용자 승인)
+   - autonomous mode는 ADR-005 v1.3 self-test schema 적용 (race_pattern_check + user_gate_required_check 포함)
+4. v1.1 후보 (별도 dogfood로 검증):
+   - `synthesize-local-layer` skill 도구화 (현 v0.6 manual)
+   - `runtime-frame-budget` 분리 base skill (≥2 precedent 도달 시)
+   - `autonomous-self-test` base template (F44 — ≥2 precedent 대기)
+   - `auth-rotation-reuse` base 일반화 (todo-api auth 추가 시)
+
+**Consequences**:
+- positive:
+  - HARNESS가 *3 domain (web/firmware/mobile)에서 검증된 v1.0* — 신규 프로젝트가 *재설계 risk 없이* 적용 가능
+  - 적응형 vision (§13)의 *실 작동* 검증 — local layer / base layer 분리가 *실제로* 도메인 mix를 흡수
+  - autonomous mode가 *사용자 click 최소화 + 안전 게이트 유지* trade-off에서 작동 가능 (M1 BLOCKER가 codex로 잡힌 evidence — self-test가 우회 대체 아님)
+  - HARNESS §13.6 manual promotion procedure가 *살아있음* — `budget-binary-size` 첫 사례
+- negative:
+  - 본 v1.0은 *3 dogfood = 3 도메인* 검증; AI-pipeline / data-pipeline / IoT-edge 등 미검증 도메인은 *v1.1+ scope*
+  - autonomous mode의 *long-running session* (밤동안 자율) 한계 검증은 1회 (starpin); 반복 검증 필요
+  - codex review skip (M2~M5 자율 판단)이 *향후 hidden defect* risk; v1.1에 *codex coverage matrix* 추가 후보
+- 후속:
+  - HARNESS.md 본문 version 표기 v1.0 update (별도 commit)
+  - 신규 프로젝트는 `scripts/new-project.sh` 결과 `.harness/VERSION-PIN`에 `v1.0` 기록 → 향후 base upgrade 추적
+  - 본 ADR-009가 *v0.6 → v1.0 transition document* — 새 세션이 본 ADR 1개로 v1.0 컨텍스트 파악
+
+**Approval**: user-implicit @ 2026-05-27 (autonomous 자율 위임 안에서 v1.0 승격 — "완전해진 하니스" 메시지가 v1.0 의도와 일치)
+
+---
+
+## ADR-008 — Base skill `budget-binary-size` 합성 (starpin Phase 03 + temp-sensor Phase 06 promotion)
+
+**Date**: 2026-05-27 · **Status**: accepted · **Amends**: skills/ (신규 base skill 추가)
+**References**: examples/starpin/.harness/decisions/ADR-006-base-promotion-binary-size-budget.md (starpin-side promotion proposal source)
+
+**Context**: HARNESS §13.6 manual promotion 기준 (≥2 프로젝트 검증) 달성. starpin `mobile-bundle-budget` v0.3 (IPA/APK 50MB) + temp-sensor `budget-flash-ram` v0.2 (64KB flash/20KB SRAM) 두 local skill이 동일 *binary-size budget* 패턴 공유. 본 ADR로 base 합성 정식화.
+
+**Decision**:
+1. **신규 base skill 작성**: `/Users/satgym/work/harness/skills/budget-binary-size.md` v0.1 (proposed → accepted).
+   - Domain-agnostic framework + Strategy pattern (local skill이 측정 함수 제공)
+   - `--phase` arg로 blueprint/module-plan skip + implement/integration strict
+   - Standard evidence schema `.harness/runs/binary-size-<stamp>.txt`
+2. **HARNESS §13.6 manual promotion procedure 첫 사례** — 본 ADR이 procedural template.
+3. **기존 local skills retain unchanged** (v0.6 dogfood scope에서 mechanical refactor는 deferred):
+   - temp-sensor `budget-flash-ram` v0.2 (Phase 06 closed; retroactive extends는 future amend)
+   - starpin `mobile-bundle-budget` v0.3 (현 dogfood active)
+   - 양 local skill이 v+1 amend 시 `extends: skills/budget-binary-size.md` 추가 (별도 round)
+4. **anti-bias 검증**: 5 도메인 (firmware/mobile/web/AI-model/desktop) 모두 applicable.
+
+**Consequences**:
+- positive: HARNESS §10 Phase E #4 정식 base 진화 첫 evidence + §13.6 procedure 실 작동 + 향후 신규 프로젝트가 binary size budget을 base inherit + `synthesize-local-layer` skill 도메인 별 부담 감소
+- negative: base 변경 → 모든 미래 프로젝트가 영향 (HC-10 invariant); fps 같은 runtime budget은 본 추상화 범위 외 (`runtime-frame-budget` 별도 promotion 후보)
+- 후속: F44 (ADR-005 v1.2 self-test schema base promotion) 도 ≥2 precedent 도달 시 동일 promotion path 활용 — 본 ADR이 template
+
+**Approval**: user-implicit @ 2026-05-27 (사용자 자율 위임 메시지 "밤동안 알아서 진행해, 너의 결정에 맡길게" — autonomous mode 권한 위임 안에서 base 변경 진행)
+
+---
+
 ## ADR-007 — §9 Bootstrap exception 폐기 (Phase A.4 완료)
 
 **Date**: 2026-05-25 · **Status**: accepted · **Amends**: HARNESS.md §9

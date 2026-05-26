@@ -8,8 +8,9 @@
 2. [STATUS.md](STATUS.md) — 현재 어디까지 됐고 다음 액션은 무엇인지
 3. [DECISIONS.md](DECISIONS.md) — 이미 내려진 결정들 (ADR)
 4. [INBOX/](INBOX/) — `ls INBOX/`로 codex가 남긴 피드백 확인 (비어있을 수 있음)
+5. **(v0.6 — 프로젝트 컨텍스트면)** `.harness/capabilities.md` 읽고 *Active* 섹션에 명시된 local skills/roles를 working set에 포함 (HARNESS §13.3, 자동 discovery 금지)
 
-위 4개를 안 읽고 작업 시작 금지.
+위 5개(프로젝트 컨텍스트) / 4개(하니스 self-build)를 안 읽고 작업 시작 금지.
 
 ## Claude의 기본 역할
 - **구현자(implementer)**. 코드/문서를 직접 작성.

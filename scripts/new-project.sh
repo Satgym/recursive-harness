@@ -72,7 +72,8 @@ HARNESS_VERSION="$(grep -m1 -E '^# HARNESS\.md' "$HARNESS_ROOT/HARNESS.md" | sed
 HARNESS_VERSION="${HARNESS_VERSION:-unknown}"
 
 # F33: include inbox; F28: include api directory for web-service
-mkdir -p .harness/{docs/modules,docs/api,reviews,decisions,postmortems,prompts,inbox/processed}
+# v0.6: include adaptive layer skeleton (skills/, roles/, capabilities.md) per HARNESS §13
+mkdir -p .harness/{docs/modules,docs/api,reviews,decisions,postmortems,prompts,inbox/processed,skills,roles}
 
 # config.toml (NAME/TYPE validated; HARNESS_ROOT recorded — F27)
 cat > .harness/config.toml <<EOF
@@ -104,6 +105,42 @@ exec   = "medium"
 EOF
 
 echo "$HARNESS_VERSION" > .harness/VERSION-PIN
+
+# v0.6: capability manifest (HARNESS §13.4) — initially empty Active section
+# F72 fix: also substitute date and the body heading `<project name>` so the seed manifest is approval-ready.
+TODAY_ISO="$(date +%Y-%m-%d)"
+awk -v name="$NAME" -v type="$TYPE" -v today="$TODAY_ISO" '
+  {
+    gsub(/<YYYY-MM-DD>/, today)
+    gsub(/<project name>/, name)
+    gsub(/<name>/, name)
+    gsub(/<web-service \| _generic \| \.\.\.>/, type)
+    print
+  }
+' "$HARNESS_ROOT/templates/CAPABILITY-MANIFEST.template.md" > .harness/capabilities.md
+
+# v0.6: starter README in skills/ and roles/ so empty dirs are committed
+cat > .harness/skills/README.md <<EOF
+# .harness/skills/ — Project-local skills (HARNESS §13)
+
+이 디렉토리는 *프로젝트 로컬* skill을 보관한다. base \`skills/\`와 분리.
+
+- 새 local skill은 [skills/synthesize-local-layer.md](file://$HARNESS_ROOT/skills/synthesize-local-layer.md) 절차로 생성
+- 양식: [templates/LOCAL-SKILL.template.md](file://$HARNESS_ROOT/templates/LOCAL-SKILL.template.md)
+- *Active*는 \`.harness/capabilities.md\`의 manifest에 명시되어야 working set 포함 (자동 discovery 금지)
+- HC-10: base 약화 금지, extension·specialization만
+EOF
+
+cat > .harness/roles/README.md <<EOF
+# .harness/roles/ — Project-local advisory roles (HARNESS §13)
+
+도메인 SME 같은 *advisory* role을 보관한다. base 4 roles의 execution authority는 *그대로*.
+
+- 새 local role은 [skills/synthesize-local-layer.md](file://$HARNESS_ROOT/skills/synthesize-local-layer.md) 절차로 생성
+- 양식: [templates/LOCAL-ROLE.template.md](file://$HARNESS_ROOT/templates/LOCAL-ROLE.template.md)
+- authority는 항상 \`advisory\` (HC-10)
+- *Active*는 \`.harness/capabilities.md\` manifest에 명시
+EOF
 
 # STATUS.md from template (awk for sed-safe substitution; F24)
 awk -v name="$NAME" -v hv="$HARNESS_VERSION" '

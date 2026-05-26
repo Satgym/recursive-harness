@@ -6,6 +6,8 @@
 
 - `.harness/docs/intake.md` (00 Intake 산출물)
 - `.harness/config.toml`
+- **`.harness/capabilities.md`** (v0.6 — Active local capabilities; HARNESS §13.3). Active 비어있으면 그 사실을 명시. Blueprint 작성 시 Active local skills/roles의 체크리스트·도메인 룰을 *반드시 고려*.
+- Active 섹션에 명시된 모든 local skill / role 파일 (Working set 포함)
 - (선택) 참조 시스템 / 기존 코드베이스
 
 ## Activities

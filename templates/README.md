@@ -3,7 +3,7 @@
 이 디렉토리는 하니스의 모든 정형 산출물 타입에 대한 표준 양식을 보유한다.
 [HARNESS.md §4.3](../HARNESS.md) artifact-specific status enum이 여기에서 정식 확정된다.
 
-## 6개 양식
+## 9개 양식 (v0.6 — 6 base + 3 adaptive)
 
 | 양식 | 인스턴스 위치 | status enum | 누가 작성 |
 |---|---|---|---|
@@ -12,7 +12,10 @@
 | [REVIEW.template.md](REVIEW.template.md) | `.harness/reviews/<phase>-<date>-<slug>.md` 또는 `INBOX/codex-feedback-<date>-<slug>.md` | `open \| resolved \| deferred \| disputed` | codex-reviewer / claude-reviewer |
 | [ADR.template.md](ADR.template.md) | `DECISIONS.md` 항목 또는 `.harness/decisions/ADR-NNNN-<slug>.md` | `proposed \| accepted \| superseded \| rejected` | claude-implementer (작성), user (승인) |
 | [POSTMORTEM.template.md](POSTMORTEM.template.md) | `postmortems/<date>-<slug>.md` 또는 `.harness/postmortems/...` | `open \| resolved` | claude-implementer |
-| [STATUS.template.md](STATUS.template.md) | 프로젝트 루트 `STATUS.md` 또는 `.harness/status.md` | (front-matter 불필요, 본문 첫 표가 대체) | claude-implementer |
+| [STATUS.template.md](STATUS.template.md) | 프로젝트 루트 `STATUS.md` 또는 `.harness/status.md` | (front-matter 불필요) | claude-implementer |
+| [LOCAL-SKILL.template.md](LOCAL-SKILL.template.md) ⭐ | `.harness/skills/<id>.md` | `draft \| approved \| superseded \| rejected` | claude-implementer (synthesize-local-layer) + user 승인 |
+| [LOCAL-ROLE.template.md](LOCAL-ROLE.template.md) ⭐ | `.harness/roles/<id>.md` (authority: advisory만) | `draft \| approved \| superseded \| rejected` | claude-implementer + user 승인 |
+| [CAPABILITY-MANIFEST.template.md](CAPABILITY-MANIFEST.template.md) ⭐ | `.harness/capabilities.md` (프로젝트당 1개) | `draft \| approved \| superseded` | claude-implementer; user가 *Active* 등재 승인 |
 
 ## 사용 규칙
 

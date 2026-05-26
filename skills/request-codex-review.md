@@ -23,6 +23,7 @@ Codex에 정식 리뷰를 의뢰. 코드 변경은 `codex review`, 텍스트(Blu
    - `.harness/config.toml`에 `[models]`이 채워져 있는지 (없으면 codex CLI 디폴트 사용 — 알림)
    - 누적 토큰이 §5.4 cost guardrail에 가까운지 (현 누적은 STATUS Notes)
    - HARNESS 대상 review 횟수가 3 초과면 사용자 명시 확인
+   - **(v0.6)** PROMPT에 *Local capability context* 섹션 포함 의무: `.harness/capabilities.md`의 Active 섹션 인용 또는 *"manifest Active empty by decision"* 명시. 비어있어도 명시는 필수 (codex가 manifest 미인지로 인한 finding을 막음).
 2. **코드 리뷰** (코드 변경 시):
    - 작업 branch에서 commit까지 완료 (또는 staged)
    - `scripts/pre-review-gate.sh` PASS 보장 (wrapper가 자동 호출)

@@ -8,18 +8,18 @@
 | 항목 | 값 |
 |---|---|
 | Project | 하니스 자체 빌드 (메타 부트스트랩) |
-| Phase | **C → BC.2 처리 완료** |
-| Active sub-phase | **BC.2 작업 완료 → commit + Phase D 진입 대기** |
+| Phase | **adaptive-redesign — v0.6** (Phase E todo-api 일시 정지, retrofit 예정) |
+| Active sub-phase | **v0.6 + bp.6.1 (codex v0.6-integrated 5 findings 처리 완료)** |
 | Strictness | strict |
-| Harness version | v0.5 (호환 변경만, 메이저 증가 없음) |
-| Git | main, HEAD = `62aa964` (Phase C commit). BC.2 변경 + .harness/reviews/bc1-... + .harness/prompts/bc1-... untracked |
-| Last updated | 2026-05-25T17:29 by Claude |
+| Harness version | **v0.6** + F68~F72 patch (commit 대기) |
+| Git | main, HEAD = `be694b7`. v0.6 전체 변경 + bp.6.1 patch untracked. |
+| Last updated | 2026-05-26 by Claude |
 
 ## Active gate
 
-- **Gate**: BC.2 (BC.1 8 findings 모두 resolved) → commit + Phase D 진입
-- **Blocked on**: 사용자가 BC.2 결과 검토 + commit 승인 + (옵션) 재리뷰 여부
-- **Approval needed**: yes — BC.2 변경 (web-service test/module HC-8 강화, new-project.sh 전면 갱신, wrapper sibling path, skills paths, INBOX 위치, api-spec CRUD)
+- **Gate**: v0.6 적응형 재설계 core 작성 완료 → codex v0.6 통합 cross-review → 사용자 승인 → commit
+- **Blocked on**: codex v0.6 cross-review 호출 결과 + finding 처리 + 사용자 승인
+- **Approval needed**: yes — v0.6 전체 변경 묶음 (HC-10 + §13 + 3 templates + 2 base skills + phases/00 sub-step + new-project.sh + project-types/README + CLAUDE/AGENTS/resume-session). codex review가 검증.
 
 ## Required reads (이 세션 시작 시)
 

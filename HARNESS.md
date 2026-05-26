@@ -1,8 +1,8 @@
-# HARNESS.md — 하니스 헌법 (v0.5)
+# HARNESS.md — 하니스 헌법 (v0.6)
 
 > 이 파일은 Claude와 Codex 모두가 따르는 **절대 규칙**과 **워크플로우 정의**다.
 > 변경은 §6 "하니스 수정 절차"를 거쳐야 한다.
-> **v0.4 → v0.5**: A.5b 정리 — F16/F19 (§9 deprecation 본문 일관화 + approver enum 확장). Phase A 종결판. 변경 내역은 §8 참조.
+> **v0.5 → v0.6**: Adaptive redesign — base vs project-local layer 분리, HC-10 신설, §13 Local Adaptive Layer, phase 00 안에 Local Capability Synthesis sub-step, manifest-based loading. 변경 내역은 §8 참조. 동기: adaptive-redesign-r1 review (F52~F67).
 
 ---
 
@@ -24,8 +24,9 @@
 | HC-7 | **Secrets-Redacted** | 시크릿/자격증명/PII는 모든 산출물·로그·리뷰에서 즉시 redact. 어떤 모드에서도 평문 저장 금지 |
 | HC-8 | **External-Effects-Gated** | 외부 영향 mutation(deploy, 외부 API write, message send, push to remote)은 **모든 모드에서 사용자 승인** |
 | HC-9 | **Destructive-Confirmed** | Destructive 작업(rm/drop/truncate/force-push/branch -D/reset --hard 등)은 **모든 모드에서 사용자 승인** |
+| HC-10 | **Local-Extends-Only** | Project-local layer(`.harness/skills/`, `.harness/roles/`, `.harness/capabilities.md`)는 base HC-1~9를 약화·재정의·우회할 수 없다. extension·specialization만 허용. base phase Exit 기준의 결정 권한은 항상 base에 있음. (§13 참조) |
 
-> HC-7/HC-8/HC-9는 strictness 모드와 무관하게 항상 적용된다.
+> HC-7/HC-8/HC-9는 strictness 모드와 무관하게 항상 적용된다. HC-10은 적응형 v0.6+의 핵심 안전장치.
 
 ## 2. Strictness 모드
 
@@ -85,7 +86,10 @@
 | INBOX (Codex 능동 피드백) | `.harness/inbox/` (`.harness/inbox/processed/` 포함) |
 | 하니스 버전 pin | `.harness/VERSION-PIN` |
 | (web-service) API 명세 | `.harness/docs/api/openapi.yaml` (또는 도구별) |
-| project-type 참조 자료 | `.harness/docs/test-strategy.md`, `module-skeleton.md` (read-only 참조) |
+| project-type 참조 자료 | `.harness/docs/test-strategy.md`, `module-skeleton.md` (read-only 참조 — seed) |
+| **Project-local skills** ⭐ | `.harness/skills/*.md` (§13) |
+| **Project-local roles** ⭐ | `.harness/roles/*.md` (§13) |
+| **Capability manifest** ⭐ | `.harness/capabilities.md` (active local capability 목록 — manifest 기반 loading) |
 
 > 본 레포(하니스 self-build)의 INBOX는 root `INBOX/` 그대로. project-level INBOX는 `.harness/inbox/`.
 
@@ -233,7 +237,8 @@ STATUS.md는 다음 섹션을 **모두** 포함해야 한다 (없으면 양식 �
 - **v0.2** (2026-05-25): Codex seed-review 5개 핵심 finding 반영 — HC-7/8/9 신설(F11), Strictness 통일(F3), §7 STATUS 양식 + Approval record(F2/F9), §9 Bootstrap exception(F1), §5 Review determinism(추가 제안 #7)
 - **v0.3** (2026-05-25): A.0e 통합 — F7 분쟁 프로토콜(§11), Postmortem triggers(§6.3-6.4), Cost guardrails(§5.4), Dogfood criteria(§10), Branch/git policy(§12), Artifact front-matter 표준(§4.3)
 - **v0.4** (2026-05-25): A.0g micro-patch — F13 §12.2 base branch 모순 해소, F14 §4.3 artifact-specific status enum 분리 + `deferred_reason` 필드 신설, F15 §9 임시 게이트가 §11 disputed 처리 cross-ref
-- **v0.5** (2026-05-25, 본 파일): Phase A 종결판. A.5 통합 cross-review 반영 — F16 (§0/HC-4/§3에서 §9 deprecated 일관화), F19 (§4.3/§7 approver enum에 `claude-reviewer` 추가). 기타 F17/F18/F20-F26은 CLAUDE/DECISIONS/scripts/templates/phases 변경으로 처리
+- **v0.5** (2026-05-25): Phase A 종결판. A.5 통합 cross-review 반영 — F16, F19. 기타 F17/F18/F20-F26은 CLAUDE/DECISIONS/scripts/templates/phases 변경으로 처리
+- **v0.6** (2026-05-25, 본 파일): **Adaptive redesign** — adaptive-redesign-r1 review (F52~F67) 반영. HC-10 신설 (Local-Extends-Only). §13 신설 (Project-local Adaptive Layer). §4.2에 `.harness/skills/`/`.harness/roles/`/`.harness/capabilities.md` 추가. 새 templates 3개 (LOCAL-SKILL/LOCAL-ROLE/CAPABILITY-MANIFEST). 새 base skills 2개 (synthesize-local-layer/review-local-layer; promote-local-capability는 v1.1로 deferred). phases/00에 Local Capability Synthesis sub-step. new-project.sh adaptive skeleton. project-types/는 *seeds*로 재해석.
 
 ## 9. Bootstrap exception (Phase A 한정) — **DEPRECATED**
 
@@ -312,3 +317,102 @@ Claude와 Codex의 의견이 충돌할 때:
 ### 12.5 Destructive git 작업
 - `force-push`, `branch -D`, `reset --hard`, `clean -fd`, `rebase -i` 등은 HC-9 적용 (사용자 승인 필수)
 - `main`에 force-push는 모든 모드에서 금지(사용자 명시 예외 시 외)
+
+## 13. Project-local Adaptive Layer
+
+> **추가일**: v0.6 (2026-05-25, adaptive-redesign-r1)
+> **목적**: base harness는 *모든 프로젝트의 공통 규칙·페이즈·구조*만 정의하고, 도메인 특화된 skills/roles/checklists는 *프로젝트 로컬*에서 자체 구성하게 한다. base는 정적 catalog가 아니라 적응을 가능케 하는 *프레임워크*.
+
+### 13.1 두 layer
+
+| Layer | 위치 | 권한 | 누가 |
+|---|---|---|---|
+| **Base** | 본 레포 (HARNESS.md, phases/, roles/, templates/, scripts/, skills/, project-types/, INBOX/) | HC-1~9 (절대), phase Exit 기준, role 권한 매트릭스, 모든 산출물 양식 | 하니스 자체 변경 절차 (§6) + 사용자 승인 |
+| **Local** | 각 프로젝트의 `.harness/skills/`, `.harness/roles/`, `.harness/capabilities.md` | base에 *추가*되는 도메인 특화 절차·역할·체크리스트 (extension only) | Local Capability Synthesis (phase 00 sub-step) + Codex review + 사용자 승인 |
+
+### 13.2 HC-10 의미 (Local-Extends-Only)
+
+Local layer는 다음을 **할 수 없다**:
+- HC-1~9 약화·재정의·우회
+- base phase Exit 기준의 항목을 *제거*
+- base role 권한 매트릭스의 항목을 *권한 추가* 방향으로 변경 (codex-reviewer가 commit하게 만든다든지)
+- `approval.approver` enum 확장 (사용자/codex-review/claude-reviewer/claude-self-test만 — F19)
+- 사용자 승인 게이트 우회
+
+Local layer가 **할 수 있는 것**:
+- base 양식에 *추가* 필드·체크리스트
+- 도메인 특화 role (advisory reviewer / domain checklist owner / 구현 제약 제공자) — 단 execution authority는 base 4 roles에만
+- 도메인 특화 skill (특수 도구 호출 / 도메인 lint / 특수 review 체크리스트)
+- 도메인 특화 phase Exit *추가* 항목 (base 항목에 더해)
+
+### 13.3 Loading semantics (manifest 기반)
+
+세션 시작 시 (CLAUDE.md / AGENTS.md 의무):
+
+1. base files (HARNESS / STATUS / DECISIONS / CLAUDE 또는 AGENTS) 읽기 — *항상*
+2. `.harness/capabilities.md` 존재하면 읽기 — *active* local capabilities 목록
+3. 그 manifest에 *명시된* local skills/roles만 working set에 포함
+
+> **암묵적 discovery 금지**: `.harness/skills/*.md`를 자동 ls해서 읽지 않음. manifest에 명시되어 *승인된* 항목만 활성. 미승인 draft는 working set에 들어가지 않음.
+
+### 13.4 Capability manifest 양식
+
+`templates/CAPABILITY-MANIFEST.template.md` 참조. 최소 구조:
+
+```markdown
+---
+artifact: capability_manifest
+version: v0.1
+project_name: <name>
+approved_at: <ISO timestamp>
+approver: user
+---
+
+# Active local capabilities
+
+## Skills (extension)
+- path: .harness/skills/<name>.md
+  scope: <어느 phase / 어느 모듈 / 어느 도메인>
+  extends: <base skill ID 또는 none>
+  approved_at: <ISO timestamp>
+
+## Roles (advisory)
+- path: .harness/roles/<name>.md
+  scope: ...
+  authority: advisory  # 항상 — execution authority는 base 4 roles만
+  approved_at: ...
+```
+
+manifest 자체도 *산출물*이며, HARNESS §7의 Approval record 6필드로 STATUS Approved artifacts에 등재된다.
+
+### 13.5 Local Capability Synthesis (phase 00 sub-step)
+
+phase 00 Intake 후, phase 01 Blueprint 전에 발동. 절차는 [skills/synthesize-local-layer.md](skills/synthesize-local-layer.md) 참조.
+
+요약:
+1. Intake 결과 분석 — base + 가까운 project-type seed가 *충분히* 커버하는가?
+2. gap 식별 — 어떤 domain SME / 특수 체크리스트 / 도메인 테스트 패턴 / 특수 review 룰이 빠졌는가?
+3. local skill/role draft 작성 (templates 사용)
+4. **Codex review** ([skills/review-local-layer.md](skills/review-local-layer.md) — HC-10 delta safety check)
+5. **사용자 승인** (모든 모드 필수 — 하니스 자체 변경에 준함)
+6. capability manifest 갱신 → STATUS Approved artifacts 등재
+7. Blueprint 단계로 진입
+
+### 13.6 Promotion (local → base)
+
+local capability가 다음 *모두* 만족하면 base 승격 후보:
+- 서로 다른 ≥ 2 프로젝트에서 활성 사용
+- 또는 1개 non-trivial dogfood에서 검증
+- Codex review 통과 + reopened finding 누적 < 임계
+- 도메인 시크릿·고유 정보 없음 (generalizable)
+
+승격은 base 변경이므로 §6.2 + ADR + Codex review + 사용자 승인. (v1.1 도구화 예정 — v0.6은 *수동* 승격)
+
+### 13.7 Local layer drift 신호
+
+- manifest와 디렉토리 실제 파일 불일치
+- local skill이 base phase Exit 기준의 *제거*를 시도 (HC-10 위반)
+- 같은 도메인의 3+ 프로젝트가 동일 local skill을 만드는 패턴 (승격 후보)
+- base 업그레이드 후 local capability가 새 base 규칙과 충돌
+
+drift 발견 시 §6.2 절차 + ADR.

@@ -25,6 +25,11 @@
    2. `HARNESS.md` (현재 적용 헌법; STATUS에 pin된 version)
    3. `STATUS.md` (가장 중요 — 단일 진실 출처)
    4. `DECISIONS.md` (ADR 누적)
+   5. **`.harness/capabilities.md` (조건부 — v0.6)**:
+      - 프로젝트 컨텍스트면(`.harness/` 존재 + bootstrapped): 파일을 읽고 *Active* 섹션의 local skills/roles를 working set에 포함 (HARNESS §13.3)
+      - harness self-build에는 capability manifest 없을 수 있음 — `Active local capabilities = none`으로 간주
+      - 프로젝트 부트스트랩 후 manifest *부재*는 Phase 00 위반 (synthesize-local-layer 미실행 신호)
+   6. (필요 시) Active 섹션에 명시된 모든 local skill / role 파일
 2. **INBOX 점검** (위치는 컨텍스트에 따라):
    - **프로젝트 컨텍스트** (`.harness/`가 존재): `ls .harness/inbox/` — unread = `.harness/inbox/codex-feedback-*.md` with `status: open`
    - **하니스 self-build**: `ls INBOX/` — unread = `INBOX/codex-feedback-*.md` with `status: open`

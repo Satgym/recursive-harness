@@ -14,6 +14,8 @@
 
 - `.harness/docs/intake.md` (Phase 00 결과)
 - `.harness/config.toml`
+- **`.harness/capabilities.md`** (v0.6 — Active local capabilities; Blueprint 작성 시 반드시 활용)
+- Active 섹션에 명시된 local skill / role 파일들 (working set)
 - (선택) 도메인 참고 자료 / 기존 시스템 분석
 
 ## Procedure

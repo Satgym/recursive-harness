@@ -18,6 +18,70 @@
 
 ---
 
+## ADR-014 — starpin v0.7 deploy-ready level 1 (prod-sim, observability scaffold)
+
+**Date**: 2026-05-27 · **Status**: accepted (user-directed 2026-05-27 "완전성 우선")
+
+**Scope**: starpin deploy-ready layer level 1 — local production-shape Docker stack + observability surface (NOT real cloud deploy). Native mobile deferred to v0.8 (Xcode/Android tooling absent → would violate "정직한 분할").
+
+**Context**:
+v0.6 ship closed data-ingest-ready layer; starpin had 2 remaining gaps (native mobile + deploy). Native mobile requires Xcode + Android Studio neither of which are installed on host — Claude cannot honestly build/test that code. Deploy-ready is fully verifiable in-Docker and addresses the second-biggest gap.
+
+"Level 1" = production *shape* without cloud: same secrets discipline, same healthcheck contract, same metrics surface as a real prod deploy, but runs locally. Real cloud (v0.8+) brings its own secret manager (Vault/SM) + observability stack (managed Prometheus/Loki) — the *application code* stays unchanged.
+
+**Decision**:
+
+### A. Backend container + prod compose
+
+- `backend/Dockerfile` — multi-stage (node:22-alpine builder + runtime), non-root user, embedded healthcheck via wget
+- `docker-compose.prod.yml` — backend service IS in compose (dev runs on host); all secrets via Docker secret file mounts (never env literals); no host port for postgres/redis; structured JSON log driver with rotation; `*_FILE → env` expansion at container entrypoint
+
+### B. Health endpoints
+
+- `GET /healthz` (liveness): constant-time, no DB/disk/network IO. Container restart trigger.
+- `GET /readyz` (readiness): DB query + snapshot loaded + objects table populated. 503 with reason if any fails. Traffic router trigger.
+- 5 unit tests cover happy path + each failure mode (DB fails / snapshot unloaded / empty objects).
+
+### C. Metrics endpoint
+
+- `GET /metrics` (Prometheus text format) — `backend/src/lib/metrics.ts` is a 100-line zero-dep registry. Cardinality budget ≤ 200 series.
+- 4 counters (http_requests / http_errors / oauth_callback / boot) + 1 gauge (uptime).
+- HC-7 hygiene: label values are bucketed (route template, status_class, provider), never user id / token / IP literal. Backslash+quote escaping in label rendering.
+- 5 unit tests cover render format, label cardinality, escape behavior.
+
+### D. Secret management
+
+- `scripts/init-prod-secrets.sh` — generates 4 prod secrets (pg_password from existing dev script + database_url constructed + internal_service_secret random + snapshot_checksum read from ADR-002). All files chmod 0600, gitignored via `.docker-secrets/.gitignore`. Idempotent.
+- `.env.template` — committed reference of all required env vars (no real values). Documents `*_FILE` convention for prod secrets.
+
+### E. Observability scaffold
+
+- `ops/prometheus-rules.yml` — 4 alert rules consuming the metrics surface (backend down, error rate >5%, boot loop, OAuth failure rate).
+- `ops/README.md` — what ships in v0.7 vs deferred to v0.8 (no Grafana dashboard yet, no Loki, no tracing — all data-blind speculation without real metric history).
+
+### F. End-to-end smoke
+
+`docker compose -f docker-compose.prod.yml up --build`:
+- All services healthy (postgres + redis + backend)
+- snapshot loader verified ADR-002 checksum + UPSERTed 646 rows
+- /healthz 200, /readyz 200 (all 3 checks pass)
+- /metrics serves Prometheus format with live request counters
+- Structured JSON logs
+
+### G. NOT in v0.7 scope (carry-over)
+
+- Real cloud deploy (k8s manifest, Terraform, AWS/GCP/Fly config)
+- Grafana dashboard (need real metric distribution first)
+- Loki / log aggregation
+- OpenTelemetry tracing
+- DB password rotation (requires Postgres-side ALTER ROLE + downtime)
+- Backup/restore strategy
+- TLS termination (reverse proxy responsibility — nginx config v0.8)
+
+**Approval**: user · 2026-05-27 · autonomous (사용자 "완전성 우선" delegated)
+
+---
+
 ## ADR-013 — Hara v1.8 minimize + hook (rule doc cut + git hook enforcement)
 
 **Date**: 2026-05-27 · **Status**: accepted (user-directed 2026-05-27 "치명적인 문제가 발생하지 않을 점들에 대해서는 최대한 줄이고, 정말 중요한 로직과 치명적인 버그를 막는 구조만 유지 + 훅 활용")

@@ -16,7 +16,14 @@ REPO_ROOT="$(git rev-parse --show-toplevel)"
 cd "$REPO_ROOT"
 
 # Read the refs being pushed via stdin (git pre-push protocol).
-ship_pattern='^(code|harness|note)\([^)]*v[0-9]+\.[0-9]+\.[0-9]+\)'
+# `note(...)` is the metadata-only ship type — it announces a ship that
+# happened in a gitignored sub-project (e.g., `examples/starpin/`). The
+# actual code + reviews live outside this repo's tracked tree, so HC-11
+# evidence cannot be discovered via `git log`. Only `code(...)` and
+# `harness(...)` ship types are subject to the in-repo review evidence
+# check. This carveout was discovered during starpin v0.7 dogfood — the
+# hook would otherwise block legitimate metadata-only `note()` ships.
+ship_pattern='^(code|harness)\([^)]*v[0-9]+\.[0-9]+\.[0-9]+\)'
 ship_subjects=""
 
 while read -r local_ref local_sha remote_ref remote_sha; do

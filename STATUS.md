@@ -8,16 +8,17 @@
 | 항목 | 값 |
 |---|---|
 | Project | 하니스 자체 빌드 (메타 부트스트랩) |
-| Phase | **Hara v1.8 SHIPPED** — minimize + hook (HARNESS.md 559→185줄, .githooks/ enforce HC-6/HC-11, 11 codex findings → 0 open in r1+r2) |
-| Active sub-phase | (대기) — v0.7 starpin (native/deploy) vs v1.9 하니스 carry vs 별도 ask |
+| Phase | **starpin v0.7.0 SHIPPED** — deploy-ready level 1 (backend Dockerfile + docker-compose.prod.yml + /healthz + /readyz + /metrics + ops/ scaffold + secret mgmt; 2 codex review rounds, 8 findings → 0 open) |
+| Active sub-phase | (대기) — v0.8 direction (real cloud deploy / native mobile when toolchain available / v0.7 carry items) |
 | Strictness | autonomous |
-| Harness version | **v1.8 (minimize + hook)** — HARNESS.md 559→185 (66% 감소), PATTERNS.md + FLEET.md 분리, `.githooks/{pre-commit,commit-msg,pre-push}` enforce critical gates, HC-11 (Codex-Cadence) 신설, P0 3 bug fixes |
-| Git | main + origin; v1.8 ship 진행 중 (이 commit에서) |
-| Last updated | 2026-05-27 by Claude (v1.8 minimize+hook round — meta-review codex 트리거 ADR-013) |
+| Harness version | v1.8 (carry) — `.githooks/` 자기 dogfood 진행 ((HC-6 STATUS + HC-11 r1+r2 모두 v0.7 ship에 fire 함) |
+| Git | main + origin; v0.7 ship 진행 중 (이 commit에서) |
+| Last updated | 2026-05-27 by Claude (v0.7 deploy-ready level 1; 241 tests; 8 codex findings closed) |
 
 ## Active gate
 
-- (none — v1.8 ship 직전 STATUS 갱신)
+- (none — v0.7 ship 직전 STATUS 갱신)
+- **하니스 검증 결과 (v1.8 dogfood)**: pre-commit (STATUS freshness + capability collect), commit-msg (no WIP residue), pre-push (HC-11 r1+r2 evidence) 모두 정상 fire. v1.8 minimize+hook의 핵심 가설("지시문 대신 hook으로 강제") 실 round에서 작동 확인.
 
 ## Required reads (세션 시작 시)
 

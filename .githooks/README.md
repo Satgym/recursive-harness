@@ -27,7 +27,8 @@ That's it. The hooks live in this directory and are committed to the repo
 
 ### `pre-push`
 
-1. **Codex evidence** — if any pushed commit subject matches `(code|harness|note)(…vN.N.N)` (the ship form), at least one codex review file must have landed in the last 20 commits. Otherwise fail with the bundle-review command to run.
+1. **Codex evidence (HC-11)** — if any pushed commit subject matches `(code|harness)(…vN.N.N)` (the *in-repo* ship form), require BOTH `*r1*` AND `*r2*` review files whose name contains the ship slug, within the last 30 commits.
+2. **`note(...)` exception** — `note(<slug>-vN.N.N)` is the *metadata-only* ship form announcing work that lives in a gitignored sub-project (e.g., `examples/starpin/`). HC-11 evidence for that work lives outside this repo's tracked tree, so the hook does NOT block these pushes. (Discovered during starpin v0.7 dogfood — the hook needs to know what's actually shipped from THIS repo vs referenced from a sibling project.)
 
 ## Bypass
 

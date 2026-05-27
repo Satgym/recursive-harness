@@ -137,7 +137,7 @@ cat > .harness/roles/README.md <<EOF
 도메인 SME 같은 *advisory* role을 보관한다. base 4 roles의 execution authority는 *그대로*.
 
 - 새 local role은 [skills/synthesize-local-layer.md](file://$HARNESS_ROOT/skills/synthesize-local-layer.md) 절차로 생성
-- 양식: [templates/LOCAL-ROLE.template.md](file://$HARNESS_ROOT/templates/LOCAL-ROLE.template.md)
+- 양식: [project-types/_incubating/LOCAL-ROLE.template.md](file://$HARNESS_ROOT/project-types/_incubating/LOCAL-ROLE.template.md) (v1.6 relocated)
 - authority는 항상 \`advisory\` (HC-10)
 - *Active*는 \`.harness/capabilities.md\` manifest에 명시
 EOF

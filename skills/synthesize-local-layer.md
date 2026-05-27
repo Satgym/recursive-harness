@@ -37,7 +37,7 @@
 
 4. **Draft 작성**:
    - skills: `cp templates/LOCAL-SKILL.template.md .harness/skills/<id>.md` 후 채움
-   - roles: `cp templates/LOCAL-ROLE.template.md .harness/roles/<id>.md` 후 채움
+   - roles: `cp project-types/_incubating/LOCAL-ROLE.template.md .harness/roles/<id>.md` 후 채움 (v1.6 — _incubating 위치; promotion 후 templates/ 복귀 가능)
    - 모든 draft는 `status: draft` (아직 Active 아님)
 
 5. **Manifest 초기화 / 갱신**:
@@ -78,7 +78,7 @@
 - [HARNESS.md §13](../HARNESS.md) (Project-local Adaptive Layer)
 - [skills/review-local-layer.md](review-local-layer.md)
 - [templates/LOCAL-SKILL.template.md](../templates/LOCAL-SKILL.template.md)
-- [templates/LOCAL-ROLE.template.md](../templates/LOCAL-ROLE.template.md)
+- [project-types/_incubating/LOCAL-ROLE.template.md](../project-types/_incubating/LOCAL-ROLE.template.md) (v1.6 — relocated to _incubating)
 - [templates/CAPABILITY-MANIFEST.template.md](../templates/CAPABILITY-MANIFEST.template.md)
 - [phases/00-intake.md](../phases/00-intake.md) (Local Capability Synthesis sub-step)
 - [skills/harness-amend.md](harness-amend.md) (base 변경 절차와 차이 명시)

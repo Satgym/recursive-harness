@@ -140,8 +140,49 @@ def main() -> int:
 
     dest.parent.mkdir(parents=True, exist_ok=True)
     dest.write_text(front_matter + body + "\n", encoding="utf-8")
-    print(f"[postprocess] wrote {dest} (tokens={extract_tokens(raw)})", file=sys.stderr)
+    tokens = extract_tokens(raw)
+    print(f"[postprocess] wrote {dest} (tokens={tokens})", file=sys.stderr)
+
+    # v1.6 M7 — append to canonical token ledger (machine-readable JSONL)
+    try:
+        update_token_ledger(dest, args, tokens, meta)
+    except Exception as e:
+        print(f"[postprocess] WARN: ledger update failed: {e}", file=sys.stderr)
     return 0
+
+
+def update_token_ledger(review_path: Path, args, tokens_str: str, meta: dict) -> None:
+    """
+    v1.6 M7 (meta-review codex finding) — auto-append review event to canonical ledger
+    at `.harness/codex-token-ledger.jsonl`. Each line = single review event with
+    machine-parseable fields. STATUS.md "Cumulative codex tokens" 라인이 더 이상
+    수동 추정 아닌 — `wc -l` + `jq` 등으로 정확 산출 가능.
+    """
+    import json
+    from datetime import datetime, timezone
+    ledger_root = review_path
+    while ledger_root.name != ".harness" and ledger_root.parent != ledger_root:
+        ledger_root = ledger_root.parent
+    if ledger_root.name != ".harness":
+        return  # not under .harness/ — skip
+    ledger_path = ledger_root / "codex-token-ledger.jsonl"
+    tokens_int = 0
+    try:
+        tokens_int = int(str(tokens_str).replace(",", "")) if tokens_str else 0
+    except (ValueError, TypeError):
+        tokens_int = 0
+    entry = {
+        "ts": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "phase": getattr(args, "phase", "") or "",
+        "slug": getattr(args, "slug", "") or "",
+        "review_round": getattr(args, "review_round", "") or "",
+        "tokens": tokens_int,
+        "model": meta.get("model", ""),
+        "review_path": str(review_path.relative_to(ledger_root.parent)) if ledger_root.parent in review_path.parents else str(review_path),
+    }
+    with ledger_path.open("a", encoding="utf-8") as f:
+        f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+    print(f"[postprocess] ledger appended to {ledger_path.name}", file=sys.stderr)
 
 
 if __name__ == "__main__":

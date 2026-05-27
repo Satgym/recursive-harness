@@ -59,16 +59,26 @@ HARNESS.md의 *모든 규칙을 자기 scope에* 적용한다. 자기 scope 안�
 ## 시작 절차
 
 1. `cd <worktree_path>` 후 본인 branch 확인 (`git status` → `feat/<child_name>`)
-2. **Required reads (F78 — 시작 전 *모두* 읽기)**:
+2. **Required reads (F78 — 시작 전 *모두* 읽기; v1.6 M3 — local skill 강제 포함)**:
    1. `<HARNESS_ROOT>/HARNESS.md` — 헌법 (HC-1~10, §14 Fleet Mode)
    2. `<HARNESS_ROOT>/CLAUDE.md` (또는 본인이 codex면 AGENTS.md) — 진입점
    3. `./.harness/subtree.md` — *본 세션이 sub-coordinator임을 알리는 marker* (root_path / parent_path / current_depth / max_depth_allowed / root_capability_manifest_hash)
    4. `./.harness/subtrees/<child_name>/locked-interface.md` 또는 `<parent_path>/.harness/subtrees/<child_name>/locked-interface.md` — 변경 불가 spec
    5. `<parent_path>/.harness/docs/blueprint.md` — 횡단 invariant 식별 (Blueprint §8.5 + Fleet F2)
    6. `<parent_path>/.harness/decisions/<SPLIT-DECISION-ADR>.md` — 본 split의 file ownership matrix + invariant 목록
-   7. `<root_path>/.harness/capabilities.md` (frozen) — 본 child가 *사용 가능한 capability*는 이것만 (Fleet F3 + F9; draft는 가능, *use·activate는 frozen list에 있는 것만*)
+   7. `<root_path>/.harness/capabilities.md` (frozen manifest) — Active local capabilities 목록
+   8. **(v1.6 M3 신규 — 적응형 vision 회복)** capabilities.md *Active* 섹션에 명시된 **모든 local skill 파일을 직접 읽기** (`.harness/skills/<name>.md` 각각) — Fleet F3/F9 *enforce*: 본 skills이 child scope에 적용되는지 *작업 중 능동적 점검*. 적용 안 된다면 *왜 안 됐는지 merge-report에 사유*
 3. STATUS.md ← *없으면 생성*. `templates/SUBTREE-STATUS.template.md`로 자기 scope 상태 초기화
 4. Phase 02 시작 (본 child scope 모듈의 plan; 본인 scope이 *또* 크다면 자기 Phase 02에서 또 split 가능 — F5 depth 게이트 강제)
+
+## Local skill application (v1.6 M3 — adaptive learning loop 회복)
+
+본 child의 작업이 Active local skills 중 어떤 것에 *해당*하는가? merge-report의 "Local skills applied" 섹션에 *모든 active skill 별로* 다음 중 하나:
+- `applied`: skill의 enforcement / checklist가 본 child 작업에서 *실 사용됨* (예: claim-exclusivity-contract → I-2 no-transfer 검증)
+- `not_applicable`: skill scope이 본 child 외 — 사유 1줄
+- `gap_detected`: skill이 본 child scope을 *cover해야 하는데* 명세 부족 — *capability candidate 후보* 별도 등록
+
+이 필드가 부족하면 parent merge phase에서 child re-work 요청.
 
 ## Pre-review-gate (scope-only — v1.2 F85 + v1.3 F111 AST lock)
 

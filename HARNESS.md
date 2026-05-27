@@ -244,19 +244,10 @@ STATUS.md는 다음 섹션을 **모두** 포함해야 한다 (없으면 양식 �
 | v1.2 | **Fleet enforcement 강화** — §14.8 lock & invariant enforcement (grep gate) + §14.9 inter-child consume timing (stub/ambient/topo) + §14.10 scope-bounded gates. F80 (user-delegated approval path). 신규 base skill `lock-grep-gate`. SUBTREE-PROMPT + MERGE-REPORT + locked-interface template 정비 | ADR-011 |
 | v1.3 | **AST-level lock enforcement** — §14.8 promote: lock-grep-gate → `lock-eslint-gen` skill (ESLint flat config + `no-restricted-imports`) primary, grep fallback. §14.9 strategy a/b/c *helper script 실 구현* (`scripts/fleet/{gen_stub,gen_ambient,topo_sort,gen_eslint_lock}.py`). Small wins: mid-work escalation 명세 (F70-fleet-1), codex 대체 heuristic (F70-fleet-3), ESM jest pattern (F86) | ADR-012 |
 
-## 9. (history) Bootstrap exception — **REMOVED**
+## 9~10. (history) — archived
 
-Phase A 자체 빌드용 임시 게이트. ADR-007로 폐기. 모든 phase는 [phases/](phases/) 정식 Exit 기준만 따른다. 상세 history는 git log + ADR-007 참조.
-
-## 10. Phase E — Dogfood 성공 기준
-
-Phase E의 Exit / 승격 기준:
-
-- **최소 프로젝트 규모**: 모듈 ≥3개, Blueprint + Module Plan + cross-review ≥1회 완료
-- **필수 산출물**: Blueprint, Module Plans (per module), Reviews, ADRs (≥3), STATUS가 끝까지 stranger-proof 유지, 발생한 Postmortem은 모두 `resolved`
-- **결함 캡처**: 발견된 모든 결함이 INBOX/review에 등재 + 처리(또는 명시 deferred)
-- **하니스 임시 변경 한도**: dogfood 중 하니스 자체에 의도되지 않은 변경 3회 초과 시 → 하니스 재설계 트리거 (drift 신호로 격상)
-- **v1.0 승격 기준**: 위 모두 충족 + 별도 사람(또는 별도 codex 세션)이 STATUS만 보고 30분 내 프로젝트 상태를 파악 가능
+- §9 Bootstrap exception (Phase A 임시 게이트): ADR-007로 폐기. git log + ADR-007 참조.
+- §10 Phase E dogfood 성공 기준: v1.0 승격 (ADR-009) 시 충족 완료. 본 criteria는 [docs/history/phase-e-dogfood-criteria.md](docs/history/phase-e-dogfood-criteria.md)로 archive (v1.6 cleanup). 신규 dogfood는 base §3 phase Exit 기준만 따름.
 
 ## 11. 분쟁 해결 프로토콜
 
@@ -449,6 +440,7 @@ drift 발견 시 §6.2 절차 + ADR.
 | F7 | **Codex review 분배** | 각 child는 *자기 scope에 대한* codex review (Phase 04)를 독립 수행. parent는 merge 후 *cross-cutting integration review*를 별도 1회 수행. **v1.3 self-test 대체 heuristic** (F70-fleet-3): self-test로 갈음 가능한 조건은 *모두* 충족 시만 — (i) `examples/` 또는 `dogfood/` 경로, (ii) 총 LOC < 1500, (iii) HC-7/8/9 영향 없음 (Blueprint에서 no라고 명시), (iv) 외부 통신 / DB write / 인증 / 결제 모듈 *부재*. 위 4 모두 아니면 codex 의무. SPLIT-DECISION-ADR의 `codex_review_replacement: self_test \| codex_full` field에 명시 (preflight가 heuristic 자동 평가 + override 시 사유) |
 | F8 | **STATUS 위계** | parent STATUS는 *tree 구조*만 표시 (child별 상태 dashboard). 각 child는 *자기 scope*만 자기 `.harness/status.md`에. root는 `current_depth=0`, child의 `parent_subtree` field가 immediate parent 식별 |
 | F9 | **HC-10 invariant 유지 + draft/activate 분리** | child는 본인의 `.harness/skills/` 파일을 *draft만* 가능 (extension 후보 작성). **load·use·activate는 frozen root manifest에 이미 있는 capability만 허용**. 신규 draft는 MERGE-REPORT의 capability candidate 섹션에 등재만; parent merge phase에서 root manifest 수용 결정 후에야 activate. parent의 active manifest를 *제거*하는 것은 불가 |
+| **F10** | **Child failure recovery (v1.6 M10)** | child가 rate-limit / crash / timeout 등으로 *merge-report 작성 못한* 경우: parent가 *대리 작성* 가능 — 단 frontmatter에 `parent_authored: true` + `child_completion_status: rate_limited\|crashed\|timeout` + `evidence_confidence: high\|medium\|low` 명시 의무. parent는 child가 작성한 *partial artifacts*만으로 lock/invariant 검증 가능한 경우 high; 추가 추론 필요한 경우 low. low의 경우 codex review에 *evidence_confidence flag 명시* + parent의 대리 결정 명시. starpin v0.4 F1 case (rate-limit으로 merge-report 누락) 가 본 규칙 첫 dogfood evidence |
 
 ### 14.3 언제 split할까 (Phase 02 split-decision)
 
@@ -521,7 +513,9 @@ drift 시 §6.2 절차 + ADR. 반복되면 *Fleet Mode 자체 회의 후보* —
 
 **관찰**: F1 (interface lock) + F2 (cross-cutting invariant)는 *명세는 명확*하지만 *enforcement는 child의 self-discipline*에 의존했었음. TypeScript typecheck로 막히지 않는 invariant (예: "verifySession만 import" / "redact util을 *실제 호출*") 다수.
 
-**v1.3 핵심 변경**: F1 (single-method consume lock)이 **AST-level mechanical enforcement**로 격상. v1.2의 grep은 fallback.
+**v1.3 핵심 변경**: F1 (single-method consume lock)이 **AST-level enforcement** (ESLint `no-restricted-imports`)로 격상. v1.2의 grep은 fallback.
+
+> **honest 한계 (v1.6 meta-review M9)**: 본 enforcement는 *child name = module name* 가정 시에만 정합. starpin v0.3의 OAuth 3 providers처럼 *같은 디렉토리에 sibling 파일*로 공존하는 경우 child-vs-child boundary 자동 catch 못함 (`apple.ts`가 `./google.js` import 가능). 또한 *stable parent module* (catalog/service.js 등) reach-around도 `consumed_stable_modules` field 명시 시에만 partial 차단. F122 (parent reach-around named-import allowlist) + F123 (sibling-file boundary)는 v1.6/v1.7 open carry-over — codex review가 2nd-line defense 의무. 본 enforcement는 *"grep-better gap detection"*에서 *"AST-better gap detection"*으로 격상; *완전한 mechanical*은 v1.7+ AST custom rule 후보.
 
 **규칙**:
 1. **Single-method consume (lock-eslint-gen — primary, v1.3)**: locked-interface §"Consumed interface"가 *runtime import allowlist*. spawn-subtree-prompts skill이 [`lock-eslint-gen`](skills/lock-eslint-gen.md) 호출 → 각 child용 `eslint.config.<child>.mjs` (flat config) 자동 생성. `no-restricted-imports` rule이 allowlist 외 모든 named import를 *AST error*로 차단. child의 pre-review-gate + Phase 05 merge-collection에서 *기계적 실패*. ESLint v9+ 의존; 미설치 시 [`lock-grep-gate`](skills/lock-grep-gate.md) fallback.

@@ -39,6 +39,10 @@ codex_meta:     # codex 비대화형 호출 시 자동 채움; claude-reviewer�
 - **detail**: <observation + reasoning>
 - **suggested_action**: <patch-level 구체 변경안>
 - **references**: <files / ADR ids / 이전 finding ID>
+- **capability_candidate** (v1.6 M8 — adaptive loop): yes | no
+  - yes 시: 본 finding이 *반복 가능한 pattern*이고 *base or local capability로 흡수 가치*. `candidate_name`, `scope` (어떤 모듈/도메인), `kind` (skill / role / template field) 명시
+  - no 시: 1회성 fix — 사유 (e.g. "1회 typo", "module-specific business logic")
+  - missing 시: finding closure 무효 (v1.6 의무 — adaptive learning loop 유지)
 
 (필요한 만큼 반복)
 

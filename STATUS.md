@@ -8,21 +8,27 @@
 | 항목 | 값 |
 |---|---|
 | Project | 하니스 자체 빌드 (메타 부트스트랩) |
-| Phase | **starpin v0.4.0 SHIPPED** (Sky 3d + Rate-limit + PKCE integration test) |
-| Active sub-phase | (대기) — v0.5 (mobile/ingest/snapshot/sky-3d repo unit) 또는 v1.6+ (F123 sibling-file / child-recovery v1.7) |
+| Phase | **Hara v1.6 cleanup round (proposed)** — codex meta-review B1~M12 + 2차 review B1+M2~M5 patches 적용 완료 |
+| Active sub-phase | (대기) — v0.5 starpin direction 또는 별도 ask |
 | Strictness | autonomous-within-delegation |
-| Harness version | **v1.3** + v1.4/v1.5/v1.7 inflight; F123 v1.6 carry; child-recovery v1.7 carry |
-| Git | main; cumulative — v1.3 `b71324d` + v0.2 `bdc1d24` + v0.3 `3b8a223` + v0.4 commits pending |
-| Last updated | 2026-05-27 by Claude (starpin v0.4.0 SHIPPED — 20 suites/227 pass; codex 0 blocker + 3 major + 2 minor closed; F1 v0.5 carry) |
+| Harness version | **v1.5 → v1.6 cleanup (proposed)** — sibling-file F123 closure 진행 중; HARNESS body 565→~580 (honest 한계 추가); ADR-001~007 archive; m11/m12/m9 모두 적용 |
+| Git | main; cumulative — v0.2/v0.3/v0.4 commits + v1.6 commits pending |
+| Last updated | 2026-05-27 by Claude (v1.6 cleanup round — 2 codex reviews + patches; ledger 자동 갱신 작동) |
 
 ## Active gate
 
-- (none — starpin v0.2.0 + Hara v1.3 ship 완료)
+- **Gate**: v1.6 cleanup 최종 commit 후 starpin v0.5 direction 선택
+- **codex meta-review closure** (1차): B1+B2+M3~M10+m11+m12 모두 적용
+- **codex v1.6 cleanup review closure** (2차): B1 (manifest path) + M2 (v03 retrofit) + M3 (dead ref) + M4 (root STATUS 본 update) + M5 (validator boundary) 모두 적용
 
-### v1.4 patches inflight (실 dogfood가 노출)
-- **F120** (resolved): gen_eslint_lock nested subtree path 미지원 — `discover_child_lockfiles()` rglob recursive 적용
-- **F121** (resolved): `src/<child>/**` hard-coded path — locked-interface `## File ownership` 섹션에서 `parse_owned_paths()` 추출
-- **F122** (open, v1.5 carry-over): ESLint lock이 stable parent module (catalog/service.js 등) reach-around 미차단 — `consumed_stable_modules` field 신설 + helper enhancement 필요
+## Required reads (이 세션 시작 시)
+
+1. `HARNESS.md` v1.5+ (~580줄; v1.6 cleanup adjustments)
+2. `STATUS.md` (본 파일)
+3. `DECISIONS.md` (ADR-001~007 summary table; ADR-008~012 full)
+4. `CLAUDE.md` / `AGENTS.md`
+5. `INBOX/` (현재 0 unread)
+6. (project work 시) `examples/<project>/.harness/status.md` + `capabilities.md` + 모든 active local skills (v1.6 M3 — SUBTREE-PROMPT enforces)
 
 ## Required reads (이 세션 시작 시)
 

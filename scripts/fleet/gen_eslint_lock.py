@@ -40,6 +40,24 @@ from collections import defaultdict
 from pathlib import Path
 
 
+def parse_public_module_path(locked_iface_path: Path) -> str | None:
+    """
+    v1.6 M9 (codex meta-review) — parse `public_module_path:` from locked-interface
+    front-matter. Returns absolute or relative path string (e.g. "src/auth/providers/apple.ts").
+    When set, gen_eslint_lock uses *this* path as the child's "owns this file" marker
+    for sibling-file deny patterns (F123 v1.6).
+    """
+    content = locked_iface_path.read_text(encoding="utf-8")
+    fm_match = re.match(r"---\n(.*?)\n---\n", content, re.DOTALL)
+    if not fm_match:
+        return None
+    for line in fm_match.group(1).splitlines():
+        m = re.match(r"^public_module_path:\s*['\"]?([^'\"\s]+)['\"]?\s*$", line)
+        if m and not m.group(1).startswith("<"):
+            return m.group(1)
+    return None
+
+
 def parse_owned_paths(locked_iface_path: Path) -> tuple[list[str], list[str]]:
     """
     F121 v1.4 patch — parse `## File ownership` section of locked-interface to extract
@@ -249,6 +267,8 @@ def build_eslint_flat_config(
     owned_src_globs: list[str] | None = None,
     owned_test_globs: list[str] | None = None,
     stable_module_allowlist: dict[str, list[str]] | None = None,
+    public_module_path: str | None = None,
+    sibling_public_paths: list[str] | None = None,
 ) -> str:
     """
     Emit ESLint v9+ flat config (eslint.config.<child>.mjs) — F110 v1.3 codex patch:
@@ -327,6 +347,31 @@ def build_eslint_flat_config(
                 ),
             })
 
+    # Layer 4 (F123 v1.6 codex meta-review M5 closure) — same-directory sibling file deny
+    #   본 child의 public_module_path와 *같은 디렉토리에 있는 sibling children의 public file*들을
+    #   relative path (`./<sibling>.js`)로 deny. 같은 dir에 공존하는 OAuth providers 같은 케이스에서
+    #   `apple.ts`가 `./google.js` import를 차단.
+    if public_module_path and sibling_public_paths:
+        own_file = Path(public_module_path)
+        own_dir = own_file.parent
+        for sibling_path in sibling_public_paths:
+            sibling = Path(sibling_path)
+            if sibling == own_file:
+                continue
+            if sibling.parent == own_dir:
+                # Same directory — relative import would be `./<basename-without-ext>.js`
+                sibling_stem = sibling.stem
+                # Block both with-ext and without-ext + index variants
+                for rel in [f"./{sibling_stem}.js", f"./{sibling_stem}", f"./{sibling.name}"]:
+                    patterns_rules.append({
+                        "group": [rel],
+                        "message": (
+                            f"Lock violation (Fleet F123 v1.6 — same-dir sibling): child '{child}' "
+                            f"may not import from sibling file '{rel}' (owned by another child). "
+                            f"Use external public module path or escalate as patch candidate."
+                        ),
+                    })
+
     paths_json = json.dumps(paths_rules, indent=2, ensure_ascii=False)
     patterns_json = json.dumps(patterns_rules, indent=2, ensure_ascii=False)
     paths_indented = "\n".join("        " + ln for ln in paths_json.splitlines())
@@ -384,22 +429,39 @@ def main() -> int:
 
     # F120 v1.4 — use recursive discovery (supports nested round prefixes)
     li_map = discover_child_lockfiles(args.adr)
+
+    # v1.6 M9 — pre-collect public_module_path for each child (sibling-file deny — F123 closure)
+    public_paths: dict[str, str] = {}
+    for child, li_path in li_map.items():
+        pmp = parse_public_module_path(li_path)
+        if pmp:
+            public_paths[child] = pmp
+
+    all_public_path_values = list(public_paths.values())
+
     for child, li_path in sorted(li_map.items()):
         allowlist = parse_runtime_allowlist(li_path)
         # F121 v1.4 — parse owned paths from locked-interface
         src_globs, test_globs = parse_owned_paths(li_path)
         # F122 v1.5 — parse consumed_stable_modules from front-matter (parent module reach-around block)
         stable_allowlist = parse_consumed_stable_modules(li_path)
+        # v1.6 M9 — get own public_module_path + sibling list for F123 same-dir deny
+        own_public = public_paths.get(child)
+        sibling_publics = [p for c, p in public_paths.items() if c != child]
         config_text = build_eslint_flat_config(
             child, allowlist, all_providers,
             owned_src_globs=src_globs or None,
             owned_test_globs=test_globs or None,
             stable_module_allowlist=stable_allowlist or None,
+            public_module_path=own_public,
+            sibling_public_paths=sibling_publics if own_public else None,
         )
         out = out_dir / f"eslint.config.{child}.mjs"
         out.write_text(config_text, encoding="utf-8")
         stable_info = f", stable: {list(stable_allowlist.keys())}" if stable_allowlist else ""
-        print(f"[gen_eslint_lock] wrote {out} (src globs: {src_globs or '[fallback]'}, test globs: {test_globs or '[fallback]'}{stable_info})")
+        sibling_info = f", siblings: {len(sibling_publics)}" if own_public and sibling_publics else ""
+        print(f"[gen_eslint_lock] wrote {out} (src: {src_globs or '[fb]'}, tests: {test_globs or '[fb]'}{stable_info}{sibling_info})")
+    _ = all_public_path_values  # quiet linter
     return 0
 
 

@@ -62,16 +62,35 @@ status: ready_for_merge | blocked | escalation
 대안: <변경 없이 우회 가능한 방법>
 ```
 
-## Capability candidates (parent capability manifest에 추가 제안)
+## Local skills applied (v1.6 M3 — adaptive learning loop 회복; 의무)
 
-본 child가 자기 scope에서 발견한 *generalizable* skill/role 후보. parent가 merge phase에서 채택 여부 결정:
+본 child 작업이 active local skills 중 어떤 것에 *해당*하는지 *모든 active skill 별로*:
 
+```yaml
+- skill: <skill_name>
+  status: applied | not_applicable | gap_detected
+  evidence: <코드 path:line OR 사유 1줄>
 ```
+
+- `applied`: skill의 enforcement/checklist가 본 child 코드에서 실 사용 — 증거 path 인용
+- `not_applicable`: skill scope이 본 child 외 — 1줄 사유
+- `gap_detected`: skill이 본 child scope cover해야 하는데 *명세 부족* — `## Capability candidates`에 자동 등록 의무
+
+## Capability candidates (parent capability manifest에 추가 제안; v1.6 M8 의무화)
+
+본 child가 자기 scope에서 발견한 *반복 가능한 pattern* — base 또는 parent capability 후보. parent가 merge phase에서 채택 결정.
+
+매 finding closure마다 다음 중 하나 의무 (REVIEW template과 sync):
+- `capability_candidate: yes` → 본 섹션에 등록
+- `capability_candidate: no` → REVIEW finding 본문에 사유 1줄
+
+```yaml
 - candidate_name: <slug>
-  type: skill | role
+  type: skill | role | template_field
   scope_observed: <어느 child 어느 모듈에서 유용했나>
   promotion_rationale: <왜 base 또는 parent capability로 승격해야 하는가>
-  draft_path: <child worktree 내 .harness/skills/<name>.md>
+  draft_path: <child worktree 내 .harness/skills/<name>.md (optional)>
+  trigger_finding: <REVIEW finding ID — 본 candidate를 trigger한 review 항목>
 ```
 
 ## Open findings (parent에 escalate)

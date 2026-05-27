@@ -14,7 +14,7 @@
 | [POSTMORTEM.template.md](POSTMORTEM.template.md) | `postmortems/<date>-<slug>.md` 또는 `.harness/postmortems/...` | `open \| resolved` | claude-implementer |
 | [STATUS.template.md](STATUS.template.md) | 프로젝트 루트 `STATUS.md` 또는 `.harness/status.md` | (front-matter 불필요) | claude-implementer |
 | [LOCAL-SKILL.template.md](LOCAL-SKILL.template.md) ⭐ | `.harness/skills/<id>.md` | `draft \| approved \| superseded \| rejected` | claude-implementer (synthesize-local-layer) + user 승인 |
-| [LOCAL-ROLE.template.md](LOCAL-ROLE.template.md) ⭐ | `.harness/roles/<id>.md` (authority: advisory만) | `draft \| approved \| superseded \| rejected` | claude-implementer + user 승인 |
+| [LOCAL-ROLE.template.md](../project-types/_incubating/LOCAL-ROLE.template.md) ⭐ | `.harness/roles/<id>.md` (authority: advisory만) | `draft \| approved \| superseded \| rejected` | claude-implementer + user 승인 — **v1.6 relocated to _incubating** (활성 사용 시 base 복귀 검토) |
 | [CAPABILITY-MANIFEST.template.md](CAPABILITY-MANIFEST.template.md) ⭐ | `.harness/capabilities.md` (프로젝트당 1개) | `draft \| approved \| superseded` | claude-implementer; user가 *Active* 등재 승인 |
 
 ## 사용 규칙

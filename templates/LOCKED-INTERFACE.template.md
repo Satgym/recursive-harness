@@ -4,6 +4,24 @@ child_name: <kebab-case>
 provider_of: [<other-child-or-parent>, ...]
 consumer_of: [<other-child>, ...]
 sha_at_split: <computed at spawn time>
+
+# v1.6 M9 (codex meta-review) — machine-readable lock fields
+# gen_eslint_lock.py가 이 필드들을 파싱해 정확한 ESLint config 생성.
+# 본 child의 *실제 file 경로* + *허용된 외부 import 경로*를 명시.
+
+# 본 child가 export하는 module의 실 파일 (gen_eslint_lock의 "deny all but this" 게이트의 기준):
+#   예: child_name='oauth-apple' → public_module_path: src/auth/providers/apple.ts
+#       (이러면 sibling 파일 ./google.js / ./kakao.js import는 ESLint가 차단)
+public_module_path: <e.g. src/<dir>/<file>.ts>
+
+# 본 child가 *허용된 외부 stable parent module 경로* (F122 patch):
+#   예: oauth-apple가 ../service.js 를 사용해야 하면:
+#     - { module: '../service.js', allowed_imports: [AuthService] }
+consumed_stable_modules: []
+#   - { module: '<relative path from public_module_path>', allowed_imports: [<exported_name>, ...] }
+
+# 본 child의 sibling provider 파일들 (같은 디렉토리 .ts 형제 — gen_eslint_lock가 자동 차단):
+#   None — gen_eslint_lock가 SPLIT-DECISION-ADR의 children list + 각 public_module_path 조합으로 자동 추론.
 ---
 
 # Locked interface — `<child_name>`

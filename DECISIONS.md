@@ -20,7 +20,7 @@
 
 ## ADR-011 — Hara v1.2 Fleet enforcement 강화 (starpin-fleet real-world dogfood trigger)
 
-**Date**: 2026-05-27 · **Status**: proposed
+**Date**: 2026-05-27 · **Status**: accepted
 **References**:
 - HARNESS.md §14.8 (lock & invariant enforcement) + §14.9 (inter-child consume timing) + §14.10 (scope-bounded gates) 신설
 - skills/lock-grep-gate.md (신설 v0.1)
@@ -113,10 +113,11 @@
   - **F106 (minor)**: ADR-011 positive consequences "typecheck 수준에 근접" → "automated gap detection layer" 정직한 down-tone
 - 후속 codex 재리뷰: 본 patches에 대해 *별도 round 불필요* (mechanical). real-world enforcement 검증은 v1.3 후속 dogfood
 
-**Approval gate**:
-- 사용자 승인 필수 (하니스 자체 변경 — strict 모드)
-- approver: <pending>
-- approval scope: §14.8/9/10 신설 + lock-grep-gate skill + LOCKED-INTERFACE template + SUBTREE-PROMPT/MERGE-REPORT/SPLIT-DECISION-ADR template amend + F80 + F100~F106 patches + starpin-fleet v0.1.0 dogfood evidence
+**Approval**:
+- approver: user
+- approved_at: 2026-05-27
+- approval scope: §14.8/9/10 신설 + lock-grep-gate skill + LOCKED-INTERFACE template + SUBTREE-PROMPT/MERGE-REPORT/SPLIT-DECISION-ADR template amend + F80 + F100~F106 patches + starpin-fleet v0.1.0 dogfood evidence + Phase 05 lock-grep-gate gate
+- 후속: v1.3 후보 (real git worktree dogfood + AST/ESLint lock rule + helper scripts + out-of-band confirmation + wall-time benefit 측정)
 
 ---
 

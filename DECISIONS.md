@@ -18,6 +18,33 @@
 
 ---
 
+## ADR-021 — starpin v0.12 planet interactivity (click + a11y list)
+
+**Date**: 2026-05-27 · **Status**: accepted (autonomous, user-authorized scope expansion)
+
+**Context**: v0.11 introduced the JPL planet ephemeris overlay; the 8 planets render visually but were not interactive — clicking them did nothing, keyboard users had no way to select. This is a tight polish item that completes the v0.11 narrative.
+
+User authorization (2026-05-27): "starpin 프로젝트의 지금 내 기획이 크지 않다고 생각해. 그런 경우 너가 임의로 프로젝트를 자연스러운 방향으로 확장시켜도 좋아." Memory: `project-starpin-scope-expansion`.
+
+**Decision**:
+
+- `sky-canvas.ts` — `pickPlanet()` (canvas hit-test, 7px tolerance = `PLANET_RADIUS_PX + 2`); planet hit-test wins over star when both within tolerance (matches the visual draw order: planets layered on stars)
+- `renderSelectedPlanet()` — detail panel showing name + body_id + RA/Dec + Earth distance in AU. Adds caption "태양계의 식구 — 사람이 차지할 수 없어요." No claim CTA (planets aren't claimable per blueprint scope). INV-XSS via `textContent` only.
+- `renderPlanetList()` — each list item is now a `<button data-body-id>`. Keyboard activation invokes `renderSelectedPlanet` via a delegated click listener on `#planet-list`.
+- `bootstrapSkyPage` — outer `let planets` hoisted before `refresh()` so the click handler reads the live snapshot; refresh() reassigns the outer binding.
+
+**Validation**:
+- typecheck/lint/build green; 288 unit tests pass (no test count change — v0.12 changes are UI-only)
+- E2E smoke green; `#planet-list` assertion still validates contract
+
+**Consequences**:
+- Planets are now first-class citizens in the sky UI (visible, clickable, keyboard-reachable)
+- No new backend route, no new table, no new dependency — pure UI completion of v0.11
+
+**Approval**: user · 2026-05-27 · autonomous (sleep delegation; scope-expansion permission per memory)
+
+---
+
 ## ADR-020 — Hara v2.0 trim discipline (anti-bloat pass)
 
 **Date**: 2026-05-27 · **Status**: accepted (autonomous, sleep delegation, user-directed)

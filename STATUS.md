@@ -8,15 +8,14 @@
 |---|---|
 | Project | Hara 메타 부트스트랩 (이 레포) + starpin dogfood (`examples/starpin/`) |
 | Harness version | **v1.9** (HC-12 신설) — v2.0 trim pass 진행 중 |
-| Last ship | `9f23d2a` note(starpin-v0.11.0) — nickname-setup + planet overlay |
+| Last ship | (pending) note(starpin-v0.12.0) — planet interactivity (click + a11y list). codex r1+r2 both ship/0 findings. Earlier: `3bf567c` harness(v2.0.0). |
 | Strictness | autonomous (사용자 sleep delegation) |
 | Last updated | 2026-05-27 by Claude |
 
 ## Active gate
 
-- v2.0 trim pass: STATUS/HARNESS/PATTERNS 정리 → codex r1+r2 → harness(v2.0) ship 예정.
+- starpin v0.12 ship 직전 — codex r1 (ship/0 findings) + r2 (ship/0 findings) closed. HC-12 smoke green.
 - Open findings: 0. INBOX: 0 unread.
-- 최근 HC-12 evidence: `examples/starpin/.harness/runs/e2e-20260527-login-smoke.json` (pass, planet-list assertion).
 
 ## Required reads (세션 시작 시)
 

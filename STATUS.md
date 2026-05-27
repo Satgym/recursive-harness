@@ -8,18 +8,18 @@
 | 항목 | 값 |
 |---|---|
 | Project | 하니스 자체 빌드 (메타 부트스트랩) |
-| Phase | **starpin v0.5.0 SHIPPED** — web-demo byproduct (4 children + parent wiring + 2 codex review rounds, 12 findings → 0 open) |
-| Active sub-phase | (대기) — v0.6 direction 선택 (native mobile, ingest, deploy, or harness v1.7 maturation) |
+| Phase | **starpin v0.6.0 SHIPPED** — data-ingest-ready (Python ingest worker + Node loader + ADR-002 Gate A closed; 2 codex review rounds, 9 findings → 0 open) |
+| Active sub-phase | (대기) — v0.7 direction 사용자 선택 (sentinel→NULL migration, content_manifest split, object_aliases, planet_positions, native mobile, deploy) |
 | Strictness | autonomous |
-| Harness version | **v1.7 (F126 added)** — `gen_eslint_lock.py` Layer 3에 `allowImportNames` 강제 추가 (consumed_stable_modules 명시된 named-import allowlist를 ESLint v9 paths rule로 lint-time 강제); v1.6 cleanup carry |
-| Git | main; v0.5.0 ship commit + Hara v1.7 commit pending |
-| Last updated | 2026-05-27 by Claude (v0.5 web-demo round 종료; codex r1 10건 + r2 2건 모두 closed) |
+| Harness version | v1.7 (F126 carry — `gen_eslint_lock` Layer 3 `allowImportNames`); no new harness patches this round |
+| Git | main; v0.6 examples/ stays local per push policy (gitignored) — only root STATUS/RELEASE references the ship |
+| Last updated | 2026-05-27 by Claude (v0.6 ingest round — Python worker + Node loader + ADR-002 Gate A; 231 tests; 9 codex findings closed) |
 
 ## Active gate
 
-- **Gate**: 사용자 ask 대기 — v0.6 direction 선택
-- **starpin v0.5 status**: 4 children + parent wiring shipped; 19 suites / 227 tests pass; lint+typecheck clean; dev server smoke-tested (5 pages 200 + CSP/nosniff/referrer 검증)
-- **Hara v1.7 status**: F126 (ESLint named-import enforcement on stable siblings) shipped; v1.6 cleanup carry items applied
+- **Gate**: 사용자 ask 대기 — v0.7 direction 선택
+- **starpin v0.6 status**: ingest worker (Python 3.12 in Docker — astropy/astroquery + pyarrow) + Node loader + ADR-002 Gate A real checksum (`d2f9de0...`); 20 suites / 231 tests pass; lint+typecheck clean; end-to-end DB load smoke 646 rows
+- **Hara v1.7 status**: no new harness patches this round; v0.6 was purely project-level evolution
 
 ## Required reads (이 세션 시작 시)
 

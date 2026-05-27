@@ -9,11 +9,11 @@
 |---|---|
 | Project | 하니스 자체 빌드 (메타 부트스트랩) |
 | Phase | **adaptive-redesign — v0.6+ → v1.0 승격 ADR 발행 (ADR-009)** |
-| Active sub-phase | **starpin v0.1.0 SHIPPED 2026-05-27** (3차 dogfood 완주) + base skill `budget-binary-size` v0.1 (ADR-008 promotion 첫 사례) + ADR-009 v1.0 승격 |
+| Active sub-phase | **starpin v0.1.1 SHIPPED 2026-05-27** (codex batch3 6 patches + Fastify routes + buildServer + integration test) — 3차 dogfood 완주 후 hardening round |
 | Strictness | strict (project-self) — 단 dogfood projects (starpin)는 autonomous transition 가능 (ADR-005 v1.3) |
 | Harness version | **v1.0** (ADR-009 — starpin Phase E §10 5 criteria 충족) |
-| Git | main; starpin 18 commits (Phase 03 자율 ship) + base skill promotion + root DECISIONS ADR-008 + ADR-009 |
-| Last updated | 2026-05-27 by Claude (Executor, autonomous within dogfood scope) |
+| Git | main; starpin 19 commits (v0.1.0 ship + v0.1.1 hardening) + base skill promotion + root DECISIONS ADR-008 + ADR-009 |
+| Last updated | 2026-05-27 by Claude (Executor, autonomous within dogfood scope) — v0.1.1 commit `9e04d24` |
 
 ## Active gate
 

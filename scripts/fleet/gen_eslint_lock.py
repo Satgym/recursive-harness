@@ -90,6 +90,64 @@ def parse_owned_paths(locked_iface_path: Path) -> tuple[list[str], list[str]]:
     return files, tests
 
 
+def parse_consumed_stable_modules(locked_iface_path: Path) -> dict[str, list[str]]:
+    """
+    F122 v1.5 patch — parse locked-interface front-matter `consumed_stable_modules:`
+    section to extract child's allowed parent-module imports. Yields machine-readable
+    allowlist for stable parent modules (e.g. `../catalog/service.js`).
+
+    Front-matter format (yaml, under `---`):
+      consumed_stable_modules:
+        - module: ../catalog/service.js
+          allowed_imports: [CatalogService]
+        - module: ../claim/service.js
+          allowed_imports: [ClaimService]
+
+    Returns {module_path: [allowed_import_names]}.
+    Falls back to empty dict if section absent (back-compat with pre-v1.5 locked-interfaces).
+    """
+    content = locked_iface_path.read_text(encoding="utf-8")
+    fm_match = re.match(r"---\n(.*?)\n---\n", content, re.DOTALL)
+    if not fm_match:
+        return {}
+    fm_lines = fm_match.group(1).splitlines()
+
+    # F124 v1.5 codex M4 patch — state machine parser:
+    #   1. find 'consumed_stable_modules:' line
+    #   2. consume indented children until next top-level (unindented) field or EOF
+    #   3. each block starts with `  - module:` and may include `    allowed_imports:`
+    result: dict[str, list[str]] = {}
+    in_section = False
+    section_indent: int | None = None
+    current_module: str | None = None
+    for line in fm_lines:
+        stripped = line.rstrip()
+        if not stripped:
+            continue
+        # Top-level (zero indent) — exits section
+        leading = len(line) - len(line.lstrip())
+        if not in_section:
+            if re.match(r"^consumed_stable_modules:\s*$", line):
+                in_section = True
+                section_indent = leading
+            continue
+        # In section — exit if we hit a sibling top-level field
+        if leading <= (section_indent or 0):
+            in_section = False
+            continue
+        # Inside section — match either `- module:` or `allowed_imports:`
+        m_module = re.match(r"\s*-\s+module:\s*['\"]?([^'\"\s]+)['\"]?\s*$", line)
+        if m_module:
+            current_module = m_module.group(1)
+            result[current_module] = []
+            continue
+        m_imports = re.match(r"\s*allowed_imports:\s*\[([^\]]*)\]\s*$", line)
+        if m_imports and current_module is not None:
+            names = [n.strip().strip("'\"") for n in m_imports.group(1).split(",") if n.strip()]
+            result[current_module].extend(names)
+    return result
+
+
 def parse_runtime_allowlist(locked_iface_path: Path) -> dict[str, list[str]]:
     """
     Parse `## Consumed interface` section. Look for `import { ... } from '...';` lines
@@ -190,6 +248,7 @@ def build_eslint_flat_config(
     all_providers: dict[str, list[str]],
     owned_src_globs: list[str] | None = None,
     owned_test_globs: list[str] | None = None,
+    stable_module_allowlist: dict[str, list[str]] | None = None,
 ) -> str:
     """
     Emit ESLint v9+ flat config (eslint.config.<child>.mjs) — F110 v1.3 codex patch:
@@ -210,15 +269,12 @@ def build_eslint_flat_config(
       import은 통과 — custom rule v1.4)
     """
     own_module = f"../{child}/index.js"
-    own_dir_pattern = f"../{child}/**"
     paths_rules = []
     patterns_rules = []
     for provider_module, all_exports in all_providers.items():
         if provider_module == own_module:
             continue
         provider_name = provider_module.replace("../", "").replace("/index.js", "")
-        provider_dir = f"../{provider_name}/**"
-        own_provider_pattern = f"../{provider_name}/!(index.js)*"
 
         # Layer 1: block all sibling internal paths (deny pattern; allow only index.js)
         patterns_rules.append({
@@ -245,6 +301,30 @@ def build_eslint_flat_config(
                 "name": provider_module,
                 "importNames": denied,
                 "message": msg,
+            })
+
+    # Layer 3 (F122 v1.5) — stable parent module internal-path block.
+    #   locked-interface front-matter의 `consumed_stable_modules:` 명시 의무.
+    #   본 layer는 *internal path reach-around*만 차단:
+    #     - 명시된 module: ../catalog/service.js → ../catalog/* 다른 path 금지
+    #   *Named-import allowlist*는 ESLint `no-restricted-imports` 한계로 v1.6 후보
+    #   (custom @typescript-eslint rule 필요 — `restricted-imports` 단일 module에 allowlist 미지원).
+    #   현재 v1.5는 *partial mitigation* — internal repo/store 접근 차단만.
+    if stable_module_allowlist:
+        for module_path, allowed_names in stable_module_allowlist.items():
+            # parent module의 디렉토리 추출 (예: ../catalog/service.js → catalog)
+            m_dir = re.match(r"\.\./([^/]+)/", module_path)
+            if not m_dir:
+                continue
+            parent_dir = m_dir.group(1)
+            patterns_rules.append({
+                "group": [f"../{parent_dir}/*", f"!{module_path}"],
+                "message": (
+                    f"Lock violation (Fleet F122 v1.5 — consumed_stable_modules): child '{child}' may not reach "
+                    f"into internal paths of stable parent '{parent_dir}' (only '{module_path}' permitted). "
+                    f"locked-interface §consumed_stable_modules allowlist: {sorted(allowed_names)}. "
+                    f"Named-import allowlist enforcement → codex review (v1.6 custom AST rule 후보)."
+                ),
             })
 
     paths_json = json.dumps(paths_rules, indent=2, ensure_ascii=False)
@@ -308,14 +388,18 @@ def main() -> int:
         allowlist = parse_runtime_allowlist(li_path)
         # F121 v1.4 — parse owned paths from locked-interface
         src_globs, test_globs = parse_owned_paths(li_path)
+        # F122 v1.5 — parse consumed_stable_modules from front-matter (parent module reach-around block)
+        stable_allowlist = parse_consumed_stable_modules(li_path)
         config_text = build_eslint_flat_config(
             child, allowlist, all_providers,
             owned_src_globs=src_globs or None,
             owned_test_globs=test_globs or None,
+            stable_module_allowlist=stable_allowlist or None,
         )
         out = out_dir / f"eslint.config.{child}.mjs"
         out.write_text(config_text, encoding="utf-8")
-        print(f"[gen_eslint_lock] wrote {out} (src globs: {src_globs or '[fallback]'}, test globs: {test_globs or '[fallback]'})")
+        stable_info = f", stable: {list(stable_allowlist.keys())}" if stable_allowlist else ""
+        print(f"[gen_eslint_lock] wrote {out} (src globs: {src_globs or '[fallback]'}, test globs: {test_globs or '[fallback]'}{stable_info})")
     return 0
 
 

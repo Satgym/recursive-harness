@@ -48,33 +48,14 @@ fi
 echo "[pre-push] ship-style commits detected:" >&2
 echo "$ship_subjects" | sed 's/^/    /' >&2
 
-# r1 #1 — HC-11 requires r1+r2 for THIS ship slug, not "any recent review".
-# Extract version slug (the captured part: e.g. starpin-v0.6.0, v1.8).
-# We accept either:
-#   (a) explicit version like v0.6.0, vN.N.N anywhere in subject
-#   (b) the parenthesized scope token, lower-cased
-# Then require BOTH a file matching `*r1*.md` AND `*r2*.md` whose name contains
-# at least one of those slugs, added in last 30 commits.
-# Collect candidate slugs from ship-style commit subjects.
-# Portable to macOS bash 3.2 (no mapfile, no arrays-of-quoted-strings).
-ship_slugs_raw=""
-while IFS= read -r subj; do
-  [[ -z "$subj" ]] && continue
-  # Parenthesized scope: code(STARPIN-v0.6.0) → starpin-v0.6.0
-  paren="${subj#*\(}"; paren="${paren%%\)*}"
-  if [[ -n "$paren" ]]; then
-    slug_full="$(echo "$paren" | tr '[:upper:]' '[:lower:]')"
-    ship_slugs_raw+="$slug_full"$'\n'
-    # Compressed: starpin-v0.6.0 → starpin-v060, v1.8.0 → v180, v0.6 → v06
-    slug_compact="$(echo "$slug_full" | sed -E 's/v([0-9]+)\.([0-9]+)\.?([0-9]*)/v\1\2\3/g')"
-    [[ "$slug_compact" != "$slug_full" ]] && ship_slugs_raw+="$slug_compact"$'\n'
-    # Two-digit major.minor compressed (drop patch): v1.8.0 → v18, v0.6.x → v06
-    slug_short="$(echo "$slug_full" | sed -E 's/v([0-9]+)\.([0-9]+)\.[0-9]+/v\1\2/g; s/v([0-9]+)\.([0-9]+)/v\1\2/g')"
-    [[ "$slug_short" != "$slug_full" && "$slug_short" != "$slug_compact" ]] && ship_slugs_raw+="$slug_short"$'\n'
-  fi
-done <<< "$ship_subjects"
-
-ship_slugs="$(echo "$ship_slugs_raw" | grep -v '^$' | sort -u)"
+# HC-11: require r1+r2 review files for each ship's slug.
+# v2.1 fix — the v1.9 logic concatenated scope+version (e.g. `harness-v2.0.0`)
+# as the substring to match against filenames. But reviewers naturally name
+# files like `harness-20260527-v20-trim.md` where the scope `harness-` is
+# separated from the version by other tokens (date / topic slug). Match the
+# version part *and* the scope part *independently* — a file is counted if it
+# contains either token. Reduces false negatives without enabling random
+# review files to satisfy the gate (version match still requires `vNNN`).
 
 # Collect review files added in last 30 commits (covers patch round + ship).
 recent_review_files="$(git log -30 --diff-filter=A --name-only --pretty=format: -- '*.harness/reviews/*.md' 2>/dev/null | grep -v '^$' | sort -u)"
@@ -85,33 +66,69 @@ if [[ -z "$recent_review_files" ]]; then
   exit 1
 fi
 
-# r2 #1 partial close — track r1/r2 *per primary slug* (the parenthesized
-# scope from each ship subject). If ANY ship in the push lacks r1+r2 for its
-# own slug, fail. Compressed slug variants are still tried but the BOOK is
-# kept per primary so multi-ship pushes are detected.
 fail_count=0
 missing_summary=""
-# Re-extract primary (parenthesized) slug per ship subject.
 while IFS= read -r subj; do
   [[ -z "$subj" ]] && continue
+  # commit type (`code|harness|note`) — used as fallback scope when the
+  # parenthesized slug is just `vN.N.N` with no explicit scope prefix.
+  # Without this fallback, `harness(v2.0.0)` would have scope="" and a
+  # version-only match like `04-...-starpin-v20.md` would falsely satisfy
+  # the gate. (Codex r1 #1 finding on v2.1 enforcement.)
+  commit_type="${subj%%(*}"
+  commit_type="$(echo "$commit_type" | tr -d '[:space:]' | tr '[:upper:]' '[:lower:]')"
   paren="${subj#*\(}"; paren="${paren%%\)*}"
   [[ -z "$paren" ]] && continue
   primary="$(echo "$paren" | tr '[:upper:]' '[:lower:]')"
-  # Generate same compressed variants as before, but scoped to THIS primary.
+
+  # Extract the *version* substring (vN.N.N or vN.N) once.
+  version="$(echo "$primary" | grep -oE 'v[0-9]+\.[0-9]+(\.[0-9]+)?' | head -1)"
+  # Extract scope prefix (everything before the dash-version), lowercased.
+  scope="${primary%-v*}"
+  [[ "$scope" == "$primary" ]] && scope=""   # no scope-version separator
+  # Fallback: harness(v2.0.0) → scope='harness'. This is required for the
+  # scope_ok guard below to actually narrow version-only matches.
+  [[ -z "$scope" ]] && scope="$commit_type"
+
+  # Variants to match against filenames. A file matches if it contains ANY of:
+  #   - full primary slug (e.g. harness-v2.0.0)         — original behavior
+  #   - version forms standalone (v2.0.0 / v200 / v20)  — handles topic-slug files
+  #   - scope token alone (harness / starpin / ...)     — *only when also a version present*
   variants="$primary"$'\n'
-  variants+="$(echo "$primary" | sed -E 's/v([0-9]+)\.([0-9]+)\.?([0-9]*)/v\1\2\3/g')"$'\n'
-  variants+="$(echo "$primary" | sed -E 's/v([0-9]+)\.([0-9]+)\.[0-9]+/v\1\2/g; s/v([0-9]+)\.([0-9]+)/v\1\2/g')"$'\n'
+  if [[ -n "$version" ]]; then
+    variants+="$version"$'\n'
+    variants+="$(echo "$version" | sed -E 's/v([0-9]+)\.([0-9]+)\.?([0-9]*)/v\1\2\3/g')"$'\n'    # v200
+    variants+="$(echo "$version" | sed -E 's/v([0-9]+)\.([0-9]+)\.[0-9]+/v\1\2/g')"$'\n'         # v20
+  fi
   variants="$(echo "$variants" | grep -v '^$' | sort -u)"
 
+  # Round classification (v2.1):
+  #   - filename contains `r2` / `r3` / ... → that round
+  #   - filename matches slug but contains NO `rN` token → r1 (default-round
+  #     convention used since starpin v0.5; e.g. `04-...-v09-r1.md` AND bare
+  #     `04-...-v09.md` both count as r1)
   has_r1=0; has_r2=0
   while IFS= read -r variant; do
     [[ -z "$variant" ]] && continue
     while IFS= read -r f; do
       [[ -z "$f" ]] && continue
       fname_lc="$(echo "$(basename "$f")" | tr '[:upper:]' '[:lower:]')"
+      # For the bare version variants (no scope prefix in the variant itself),
+      # additionally require the scope token to appear in the filename so an
+      # unrelated review for a different scope at the same version doesn't pass.
+      # E.g. ship `harness-v2.0.0` + file `04-starpin-v20.md` must still fail.
       if [[ "$fname_lc" == *"$variant"* ]]; then
-        [[ "$fname_lc" == *r1* ]] && has_r1=1
-        [[ "$fname_lc" == *r2* ]] && has_r2=1
+        scope_ok=1
+        if [[ -n "$scope" && "$variant" != *"$scope"* ]]; then
+          [[ "$fname_lc" == *"$scope"* ]] || scope_ok=0
+        fi
+        if [[ $scope_ok -eq 1 ]]; then
+          if [[ "$fname_lc" =~ r[2-9] ]]; then
+            has_r2=1
+          else
+            has_r1=1   # bare or explicit r1
+          fi
+        fi
       fi
     done <<< "$recent_review_files"
   done <<< "$variants"

@@ -18,6 +18,67 @@
 
 ---
 
+## ADR-022 — Hara v2.1 enforcement gap pass
+
+**Date**: 2026-05-28 · **Status**: accepted (autonomous — user-directed audit-driven fix)
+
+**Context**: Audit (2026-05-28 사용자 요청) — base 하니스 및 project-local 하니스의 실제 작동 검증. 5 ship의 야간 작업이 hook 의 hard gate (HC-6 pre-commit, HC-11 review file presence, HC-12 evidence) 는 통과했으나, *push 시도해보니* pre-push hook이 `harness(v2.0.0)` 을 차단함을 확인. 추가로 documentation theater 1건 + monorepo gate inactive 1건 발견.
+
+3 enforcement gap + 1 theater cut:
+
+1. **pre-push slug 매칭이 너무 strict** — v1.9 hook은 `scope-version` 연결 형태 (`harness-v2.0.0`) 를 substring으로 찾음. 그러나 reviewer는 자연스럽게 파일명을 `<phase>-<date>-<topic-slug>.md` 형태로 짓는데, 거기 `harness-v2.0.0` 같은 단일 토큰이 안 들어감 (date 가 사이에 끼임). 결과: v2.0.0 push가 실제로 blocked. starpin v0.5~v0.9 ship 들이 reviews 가 분명 있었음에도 hook이 안 잡았던 이유와도 같은 계열.
+
+2. **r1 conventions를 hook이 모름** — starpin v0.7~v0.9 reviews 다수가 첫 라운드는 bare `04-...-v07.md`, 두 번째 라운드는 `-r2` suffix 명명. v1.9 hook은 *명시적 `r1` substring* 만 r1으로 인정 → bare 파일이 r1으로 안 잡힘.
+
+3. **pre-review-gate가 monorepo subdir 모름** (F42 carry from v1.2) — `examples/starpin/.harness/` + `examples/starpin/backend/package.json` 같은 layout에서 gate가 root에 서서 `package.json` 못 찾아 "0 checks attempted FAIL". 결과: 야간 codex review 7회 모두 `--no-gate` 우회. 사용자가 npm test/typecheck 수동 실행으로 갈음했지만, *gate가 enforce 라는 design intent* 가 무력화됨.
+
+4. **HARNESS §6 3-질문 자가점검은 documentation theater** — "Blueprint와 일치하나? / STATUS 최신? / 미반영 finding?" 체크리스트가 v1.8~v2.0 dogfood 10+ ship에서 한 번도 명시 invoke 되지 않음. user direction (memory: `feedback-harness-minimalism`) 정확히 그 케이스 — 안 지켜지는 규칙은 hook으로 enforce 하거나 삭제.
+
+**Decision**:
+
+### A. pre-push slug matching 완화 (`.githooks/pre-push`)
+- scope (`harness`, `starpin`, `temp-sensor` 등) 와 version (`vN.N.N`, 압축 `vNNN`, 짧은 `vNN`) 를 *독립적으로* 매칭. 둘 다 같은 파일에 있을 때만 (또는 scope가 빈 경우 version 만으로) 카운트
+- bare round-suffix-less 파일을 r1으로 인정 (`/r[2-9]/` substring 없으면 default r1). starpin convention (v0.5~v0.9) 과 직접 호환
+
+### B. pre-review-gate monorepo (`scripts/pre-review-gate.sh`)
+- ROOT 자체에 project marker (`package.json` / `pyproject.toml` / `Cargo.toml` / `go.mod`) 없으면 1-depth subdir 도 스캔
+- node_modules / .venv / .git 제외
+- 각 subdir 별로 lint/typecheck/test 실행, attempted/ok 카운트 통합
+- 결과: starpin root에서 `bash pre-review-gate.sh` → `backend npm lint/typecheck/test` 3 checks PASS 확인
+
+### C. HC-6 carveout 명시 (HARNESS HC-6 row)
+- "scope: 루트 STATUS.md만 hook enforce. project-local `.harness/status.md` (gitignored sub-project) 는 프로젝트 자체의 책임" 추가
+- 명시적 carveout이라 starpin/.harness/status.md staleness가 silent design assumption 이 아니라 known constraint 가 됨
+
+### D. HARNESS §6 3-질문 삭제
+- 3-질문 체크리스트 제거. §6 본문은 PATTERNS.md §drift 포인터 + postmortem trigger 만 유지
+- 삭제 사유 inline 명시 (audit 발견을 미래 세션이 볼 수 있게): "documentation theater 사례 — 10+ ship 동안 한 번도 invoke 안 됨"
+
+**Validation**:
+- `git push --dry-run` ← v2.0.0 commit 포함 → before: FAIL, after: PASS (`HC-11 r1+r2 evidence found for every ship`)
+- `bash scripts/pre-review-gate.sh` from `examples/starpin/` → before: FAIL 0 checks, after: PASS 3 checks (backend lint/typecheck/test)
+- pre-commit HC-6 enforcement 변경 없음 (이미 정상 작동)
+- HC-12 hook 변경 없음
+
+**Consequences**:
+
+positive:
+- Hook 이 *설계 의도대로* 실제 작동 — slug 명명 convention 자유도 ↑ 면서 false negative ↓
+- F42 (v1.2 era open finding) 마침내 closed
+- HC-6 의 "왜 root 만 enforce 되는지" 가 explicit document (silent 누락 vs 명시 carveout)
+- Documentation theater 1건 cut (HARNESS §6 3-질문)
+
+negative:
+- pre-push 의 slug matching logic 복잡도 약간 ↑ (scope 분리 + r-suffix 분기). hook 본문 ~30줄 증가
+- pre-review-gate에 monorepo discovery loop 추가 ~25줄 증가
+
+guardrail:
+- v2.0 trim discipline 위배 안 함 — 이번 추가는 *enforce 강화* (load-bearing). theater cut으로 순 라인 수는 거의 같거나 줄어듦.
+
+**Approval**: user · 2026-05-28 · autonomous (audit 요청 직접 수행 → 발견 → fix 단일 ship)
+
+---
+
 ## ADR-021 — starpin v0.12 planet interactivity (click + a11y list)
 
 **Date**: 2026-05-27 · **Status**: accepted (autonomous, user-authorized scope expansion)

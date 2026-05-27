@@ -7,16 +7,16 @@
 | 항목 | 값 |
 |---|---|
 | Project | Hara 메타 부트스트랩 (이 레포) + starpin dogfood (`examples/starpin/`) |
-| Harness version | **v2.0** (trim discipline) |
-| Last ship | `4e0c71d` note(starpin-v0.12.0) — planet interactivity. 야간 작업 5 ship 완료 (Hara v1.9/v2.0 + starpin v0.10/v0.11/v0.12). |
-| Strictness | autonomous (사용자 sleep delegation; 마무리 상태) |
-| Last updated | 2026-05-27 by Claude (sleep-delegation session 완료) |
+| Harness version | **v2.1** (enforcement gap pass; ADR-022) — pre-push slug matching 완화 + pre-review-gate monorepo + HC-6 carveout 명시 + §6 3-질문 삭제 |
+| Last ship | (pending) harness(v2.1.0) — audit-driven enforcement fix. 직전: `4e0c71d` note(starpin-v0.12.0). |
+| Strictness | autonomous (사용자 wake-up + audit-driven 작업) |
+| Last updated | 2026-05-28 by Claude (audit → v2.1 fix) |
 
 ## Active gate
 
-- (none) — 야간 자율 작업 모두 ship 완료. 사용자 wake-up 핸드오프 대기.
-- Open findings: 0. INBOX: 0 unread.
-- HC-12 evidence: `examples/starpin/.harness/runs/e2e-20260527-login-smoke.json` (pass, 모든 ship 직전 갱신).
+- v2.1 ship 준비 — codex r1+r2 진행 예정.
+- Open findings: 0 (F42 closed by ADR-022 §B). INBOX: 0 unread.
+- HC-12 evidence: `examples/starpin/.harness/runs/e2e-20260527-login-smoke.json` (pass).
 
 ## Required reads (세션 시작 시)
 
@@ -30,13 +30,14 @@
 
 **Hook 설치** (clone 1회): `git config core.hooksPath .githooks` — HC-6/HC-11/HC-12 자동 enforce.
 
-## Recent ships (이번 sleep-delegation session)
+## Recent ships
 
 | commit | scope | 내용 |
 |---|---|---|
-| 4e0c71d | note(starpin-v0.12.0) | planet interactivity — click + a11y list buttons (ADR-021, codex r1+r2 ship/0) |
+| (pending) | harness(v2.1.0) | enforcement gap pass — pre-push slug 완화, monorepo gate, HC-6 carveout, §6 cut (ADR-022) |
+| 4e0c71d | note(starpin-v0.12.0) | planet interactivity — click + a11y list buttons (ADR-021) |
 | 3bf567c | harness(v2.0.0) | trim discipline — STATUS −73% / HARNESS HC-12 row + version history 압축 (ADR-020) |
-| 9f23d2a | note(starpin-v0.11.0) | nickname-setup + planet overlay (ADR-019, codex r2 minor-followup) |
+| 9f23d2a | note(starpin-v0.11.0) | nickname-setup + planet overlay (ADR-019) |
 | 74391d5 | harness(v1.9.0) + starpin v0.10 | HC-12 신설 + Mock OAuth/route 누락 fix (ADR-017/018) |
 | (older) | — | git log; ADR-001~ADR-016은 DECISIONS.md |
 

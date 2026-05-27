@@ -56,21 +56,55 @@ fail() { echo "[gate] FAIL: $*" >&2; ok=0; }
 pass() { echo "[gate] PASS: $*" >&2; }
 attempt() { attempted=$((attempted+1)); }
 
+# v2.1 (F42 close) — monorepo subproject discovery.
+# Common layout: project root has `.harness/` but the actual code package lives
+# in a subdir (e.g. `examples/starpin/.harness/` + `examples/starpin/backend/`).
+# Walk one level into subdirs and run tooling from any subdir containing a
+# project marker. Skips node_modules/.git to avoid descending into vendor.
+
 # --- JS / TS ---
+js_dirs=""
 if [[ -f package.json ]] && command -v npm >/dev/null 2>&1; then
-  echo "[gate] detected JS/TS (package.json)" >&2
-  attempt; npm run -s lint --if-present      && pass "npm lint"      || fail "npm lint"
-  attempt; npm run -s typecheck --if-present && pass "npm typecheck" || fail "npm typecheck"
-  attempt; npm test --silent --if-present    && pass "npm test"      || fail "npm test"
+  js_dirs="."
 fi
+# Subdir scan (depth 1): pick dirs with package.json but not node_modules.
+if command -v npm >/dev/null 2>&1; then
+  while IFS= read -r d; do
+    [[ -z "$d" ]] && continue
+    [[ "$d" == "./node_modules"* ]] && continue
+    [[ "$d" == "./.git"* ]] && continue
+    js_dirs+=$'\n'"$d"
+  done < <(find . -mindepth 2 -maxdepth 2 -name package.json -not -path '*/node_modules/*' 2>/dev/null | sed 's|/package.json$||')
+fi
+js_dirs="$(echo "$js_dirs" | grep -v '^$' | sort -u)"
+while IFS= read -r d; do
+  [[ -z "$d" ]] && continue
+  label="${d#./}"; [[ "$label" == "." ]] && label="(root)"
+  echo "[gate] detected JS/TS ($label)" >&2
+  ( cd "$d" && npm run -s lint --if-present )      && { attempt; pass "$label npm lint"; }      || { attempt; fail "$label npm lint"; }
+  ( cd "$d" && npm run -s typecheck --if-present ) && { attempt; pass "$label npm typecheck"; } || { attempt; fail "$label npm typecheck"; }
+  ( cd "$d" && npm test --silent --if-present )    && { attempt; pass "$label npm test"; }      || { attempt; fail "$label npm test"; }
+done <<< "$js_dirs"
 
 # --- Python ---
+py_dirs=""
 if [[ -f pyproject.toml || -f setup.py ]]; then
-  echo "[gate] detected Python" >&2
-  command -v ruff   >/dev/null && { attempt; ruff check .  && pass "ruff"   || fail "ruff"; }
-  command -v mypy   >/dev/null && { attempt; mypy .        && pass "mypy"   || fail "mypy"; }
-  command -v pytest >/dev/null && { attempt; pytest -q     && pass "pytest" || fail "pytest"; }
+  py_dirs="."
 fi
+while IFS= read -r d; do
+  [[ -z "$d" ]] && continue
+  [[ "$d" == "./.git"* ]] && continue
+  py_dirs+=$'\n'"$d"
+done < <(find . -mindepth 2 -maxdepth 2 \( -name pyproject.toml -o -name setup.py \) -not -path '*/.venv/*' 2>/dev/null | sed -E -e 's|/pyproject\.toml$||' -e 's|/setup\.py$||')
+py_dirs="$(echo "$py_dirs" | grep -v '^$' | sort -u)"
+while IFS= read -r d; do
+  [[ -z "$d" ]] && continue
+  label="${d#./}"; [[ "$label" == "." ]] && label="(root)"
+  echo "[gate] detected Python ($label)" >&2
+  command -v ruff   >/dev/null && { ( cd "$d" && ruff check . )  && { attempt; pass "$label ruff"; }   || { attempt; fail "$label ruff"; }; }
+  command -v mypy   >/dev/null && { ( cd "$d" && mypy . )        && { attempt; pass "$label mypy"; }   || { attempt; fail "$label mypy"; }; }
+  command -v pytest >/dev/null && { ( cd "$d" && pytest -q )     && { attempt; pass "$label pytest"; } || { attempt; fail "$label pytest"; }; }
+done <<< "$py_dirs"
 
 # --- Rust ---
 if [[ -f Cargo.toml ]] && command -v cargo >/dev/null 2>&1; then

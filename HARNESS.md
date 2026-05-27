@@ -1,4 +1,4 @@
-# HARNESS.md — Hara 헌법 (v2.0)
+# HARNESS.md — Hara 헌법 (v2.1)
 
 > Claude+Codex 협업의 **절대 규칙**과 **워크플로우 정의**.
 > 변경은 §10 절차. 버전 이력은 §11.
@@ -24,7 +24,7 @@
 | HC-3 | **Drift-Aware** | phase 경계와 세션 시작 시 "지금 Blueprint와 일치하나?" 자가점검 |
 | HC-4 | **Gate-Bound** | phase 간 이동은 [phases/<phase>.md](phases/)의 Exit 기준 만족 필수 |
 | HC-5 | **Role-Default** | Claude=구현자, Codex=리뷰어. 역할 스왑은 명시적 결정 + ADR |
-| HC-6 | **Status-Updated** | 모든 작업 종료 시 STATUS.md 갱신. **pre-commit hook이 enforce** (RELEASE.md 변경 시 STATUS.md 동시 staging 필수) |
+| HC-6 | **Status-Updated** | 모든 작업 종료 시 STATUS.md 갱신. **pre-commit hook이 enforce** (RELEASE.md/HARNESS-scaffold 변경 시 루트 STATUS.md 동시 staging). **Scope**: 루트 STATUS.md만 hook enforce. project-local `.harness/status.md` (gitignored sub-project)는 *프로젝트 자체의 책임* — root에서 enforce 불가, 프로젝트 working set에 포함되면 같은 갱신 의무가 그 프로젝트의 hook 또는 사용자 검토로 적용 |
 | HC-7 | **Secrets-Redacted** | 시크릿/자격증명/PII는 모든 산출물·로그·리뷰에서 즉시 redact. 어떤 모드에서도 평문 저장 금지 |
 | HC-8 | **External-Effects-Gated** | 외부 영향 mutation(deploy, 외부 API write, message send, push to remote)은 **모든 모드에서 사용자 승인** |
 | HC-9 | **Destructive-Confirmed** | Destructive 작업(rm/drop/truncate/force-push/branch -D/reset --hard 등)은 **모든 모드에서 사용자 승인** |
@@ -113,12 +113,10 @@ canonical enum 사용 의무: `severity (blocker|major|minor|nit|info)`, `status
 
 ## 6. 드리프트 감지·수정
 
-phase 경계 + 세션 시작 시 *3 질문* 자가점검:
-1. Blueprint와 일치하나?
-2. STATUS가 최신인가?
-3. 미반영 codex finding이 있는가?
+세부 신호 + 절차 + postmortem 양식: [PATTERNS.md §drift](PATTERNS.md).
+Postmortem trigger: (a) HC-7/8/9 위반, (b) 같은 finding 2회 이상 재발, (c) Blueprint 우회.
 
-세부 절차 + postmortem 양식: [PATTERNS.md §drift](PATTERNS.md). Postmortem trigger: (a) HC-7/8/9 위반, (b) 같은 finding 2회 이상 재발, (c) Blueprint 우회.
+> v2.0까지 본 섹션에 *"3-질문 자가점검"* 체크리스트가 있었으나 v1.8~v2.0 dogfood (10+ ship)에서 한 번도 명시 invoke 안 됨 — 전형적 documentation theater. v2.1에 삭제. 드리프트 catch는 hook (HC-6/HC-11/HC-12) + codex review에 위임.
 
 ## 7. Project-local Adaptive Layer
 
@@ -175,7 +173,8 @@ stranger (다음 세션 / 다른 사람)가 STATUS.md만 보고 "지금 무엇�
 
 | 버전 | 변경 | ADR |
 |---|---|---|
-| v2.0 | trim discipline — STATUS/HARNESS bloat 제거, HC-12 row 압축, 운영 원칙 명시. user direction: "안지켜짐 → 규칙 추가" 루프 금지 | ADR-020 |
+| v2.1 | enforcement gap 메우기 — pre-push slug-matching 완화 (scope/version 독립 + r1 default-round 인정), pre-review-gate monorepo subdir 인식 (F42 close), HC-6 carveout 명시 (root vs project-local), §6 3-질문 documentation theater 삭제 | ADR-022 |
+| v2.0 | trim discipline — STATUS/HARNESS bloat 제거, HC-12 row 압축, 운영 원칙 명시 | ADR-020 |
 | v1.9 | HC-12 User-Flow-Verified (Playwright E2E smoke + pre-push enforce) | ADR-017 |
 | v1.8 | minimize + hook (565→200줄, .githooks/ enforce HC-6/HC-11) | ADR-013 |
 | v1.1 | Fleet Mode (다중 세션 병렬, depth ≤ 2) | ADR-010 |

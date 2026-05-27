@@ -8,12 +8,12 @@
 | 항목 | 값 |
 |---|---|
 | Project | 하니스 자체 빌드 (메타 부트스트랩) |
-| Phase | **starpin v0.3.0 SHIPPED** (OAuth 3-provider production + Hara v1.3+v1.5 inflight) |
-| Active sub-phase | (대기) — v1.6 trigger F123 또는 starpin v0.4 (sky-3d / mobile / ingest) |
+| Phase | **starpin v0.4.0 SHIPPED** (Sky 3d + Rate-limit + PKCE integration test) |
+| Active sub-phase | (대기) — v0.5 (mobile/ingest/snapshot/sky-3d repo unit) 또는 v1.6+ (F123 sibling-file / child-recovery v1.7) |
 | Strictness | autonomous-within-delegation |
-| Harness version | **v1.3** + v1.4/v1.5 inflight (F120/F121/F122/F124 applied; F123 v1.6 carry-over) |
-| Git | main; v1.3 commit `b71324d` + v0.2 commit `bdc1d24` + v0.3 commits pending |
-| Last updated | 2026-05-27 by Claude (starpin v0.3.0 SHIPPED — 18 suites/198 pass; codex 0 blocker + 5 major + 1 minor 모두 closed) |
+| Harness version | **v1.3** + v1.4/v1.5/v1.7 inflight; F123 v1.6 carry; child-recovery v1.7 carry |
+| Git | main; cumulative — v1.3 `b71324d` + v0.2 `bdc1d24` + v0.3 `3b8a223` + v0.4 commits pending |
+| Last updated | 2026-05-27 by Claude (starpin v0.4.0 SHIPPED — 20 suites/227 pass; codex 0 blocker + 3 major + 2 minor closed; F1 v0.5 carry) |
 
 ## Active gate
 

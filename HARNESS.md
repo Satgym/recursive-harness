@@ -1,7 +1,8 @@
-# HARNESS.md — 하니스 헌법 (v0.6)
+# HARNESS.md — 하니스 헌법 (v1.0)
 
 > 이 파일은 Claude와 Codex 모두가 따르는 **절대 규칙**과 **워크플로우 정의**다.
 > 변경은 §6 "하니스 수정 절차"를 거쳐야 한다.
+> **v0.6 → v1.0** (2026-05-27): Phase E §10 5 criteria 모두 충족 (3 dogfood: todo-api/temp-sensor/starpin); HARNESS §13.6 manual base promotion 첫 사례 작동 (skills/budget-binary-size.md v0.1 합성); autonomous mode self-test schema 3 amend (ADR-005 v1.1→v1.2→v1.3) — *self-test PASS는 codex review 대체 X* 명문화. 신규 base skill 추가: `budget-binary-size`. v0.6 adaptive vision 검증 완료. 변경 내역은 §8 참조. 자세한 promotion rationale: root DECISIONS.md ADR-009 (v1.0 ship) + ADR-008 (binary-size-budget promotion).
 > **v0.5 → v0.6**: Adaptive redesign — base vs project-local layer 분리, HC-10 신설, §13 Local Adaptive Layer, phase 00 안에 Local Capability Synthesis sub-step, manifest-based loading. 변경 내역은 §8 참조. 동기: adaptive-redesign-r1 review (F52~F67).
 
 ---
@@ -238,7 +239,8 @@ STATUS.md는 다음 섹션을 **모두** 포함해야 한다 (없으면 양식 �
 - **v0.3** (2026-05-25): A.0e 통합 — F7 분쟁 프로토콜(§11), Postmortem triggers(§6.3-6.4), Cost guardrails(§5.4), Dogfood criteria(§10), Branch/git policy(§12), Artifact front-matter 표준(§4.3)
 - **v0.4** (2026-05-25): A.0g micro-patch — F13 §12.2 base branch 모순 해소, F14 §4.3 artifact-specific status enum 분리 + `deferred_reason` 필드 신설, F15 §9 임시 게이트가 §11 disputed 처리 cross-ref
 - **v0.5** (2026-05-25): Phase A 종결판. A.5 통합 cross-review 반영 — F16, F19. 기타 F17/F18/F20-F26은 CLAUDE/DECISIONS/scripts/templates/phases 변경으로 처리
-- **v0.6** (2026-05-25, 본 파일): **Adaptive redesign** — adaptive-redesign-r1 review (F52~F67) 반영. HC-10 신설 (Local-Extends-Only). §13 신설 (Project-local Adaptive Layer). §4.2에 `.harness/skills/`/`.harness/roles/`/`.harness/capabilities.md` 추가. 새 templates 3개 (LOCAL-SKILL/LOCAL-ROLE/CAPABILITY-MANIFEST). 새 base skills 2개 (synthesize-local-layer/review-local-layer; promote-local-capability는 v1.1로 deferred). phases/00에 Local Capability Synthesis sub-step. new-project.sh adaptive skeleton. project-types/는 *seeds*로 재해석.
+- **v0.6** (2026-05-25): **Adaptive redesign** — adaptive-redesign-r1 review (F52~F67) 반영. HC-10 신설 (Local-Extends-Only). §13 신설 (Project-local Adaptive Layer). §4.2에 `.harness/skills/`/`.harness/roles/`/`.harness/capabilities.md` 추가. 새 templates 3개 (LOCAL-SKILL/LOCAL-ROLE/CAPABILITY-MANIFEST). 새 base skills 2개 (synthesize-local-layer/review-local-layer; promote-local-capability는 v1.1로 deferred). phases/00에 Local Capability Synthesis sub-step. new-project.sh adaptive skeleton. project-types/는 *seeds*로 재해석.
+- **v1.0** (2026-05-27, 본 파일): **Phase E ship + adaptive vision 검증 완료**. ADR-009 v1.0 승격 — §10 v1.0 5 criteria 모두 충족 (3 domain dogfood ship: todo-api Phase 02 + temp-sensor v0.1.0 + starpin v0.1.0). 신규 base skill `budget-binary-size` 추가 (ADR-008 manual promotion 첫 사례; starpin mobile-bundle-budget + temp-sensor budget-flash-ram → domain-agnostic abstraction). autonomous mode self-test 정착: race_pattern_check + user_gate_required_check + carry_over_finding_count + codex_round_count_per_artifact (ADR-005 v1.3 — *self-test PASS는 codex review 대체 X* 명문화). v0.6 → v1.0 transition rationale은 root DECISIONS.md ADR-009 참조.
 
 ## 9. Bootstrap exception (Phase A 한정) — **DEPRECATED**
 

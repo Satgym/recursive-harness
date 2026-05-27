@@ -8,17 +8,17 @@
 | 항목 | 값 |
 |---|---|
 | Project | 하니스 자체 빌드 (메타 부트스트랩) |
-| Phase | **starpin v0.8.0 SHIPPED** — 카탈로그 데이터 품질 (sentinel→NULL + object_aliases + planet_positions); 2 codex review rounds, 6 findings → 0 open |
-| Active sub-phase | (대기) — v0.9 direction (`hd` namespace / 전체 mag≤12 / sky planet 통합 / native mobile when toolchain / real cloud deploy) |
+| Phase | **starpin v0.9.0 SHIPPED** — HD namespace + sky planet API (`/v1/sky/planets`); 2 codex review rounds, 3 findings → 0 open |
+| Active sub-phase | (대기) — v0.10 direction (multi-epoch planets / sky/now planet 통합 / mag≤12 / native mobile when toolchain / cloud deploy) |
 | Strictness | autonomous |
-| Harness version | v1.8 carry (4th round dogfood; 새 hook 버그 0건 발견 — v1.8 stable 신호) |
-| Git | main + origin; v0.8 ship 진행 중 (이 commit에서) |
-| Last updated | 2026-05-27 by Claude (v0.8 카탈로그 데이터 품질; 247 tests; 6 codex findings closed) |
+| Harness version | v1.8 carry (5th round dogfood; 새 hook 버그 0건 — stability 추가 확인) |
+| Git | main + origin; v0.9 ship 진행 중 (이 commit에서) |
+| Last updated | 2026-05-27 by Claude (v0.9 HD + sky planet API; 279 tests; 3 codex findings closed) |
 
 ## Active gate
 
-- (none — v0.8 ship 직전 STATUS 갱신)
-- **하니스 검증 결과 (v1.8 4th dogfood round)**: pre-commit + commit-msg + pre-push 모두 정상 fire. 새 버그 0건 발견 — v1.8 stability 신호. cumulative dogfood rounds: v0.7 (3 hooks all fire) + v0.8 (3 hooks all fire, 0 false positives, 0 missing enforcement).
+- (none — v0.9 ship 직전 STATUS 갱신)
+- **하니스 검증 결과 (v1.8 5th dogfood round)**: 3 hooks 모두 정상. cumulative: 5 ship rounds × 3 hooks = 15 hook fire 기회 × 0 false positives × 0 missing enforcement. v1.8 minimize+hook stability strongly validated.
 
 ## Required reads (세션 시작 시)
 

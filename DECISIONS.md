@@ -18,6 +18,63 @@
 
 ---
 
+## ADR-016 — starpin v0.9 HD namespace + sky planet API
+
+**Date**: 2026-05-27 · **Status**: accepted (user-recommended "추천해줘")
+
+**Scope**: 2 paired carry items from v0.8 — restore HD aliases as `hd` namespace (v0.8 r1 #2) + expose v0.8's loaded planet_positions via `/v1/sky/planets` (closes "data loaded but not exposed" gap).
+
+**References**:
+- codex v0.8 r1 #2 (HD as HIP corruption)
+- v0.8 STATUS "v0.9 carry" — sky planet integration + hd namespace
+- ADR-002 amended (manifest sha `3b217f0e775df…`)
+- migration 0032
+- codex v0.9 r1 (2 findings: blocker + major) + r2 (1 closed + 1 partial → closed)
+
+**Decision**:
+
+### A. HD namespace restored (codex v0.8 r1 #2)
+1. Migration 0032 — `object_aliases.source_catalog` enum adds `'henry-draper'`; idempotent DO blocks
+2. `canonical-id.ts` — `'hd'` added to VALID_SOURCES (separate from `'hip'`)
+3. `ingest/fetch_aliases.py` — HD restored in SIMBAD_PREFIX_MAP, emits `source_catalog: 'henry-draper'`
+4. Verified: 35 HD aliases load alongside 34 HIP — distinct namespaces
+
+### B. /v1/sky/planets endpoint (v0.8 carry)
+1. `backend/src/sky/planet-repository.ts` (NEW) — read-only access, `DISTINCT ON (body_id)` latest-per-body + epoch filter
+2. `backend/src/routes/sky-planets-route.ts` (NEW) — auth-gated, optional `?epoch_utc=ISO` filter
+3. UTC contract round-trippable (r2 #2): canonical `YYYY-MM-DDTHH:MM:SS.sssZ` form, parse-validate via `Date`, year range bound 1900-2100, repo uses `to_char(... AT TIME ZONE 'UTC', ...)` for stable output
+4. Verified: 8 planets queryable, response epoch_utc can be fed back as query (round-trip test)
+
+### C. Codex review evidence
+- r1: 2 findings (1 blocker server.ts ts-jest narrowing + 1 major epoch_utc UTC semantics)
+- r2: 1 closed + 1 partial → patched to closed (round-trip contract + bound)
+- 26 test suites / **279 tests + 3 skipped / 0 fail** (+8 new for v0.9)
+
+**Consequences**:
+
+positive:
+- Name-based lookup via HD numbers now works (Sirius = HD 48915, queryable)
+- Planet positions exposed via stable API contract — UI/native clients can render planets alongside stars
+- UTC contract is round-trippable (response value ↔ query input)
+- Year-range guard catches Date.parse silent failures (e.g., `0000-01-01`)
+
+negative:
+- 117 aliases — bounded scope (36 SIMBAD calls); v0.9+ streaming for full bright sample still carry
+- `/v1/sky/planets` is single-epoch in current ingest (8 planets per snapshot); multi-epoch hourly cadence is v0.10 carry
+- Year bound 1900-2100 — astronomy queries beyond that window need wider range
+
+후속 (v0.10+):
+- Multi-epoch planet ingest (hourly window for 24h or daily)
+- `/v1/sky/now` integration with planets (currently stars only)
+- Streaming SIMBAD batch for full Gaia bright sample
+- Temp-table swap-on-commit
+- Native mobile (still requires Xcode + Android Studio)
+- Real cloud deploy level 2
+
+**Approval**: user · 2026-05-27 · autonomous (사용자 "추천해줘" delegated)
+
+---
+
 ## ADR-015 — starpin v0.8 catalog data quality bundle (sentinel→NULL + aliases + planet_positions)
 
 **Date**: 2026-05-27 · **Status**: accepted (user-directed "진행해줘")

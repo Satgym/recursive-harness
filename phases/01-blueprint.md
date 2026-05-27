@@ -19,7 +19,9 @@
 5. **Observability** — 구조화 로그 형식, redaction(HC-7), 디버그 hook 약속.
 6. **Risks** — likelihood × impact 매트릭스, 각 risk에 mitigation 명시.
 7. **HC-7/8/9 영향 식별** — Blueprint 시점에서 시크릿 / 외부 mutation / destructive 작업이 발생할 모듈 / 시점을 사전 명시.
-8. **Codex 리뷰 의뢰** — `scripts/codex-exec-review.sh --phase 01-blueprint --slug initial --prompt-file <prompt>`로 codex-reviewer 검토 요청. 결과는 `.harness/reviews/01-blueprint-<date>-initial.md`.
+8. **(v1.1+) Cross-cutting invariants 식별 의무** — split 여부와 무관하게 *모듈 경계를 가로지르는 invariant*를 BLUEPRINT §X에 명시. Fleet Mode 진입 시 child가 이를 *동시에* 지켜야 함. 식별되지 않으면 `none identified`로 명시 (생략 금지). HARNESS §14.2 Fleet F2.
+9. **Expected module set 고정** — Blueprint §3 Modules 표에 *모든 예상 모듈 ID*를 한 번에 열거 + `.harness/docs/modules/index.md`에 같은 set을 캐노니컬 list로 기록 (Phase 02 split-decision의 "마지막 plan" 판정 근거). 후속 phase에서 모듈 추가/제거 시 Blueprint amend ADR 필수.
+10. **Codex 리뷰 의뢰** — `scripts/codex-exec-review.sh --phase 01-blueprint --slug initial --prompt-file <prompt>`로 codex-reviewer 검토 요청. 결과는 `.harness/reviews/01-blueprint-<date>-initial.md`.
 9. **리뷰 finding 처리** — blocker = 0, major resolved/deferred 명시.
 
 ## Outputs
@@ -35,6 +37,8 @@
 - [ ] 의존성 그래프 사이클 없음
 - [ ] 테스트 전략 실행 가능 (도구 / 위치 명시)
 - [ ] HC-7/8/9 영향 항목 식별됨
+- [ ] **(v1.1+) Cross-cutting invariants 명시** (Fleet F2 — `none identified`로라도 명시; 생략은 양식 위반)
+- [ ] **(v1.1+) Expected module set이 Blueprint §3 + `.harness/docs/modules/index.md`에 캐노니컬 기록**
 - [ ] Open questions 모두 답 또는 명시적 deferred
 - [ ] **Codex 리뷰 받음** (ready_for_next_phase=yes 또는 yes_with_minor_fixes)
 - [ ] **사용자 승인** (모든 모드)

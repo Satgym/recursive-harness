@@ -11,6 +11,16 @@
 
 ## Activities
 
+0. **(v1.1+ Fleet 모드일 때) Subtree merge-collection** — 본 phase 진입 전에 다음 의무:
+   - 모든 child branch (HARNESS §14.4 worktree 구조)가 자기 `MERGE-REPORT.md` commit 완료했는지 확인
+   - 각 child branch `git fetch` + parent로 merge (sequential — child끼리는 conflict 자체적으로 못 풀음)
+   - 각 child의 MERGE-REPORT.md를 회수해서 `.harness/reviews/05-merge-collection-<date>.md`로 통합 (per-child finding + capability candidate + **conflict decision matrix** 묶음)
+   - merge conflict 발생 시:
+     - 모든 관련 child의 MERGE-REPORT *conflict decision matrix* 섹션 (F77) 수집 → lock conformance · invariant impact · test evidence 비교
+     - shared 파일(F4 위반)이면 parent가 단독 결정. `severity ∈ {blocker, major}`이면 §11 사용자 escalation 의무
+     - 모듈 boundary 충돌이면 split-decision 자체 재검토 (drift 신호 — Fleet §14.7)
+     - 결정 결과는 ADR로 명문화 (`merge-conflict-resolution-<slug>` ADR 신설)
+   - 통합 후 cross-cutting integration codex review 1회 별도 호출 (Fleet F7) — *self-test 대체*는 dogfood/POC만; production Fleet은 codex 의무
 1. **결합 환경 준비** — DI / config / fixture 로 실 의존성 (또는 mock vs real boundary 정책에 따라).
 2. **Integration test 실행** — Blueprint test strategy에 명시된 시나리오.
 3. **E2E 시나리오** (해당 시) — 사용자 관점 happy path + 핵심 실패 경로.
@@ -32,6 +42,7 @@
 - [ ] 성능 / 자원 제약 (Blueprint §2) 위반 없음
 - [ ] 발생한 모든 Postmortem이 `status: resolved`
 - [ ] HC-8 (외부 mutation) / HC-9 (destructive) 작업이 본 phase에 있었다면 모두 사용자 승인됨
+- [ ] **(Fleet 모드)** 모든 child branch merge 완료 + MERGE-REPORT 회수 + cross-cutting integration review 1회 완료 + child가 제출한 capability candidate에 대한 *수용/거부 결정* ADR로 명문화
 
 ## 주도 역할
 

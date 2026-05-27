@@ -4,18 +4,22 @@
 하니스 자체도 하니스의 규칙을 따른다 (메타 부트스트랩 / dogfood).
 
 ## 세션 시작 시 읽을 순서
+
+**모든 세션 공통**:
 1. [HARNESS.md](HARNESS.md) — 헌법, 절대 규칙, 페이즈 정의
 2. [STATUS.md](STATUS.md) — 현재 어디까지 됐고 다음 액션은 무엇인지
-3. [DECISIONS.md](DECISIONS.md) — 이미 내려진 결정들 (ADR)
-4. [INBOX/](INBOX/) — `ls INBOX/`로 codex가 남긴 피드백 확인 (비어있을 수 있음)
-5. **(v0.6 — 프로젝트 컨텍스트면)** `.harness/capabilities.md` 읽고 *Active* 섹션에 명시된 local skills/roles를 working set에 포함 (HARNESS §13.3, 자동 discovery 금지)
+3. [DECISIONS.md](DECISIONS.md) — 이미 내려진 결정 (ADR)
+4. [INBOX/](INBOX/) — `ls INBOX/`로 codex가 남긴 피드백 확인
 
-위 5개(프로젝트 컨텍스트) / 4개(하니스 self-build)를 안 읽고 작업 시작 금지.
+**프로젝트 컨텍스트면 추가**:
+5. `.harness/capabilities.md`의 *Active* 섹션에 명시된 local skills/roles를 working set에 포함 (HARNESS §13.3, 자동 discovery 금지)
+6. **(v1.1+)** `.harness/subtree.md`가 존재하면 본 세션은 *sub-coordinator*. parent 경로 + locked interface 읽기 (HARNESS §14)
+
+위를 안 읽고 작업 시작 금지.
 
 ## Claude의 기본 역할
-- **구현자(implementer)**. 코드/문서를 직접 작성.
-- 단, Codex의 리뷰 결과를 받아 반영하는 책임도 Claude에게 있음.
-- Codex에게 리뷰를 의뢰할 때는 표준 스크립트(`scripts/codex-review.sh`, 추후 작성)를 통한다.
+- **구현자(implementer) + coordinator**. 코드/문서 직접 작성. v1.1+ 모드에서는 Phase 02 split 결정 + Phase 05 merge 회수.
+- Codex 리뷰 결과 반영도 Claude 책임. 리뷰 의뢰는 `scripts/codex-review.sh` (코드) / `scripts/codex-exec-review.sh` (텍스트).
 
 ## 절대 규칙 (전체는 HARNESS.md 참조)
 - Blueprint 승인 전 코드 작성 금지

@@ -20,11 +20,19 @@
 8. **Risks & open questions** — 모듈 단위 위험과 결정 필요 항목.
 9. **Definition of done** — 템플릿 §8 체크리스트.
 10. **Codex 리뷰** — strict 모드에선 의뢰 (`codex-exec-review.sh --phase 02-module-plan --slug <module>`). balanced 모드에선 의뢰 (사용자 승인 갈음). autonomous 모드에선 self-test로 갈음 가능.
+11. **(v1.1+) Split-decision step** — *마지막 plan 판정 의무* (F76):
+    - Blueprint §8.6 expected module set과 `.harness/docs/modules/index.md`의 캐노니컬 list 비교
+    - 둘이 *완전히 일치*하고 모든 plan이 `status: approved`일 때만 본 step 진입 (불일치 또는 미완 시 die — 계속 Phase 02)
+    - 진입 후 [skills/estimate-project-scope.md](../skills/estimate-project-scope.md) 호출:
+      - **결과 = no-split**: 본인이 Phase 03 진행 (지금까지 패턴)
+      - **결과 = split**: SPLIT-DECISION-ADR 작성 (current_depth/max_depth_allowed/root_path field 의무 — Fleet F74) → `approver: user` 승인 (F6, autonomous도 의무; `dogfood_simulation: true`만 예외) → [skills/spawn-subtree-prompts.md](../skills/spawn-subtree-prompts.md) 호출 (preflight가 F73/F74/F76 게이트 enforce) → 각 child worktree + prompt 생성 → 사용자에게 child 세션 spawn 요청. 본인은 child 완료까지 wait
+    - Fleet 규칙 전체는 HARNESS §14.
 
 ## Outputs
 
 - `.harness/docs/modules/<name>/plan.md` (front-matter `artifact: module_plan`)
 - (해당 시) `.harness/reviews/02-module-plan-<date>-<name>.md`
+- **(v1.1 split 시)** `.harness/decisions/ADR-NNNN-split-decision-<slug>.md` + `.harness/subtrees/<child>/{prompt.md,locked-interface.md}` 일체
 
 ## Exit 기준
 
@@ -36,6 +44,7 @@
 - [ ] **balanced 모드**: Codex 리뷰 통과 (사용자 승인 갈음)
 - [ ] **autonomous 모드**: claude-self-test 완료 (cross-review 대체 불가, 다음 정식 cross-review 또는 periodic audit에서 사후 검증)
 - [ ] STATUS Approved artifacts에 module plan 등재
+- [ ] **(v1.1+ Fleet 의무)** root coordinator scope의 마지막 plan일 때 split-decision 수행됨 (no-split이든 split이든 *판단을 명시*). split 결정 시 SPLIT-DECISION-ADR + 사용자 승인 + subtree workspace 생성 완료
 
 ## 주도 역할
 

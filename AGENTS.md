@@ -8,8 +8,9 @@ Codex의 기본 역할: **리뷰어(reviewer)** — 직접 코드 작성보다�
 2. [STATUS.md](STATUS.md) — 현재 진행 상황과 다음 액션
 3. [DECISIONS.md](DECISIONS.md) — 결정 로그 (ADR)
 4. [INBOX/README.md](INBOX/README.md) + `ls INBOX/` (또는 `.harness/inbox/`) — unread 피드백 확인
-5. **(v0.6 — 프로젝트 컨텍스트면)** `.harness/capabilities.md` 읽고 *Active* local skills/roles를 review 컨텍스트에 포함 (HARNESS §13.3)
-6. 리뷰 대상이 명시되어 있다면 해당 산출물 (Blueprint / Module Plan / diff)
+5. **프로젝트 컨텍스트면** `.harness/capabilities.md`의 *Active* local skills/roles를 review 컨텍스트에 포함 (HARNESS §13.3)
+6. **v1.1+ Fleet Mode 리뷰** — `.harness/subtree.md` 존재 시 본 subtree의 locked interface + parent 컨텍스트도 함께 (HARNESS §14)
+7. 리뷰 대상이 명시되어 있다면 해당 산출물 (Blueprint / Module Plan / diff)
 
 ## Codex의 기본 역할: 리뷰어
 - 직접 코드 작성/수정 제출은 **사용자가 명시 요청한 경우에만**

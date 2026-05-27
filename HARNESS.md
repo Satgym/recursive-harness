@@ -1,16 +1,14 @@
-# HARNESS.md — 하니스 헌법 (v1.0)
+# HARNESS.md — 하니스 헌법 (v1.1)
 
-> 이 파일은 Claude와 Codex 모두가 따르는 **절대 규칙**과 **워크플로우 정의**다.
-> 변경은 §6 "하니스 수정 절차"를 거쳐야 한다.
-> **v0.6 → v1.0** (2026-05-27): Phase E §10 5 criteria 모두 충족 (3 dogfood: todo-api/temp-sensor/starpin); HARNESS §13.6 manual base promotion 첫 사례 작동 (skills/budget-binary-size.md v0.1 합성); autonomous mode self-test schema 3 amend (ADR-005 v1.1→v1.2→v1.3) — *self-test PASS는 codex review 대체 X* 명문화. 신규 base skill 추가: `budget-binary-size`. v0.6 adaptive vision 검증 완료. 변경 내역은 §8 참조. 자세한 promotion rationale: root DECISIONS.md ADR-009 (v1.0 ship) + ADR-008 (binary-size-budget promotion).
-> **v0.5 → v0.6**: Adaptive redesign — base vs project-local layer 분리, HC-10 신설, §13 Local Adaptive Layer, phase 00 안에 Local Capability Synthesis sub-step, manifest-based loading. 변경 내역은 §8 참조. 동기: adaptive-redesign-r1 review (F52~F67).
+> Claude와 Codex 모두가 따르는 **절대 규칙**과 **워크플로우 정의**.
+> 변경은 §6 "하니스 수정 절차"를 거쳐야 한다. 버전 이력은 §8.
 
 ---
 
 ## 0. 메타-원칙
 
 이 하니스는 자기 자신도 하니스 규칙으로 빌드한다 (메타 부트스트랩, dogfood).
-모든 phase 진행은 [phases/](phases/)의 정식 Exit 기준을 따른다. (Phase A 빌드 중 사용된 §9 Bootstrap exception은 ADR-007로 deprecated — §9는 history record로만 보존.)
+모든 phase 진행은 [phases/](phases/)의 정식 Exit 기준을 따른다.
 
 ## 1. 절대 규칙 (Hard Constraints)
 
@@ -19,7 +17,7 @@
 | HC-1 | **Plan-First, Code-Late** | Blueprint 승인 전 코드 X. Module Plan 승인 전 해당 모듈 코드 X |
 | HC-2 | **File-Persistent** | 모든 결정·계획·리뷰는 파일로 영속화. 대화 기억에 의존 금지 |
 | HC-3 | **Drift-Aware** | phase 경계와 세션 시작 시 "지금 Blueprint와 일치하나?" 자가점검 |
-| HC-4 | **Gate-Bound** | phase 간 이동은 [phases/<phase>.md](phases/)의 Exit 기준 만족 필수 (§9는 ADR-007로 deprecated) |
+| HC-4 | **Gate-Bound** | phase 간 이동은 [phases/<phase>.md](phases/)의 Exit 기준 만족 필수 |
 | HC-5 | **Role-Default** | Claude=구현자, Codex=리뷰어. 역할 스왑은 명시적 결정 + ADR |
 | HC-6 | **Status-Updated** | 모든 작업 종료 시 STATUS.md 갱신 (생략 시 그 작업은 미완으로 간주) |
 | HC-7 | **Secrets-Redacted** | 시크릿/자격증명/PII는 모든 산출물·로그·리뷰에서 즉시 redact. 어떤 모드에서도 평문 저장 금지 |
@@ -60,7 +58,8 @@
 [06 Handoff]   STATUS.md 갱신 → 다음 모듈로 또는 종료
 ```
 
-각 phase Exit 기준은 [phases/](phases/)에 정식 명시 (00-intake.md ~ 06-handoff.md). §9 Bootstrap exception은 ADR-007로 deprecated (history record).
+각 phase Exit 기준은 [phases/](phases/)에 정식 명시 (00-intake.md ~ 06-handoff.md).
+v1.1+ Fleet Mode (다중 세션 병렬 모듈 구현)는 §14 참조.
 
 ## 4. 산출물 표준 위치 & Front-matter 표준
 
@@ -234,33 +233,18 @@ STATUS.md는 다음 섹션을 **모두** 포함해야 한다 (없으면 양식 �
 
 ## 8. 버전 이력
 
-- **v0.1** (2026-05-25): 초기 6개 문서 골격
-- **v0.2** (2026-05-25): Codex seed-review 5개 핵심 finding 반영 — HC-7/8/9 신설(F11), Strictness 통일(F3), §7 STATUS 양식 + Approval record(F2/F9), §9 Bootstrap exception(F1), §5 Review determinism(추가 제안 #7)
-- **v0.3** (2026-05-25): A.0e 통합 — F7 분쟁 프로토콜(§11), Postmortem triggers(§6.3-6.4), Cost guardrails(§5.4), Dogfood criteria(§10), Branch/git policy(§12), Artifact front-matter 표준(§4.3)
-- **v0.4** (2026-05-25): A.0g micro-patch — F13 §12.2 base branch 모순 해소, F14 §4.3 artifact-specific status enum 분리 + `deferred_reason` 필드 신설, F15 §9 임시 게이트가 §11 disputed 처리 cross-ref
-- **v0.5** (2026-05-25): Phase A 종결판. A.5 통합 cross-review 반영 — F16, F19. 기타 F17/F18/F20-F26은 CLAUDE/DECISIONS/scripts/templates/phases 변경으로 처리
-- **v0.6** (2026-05-25): **Adaptive redesign** — adaptive-redesign-r1 review (F52~F67) 반영. HC-10 신설 (Local-Extends-Only). §13 신설 (Project-local Adaptive Layer). §4.2에 `.harness/skills/`/`.harness/roles/`/`.harness/capabilities.md` 추가. 새 templates 3개 (LOCAL-SKILL/LOCAL-ROLE/CAPABILITY-MANIFEST). 새 base skills 2개 (synthesize-local-layer/review-local-layer; promote-local-capability는 v1.1로 deferred). phases/00에 Local Capability Synthesis sub-step. new-project.sh adaptive skeleton. project-types/는 *seeds*로 재해석.
-- **v1.0** (2026-05-27, 본 파일): **Phase E ship + adaptive vision 검증 완료**. ADR-009 v1.0 승격 — §10 v1.0 5 criteria 모두 충족 (3 domain dogfood ship: todo-api Phase 02 + temp-sensor v0.1.0 + starpin v0.1.0). 신규 base skill `budget-binary-size` 추가 (ADR-008 manual promotion 첫 사례; starpin mobile-bundle-budget + temp-sensor budget-flash-ram → domain-agnostic abstraction). autonomous mode self-test 정착: race_pattern_check + user_gate_required_check + carry_over_finding_count + codex_round_count_per_artifact (ADR-005 v1.3 — *self-test PASS는 codex review 대체 X* 명문화). v0.6 → v1.0 transition rationale은 root DECISIONS.md ADR-009 참조.
+상세 rationale은 root DECISIONS.md ADR 참조. 본 표는 한 줄 요약.
 
-## 9. Bootstrap exception (Phase A 한정) — **DEPRECATED**
+| 버전 | 핵심 변경 | Trigger |
+|---|---|---|
+| v0.1~v0.5 | 골격 + HC-1~9 + STATUS 양식 + Codex 규약 + ADR/postmortem/git policy 확립 | Phase A 자체 부트스트랩 |
+| v0.6 | **Adaptive redesign** — HC-10 + §13 Local Adaptive Layer (`.harness/skills`,`/roles`,`/capabilities.md`) | adaptive-redesign-r1 review |
+| v1.0 | Phase E ship — 3 dogfood 검증 (todo-api/temp-sensor/starpin) + base promotion 첫 사례(`budget-binary-size`) + autonomous mode 검증 | ADR-009 |
+| v1.1 | **Fleet Mode** — §14 신설. Phase 02 split-decision + Phase 05 merge-collection. 재귀 coordinator 패턴 (root → leaf, depth ≤ 2). 4 templates + 2 base skills | ADR-010 |
 
-> **Status**: deprecated since 2026-05-25 by [ADR-007](DECISIONS.md). Phase A.4 완료([phases/](phases/) 정식 문서)로 자동 폐기. 모든 phase 진행은 `phases/<phase>.md`의 정식 Exit 기준을 따른다.
->
-> 본 §9는 history record로 유지. HARNESS v0.5 (A.5 통합 cross-review 후)에서 archival 섹션 또는 별도 보관소로 이동 검토.
+## 9. (history) Bootstrap exception — **REMOVED**
 
-Phase A의 sub-phase 진행 동안엔 정식 Blueprint/Module Plan/phases 양식이 아직 없으므로, HC-1/HC-4의 정식 게이트를 다음 **임시 게이트**로 대체:
-
-### 임시 게이트 Exit 기준 (Phase A 동안만 유효)
-A.x 완료 후 다음 조건을 모두 만족하면 A.(x+1) 진입 가능:
-1. 본 sub-phase 산출물이 디렉토리에 모두 존재
-2. Codex review를 받음 (codex exec, REVIEW 양식)
-3. Blocker findings는 모두 `resolved` 또는 사용자가 명시 승인한 `deferred`
-4. STATUS.md의 *Approved artifacts*에 본 sub-phase 결과가 등재 (사용자 승인 표시)
-5. STATUS.md의 *Active gate*가 다음 sub-phase를 가리키도록 갱신
-6. **Disputed findings는 §11에 따라 처리**. `severity ∈ {blocker, major}`로 disputed인 항목이 있으면 A.(x+1) 진입 차단 — 사용자 결정 필요
-
-### 폐기 시점
-Phase A.4 (`phases/` 정식 문서) 완성 후 §9는 **자동 폐기**된다. 폐기는 다음 ADR로 명문화.
+Phase A 자체 빌드용 임시 게이트. ADR-007로 폐기. 모든 phase는 [phases/](phases/) 정식 Exit 기준만 따른다. 상세 history는 git log + ADR-007 참조.
 
 ## 10. Phase E — Dogfood 성공 기준
 
@@ -418,3 +402,115 @@ local capability가 다음 *모두* 만족하면 base 승격 후보:
 - base 업그레이드 후 local capability가 새 base 규칙과 충돌
 
 drift 발견 시 §6.2 절차 + ADR.
+
+## 14. Fleet Mode (재귀 coordinator 패턴)
+
+> **추가일**: v1.1 (2026-05-27, ADR-010)
+> **목적**: 모듈 수가 많거나 결합도가 낮은 프로젝트에서 *다중 Claude 세션 병렬*로 Phase 03 implement를 진행. coordinator는 Phase 02에서 split 여부를 판단하고, Phase 05에서 결과를 회수한다. 각 coordinator는 같은 7-phase 루프를 *자기 scope에* 실행 — **재귀**.
+
+### 14.1 핵심 모델
+
+```
+[Root coordinator session]   ← 사용자가 처음 띄운 세션
+  Phase 00~02 본인이 실행
+  Phase 02 종료 직전: split-decision (skill: estimate-project-scope)
+    │
+    ├─ 단일 모드(no-split)    → 본인이 Phase 03~06 그대로 진행 (현재까지 패턴)
+    │
+    └─ Fleet 모드(split)
+        ↓ SPLIT-DECISION-ADR 발행 (사용자 승인 의무 — HC-8/9 무관 별도)
+        ↓ skill: spawn-subtree-prompts → 각 child별 worktree + SUBTREE-PROMPT.md 생성
+        ↓ 사용자가 N개 Claude Code 세션 열어 prompt 전달
+        │
+        ├─ [Child coordinator M2]    ← 자기 worktree, 자기 branch, 자기 STATUS
+        │     Phase 02~04 본인 scope만 (재귀적으로 또 split 가능 — depth ≤ 2 in v1.1)
+        │     완료 시 MERGE-REPORT.md 작성 + commit
+        │
+        ├─ [Child coordinator M3]   동일
+        └─ ...
+        ↓ 모든 child 완료까지 wait
+[Root coordinator session 복귀]
+  Phase 05 merge-collection: 각 child branch fetch → integration test → finding 회수
+  Phase 06 handoff
+```
+
+### 14.2 Fleet Mode 규칙
+
+| # | 규칙 | 의미 |
+|---|---|---|
+| F1 | **인터페이스 lock at split** | parent의 SPLIT-DECISION-ADR에 명시된 각 child의 *인터페이스·DB 스키마·타입·invariant·file ownership*은 child가 수정 불가. 변경 필요 시 child가 작업 중단 → parent에 escalate |
+| F2 | **횡단 invariant 식별 의무** | parent Phase 01 Blueprint Exit에 *cross-cutting invariant 목록* 필수. split 후 발견되는 횡단 invariant는 전체 stop + parent replan |
+| F3 | **capability manifest 동결** | split 시점에 *root*의 `.harness/capabilities.md` freeze. child는 *읽기만*; 신규 capability 후보는 MERGE-REPORT에 candidate로 제출, parent가 merge phase에서 결정. (recursion 시 root의 manifest가 *모든 depth의 ground truth*) |
+| F4 | **file ownership 명시** | SPLIT-DECISION-ADR에 *디렉토리 단위 ownership* 명시. shared 파일(types.ts, config, root 산출물)은 parent 소유 — child는 *읽기 허용, 쓰기 금지*. 변경 필요 시 patch candidate로 (MERGE-REPORT에) |
+| F5 | **재귀 depth ≤ 2 (v1.1)** | root(depth=0) → child(depth=1) → grandchild(depth=2)까지. *기계적 강제*: SPLIT-DECISION-ADR `current_depth`+1 = `resulting_depth`, `resulting_depth > max_depth_allowed`면 spawn-subtree-prompts skill이 die. 더 깊은 split은 ADR 별도 정당화. v1.2에서 완화 가능 |
+| F6 | **승인 게이트 (기계적 강제)** | SPLIT-DECISION-ADR는 **모든 모드에서 `approver: user` 의무**. 예외는 *명시적* `dogfood_simulation: true` flag (production Fleet에서는 금지). spawn-subtree-prompts skill의 preflight가 둘 다 확인 — `claude-self-test` 등 다른 approver로 우회 불가 |
+| F7 | **Codex review 분배** | 각 child는 *자기 scope에 대한* codex review (Phase 04)를 독립 수행. parent는 merge 후 *cross-cutting integration review*를 별도 1회 수행. *self-test 대체*는 dogfood/POC 수준에서만; production Fleet은 codex 의무 |
+| F8 | **STATUS 위계** | parent STATUS는 *tree 구조*만 표시 (child별 상태 dashboard). 각 child는 *자기 scope*만 자기 `.harness/status.md`에. root는 `current_depth=0`, child의 `parent_subtree` field가 immediate parent 식별 |
+| F9 | **HC-10 invariant 유지 + draft/activate 분리** | child는 본인의 `.harness/skills/` 파일을 *draft만* 가능 (extension 후보 작성). **load·use·activate는 frozen root manifest에 이미 있는 capability만 허용**. 신규 draft는 MERGE-REPORT의 capability candidate 섹션에 등재만; parent merge phase에서 root manifest 수용 결정 후에야 activate. parent의 active manifest를 *제거*하는 것은 불가 |
+
+### 14.3 언제 split할까 (Phase 02 split-decision)
+
+skill [`estimate-project-scope`](skills/estimate-project-scope.md) 호출. 결정 휴리스틱 (참고):
+
+| 신호 | 임계 | 결정 |
+|---|---|---|
+| 모듈 수 | ≤ 3 | no-split |
+| 모듈 수 | 4~7, 결합도 낮음 | split (root + N leaves) |
+| 모듈 수 | 8+ | split + 잎이 또 split (depth=2) |
+| 모듈 간 *순환 의존* | 1개 이상 | no-split (인터페이스 lock 위험) |
+| 횡단 invariant | 3+개 식별됨 | no-split 또는 신중 split (lock 부담) |
+| 예상 LOC | < 1500 | no-split |
+| 예상 LOC | ≥ 5000 + 모듈 ≥4 | split 권장 |
+
+휴리스틱은 *참고*. 최종 판단은 coordinator + SPLIT-DECISION-ADR에 근거 명시.
+
+### 14.4 Subtree workspace 구조
+
+```
+parent-repo/                  # parent worktree (main branch)
+├── .harness/
+│   ├── status.md             # root STATUS — tree dashboard
+│   ├── capabilities.md       # frozen at split time
+│   ├── subtrees/             # parent가 child에 전달하는 *입력*
+│   │   ├── <child-name>/
+│   │   │   ├── prompt.md     # SUBTREE-PROMPT (child kickoff)
+│   │   │   ├── locked-interface.md   # 변경 불가 spec
+│   │   │   └── (merge 시점) merge-report.md  # child가 fetch+commit으로 제공
+│   └── decisions/
+│       └── ADR-NNNN-split-decision-<slug>.md
+
+../parent-repo-<child>/       # child worktree (feat/<child> branch)
+├── .harness/
+│   ├── subtree.md            # 본 세션이 sub-coordinator임을 알리는 marker
+│   │                         #   parent_path, locked_interface_path, child_name
+│   ├── status.md             # child 본인 scope의 STATUS
+│   └── (자기 모듈 코드)
+```
+
+git worktree로 분리하므로 각 child 세션은 **독립 디렉토리 + 독립 컨텍스트 + 독립 branch**. parent와 child의 file write는 서로 보이지 않음 (각자 branch에서만). merge phase에 parent가 `git fetch` + `git merge` 또는 PR 통합.
+
+### 14.5 Phase mapping
+
+| Phase | Root coordinator | Child coordinator (sub-session) |
+|---|---|---|
+| 00 Intake | 본인 실행 | (해당 없음 — parent의 intake 상속) |
+| 01 Blueprint | 본인 실행 (횡단 invariant 명시 의무) | (해당 없음 — parent의 blueprint 상속) |
+| 02 ModulePlan | 본인 scope의 모듈 plan + split-decision step | 본인 scope의 모듈 plan (다시 split 가능 — depth ≤ 2) |
+| 03 Implement | (split 시 본인이 직접 코드 짜지 않고 spawn만) | 본인 scope만 |
+| 04 CrossReview | (split 시 cross-cutting integration review만) | 본인 scope의 codex review |
+| 05 Integration | merge-collection — child branch들 fetch + 통합 test + finding 회수 | (해당 없음) |
+| 06 Handoff | 본인 실행 | MERGE-REPORT.md 작성 + commit (handoff to parent) |
+
+### 14.6 새 산출물
+
+- **Templates** (4): `templates/SUBTREE-PROMPT.template.md`, `templates/SUBTREE-STATUS.template.md`, `templates/SPLIT-DECISION-ADR.template.md`, `templates/MERGE-REPORT.template.md`
+- **Base skills** (2): `skills/estimate-project-scope.md`, `skills/spawn-subtree-prompts.md`
+
+### 14.7 Fleet Mode drift 신호
+
+- child가 locked interface를 수정한 흔적 (git diff에 lock 파일 변경)
+- child의 MERGE-REPORT에 capability candidate가 5+개 (manifest 동결 압박)
+- 횡단 invariant가 split 후 신규 발견됨 (parent Phase 01 미흡)
+- merge 시 conflict가 모듈 boundary가 아닌 *shared 파일*에서 다수 발생 (file ownership 명세 미흡)
+
+drift 시 §6.2 절차 + ADR. 반복되면 *Fleet Mode 자체 회의 후보* — split 패턴이 본 프로젝트에 안 맞을 수 있음.

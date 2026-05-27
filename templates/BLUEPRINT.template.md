@@ -97,6 +97,23 @@ graph LR
 - Q1: ...
 - Q2: ...
 
+## 8.5 Cross-cutting invariants (v1.1+ Fleet F2)
+
+> 모듈 경계를 *가로지르는* invariant. Fleet Mode 진입 시 모든 child가 *동시에* 지킨다.
+> 식별되지 않으면 `none identified`로 명시 — *생략은 양식 위반* (Phase 01 Exit checklist).
+
+- INV-1: ... (예: "응답 body는 항상 `{success: bool, data?: T, error?: string}` 형태")
+- INV-2: ... (예: "PII는 모든 모듈에서 로그 진입 전 redact (HC-7)")
+- (none identified — 모든 모듈이 완전 독립이면)
+
+## 8.6 Expected module set (v1.1+ Fleet F76)
+
+> 본 프로젝트의 *모든 예상 모듈 ID 캐노니컬 목록*. Phase 02 split-decision의 "마지막 plan" 판정 근거.
+> 후속 phase에서 모듈 추가/제거 시 Blueprint amend ADR 필수.
+
+- module_ids: [M1, M2, M3, ...]
+- 동일 list가 `.harness/docs/modules/index.md`에도 (mechanically check)
+
 ## 9. 승인 체크
 
 Blueprint 승인 시 다음을 확인:
@@ -105,4 +122,6 @@ Blueprint 승인 시 다음을 확인:
 - [ ] 의존성 그래프에 사이클 없음
 - [ ] 테스트 전략이 실행 가능
 - [ ] HC-7/8/9 영향 항목 식별됨
+- [ ] **(v1.1+) Cross-cutting invariants 섹션 명시** (`none identified`로라도)
+- [ ] **(v1.1+) Expected module set이 §8.6 + `.harness/docs/modules/index.md`에 동일하게 기록**
 - [ ] Open questions 모두 답 되었거나 명시적 deferred

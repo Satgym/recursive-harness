@@ -18,6 +18,84 @@
 
 ---
 
+## ADR-010 — Hara v1.1 Fleet Mode 도입 (재귀 coordinator 패턴, depth ≤ 2)
+
+**Date**: 2026-05-27 · **Status**: proposed
+**References**:
+- HARNESS.md §14 (신설)
+- skills/estimate-project-scope.md (신설 v0.1)
+- skills/spawn-subtree-prompts.md (신설 v0.1)
+- templates/SUBTREE-PROMPT.template.md / SUBTREE-STATUS.template.md / SPLIT-DECISION-ADR.template.md / MERGE-REPORT.template.md (신설)
+- examples/fleet-mini/ (신설 v0.1 dogfood)
+
+**Context**: v1.0 검증 후 사용자가 다음 한계 지적:
+
+1. 큰 프로젝트에서 메인 Claude 세션이 *순차 직렬* — Codex 호출/대기/응답 처리/구현/다시 호출의 반복으로 wall-time 병목
+2. 모듈 간 결합도가 낮은 경우 *각 모듈은 독립 진행 가능*하지만 현재 v1.0은 single-session sequential phase만 정식 지원
+3. 사용자 제안: **재귀 coordinator** — coordinator가 Phase 02에서 split 여부 판단, split이면 N개 child 세션 spawn, 각 child도 같은 7-phase 루프를 자기 scope에 실행. depth 제한 내에서 leaf가 또 split 가능
+
+**Decision**: HARNESS를 **v1.1**로 amend. Fleet Mode (재귀 coordinator 패턴) 도입.
+
+1. **HARNESS §14 신설** — Fleet Mode 정식 정의 (9 rules + workspace 구조 + phase mapping + drift signals)
+2. **Phase 02 amend** — split-decision step 추가 (root coordinator scope의 마지막 plan 직후 의무)
+3. **Phase 05 amend** — merge-collection step 추가 (모든 child branch fetch + integration + cross-cutting codex review)
+4. **4 templates 추가** — SUBTREE-PROMPT / SUBTREE-STATUS / SPLIT-DECISION-ADR / MERGE-REPORT
+5. **2 base skills 추가** — estimate-project-scope (heuristic + 정성 override) / spawn-subtree-prompts (worktree + 산출물 자동 생성)
+6. **CLAUDE.md / AGENTS.md amend** — `.harness/subtree.md` marker 인식 + sub-coordinator 진입 모델
+7. **재귀 depth ≤ 2 (v1.1)** — root → child → grandchild. 더 깊은 split은 ADR 별도 정당화. v1.2 후보 (precedent 누적 시 완화)
+8. **사용자 승인 게이트 (Fleet F6)** — SPLIT-DECISION-ADR는 *모든 모드*에서 사용자 승인 필수. 이유: 사용자가 직접 N개 세션을 spawn하는 외부 행동 필요
+
+**Cleanup pass (v1.1과 동반)**:
+- HARNESS.md 헤더 v0.6→v1.0/v0.5→v0.6 transition note 제거 (§8 표로 통합)
+- HARNESS.md §9 Bootstrap exception 본문 19줄 → 3줄 archival pointer
+- HARNESS.md §8 버전 이력 paragraph → 1줄 표
+- HARNESS.md §0/§1 HC-4/§3의 §9 deprecation 순환 참조 제거
+- STATUS.md 340줄 → 120줄 (Phase A 과거 history 제거, 현재 v1.1 상태만)
+- CLAUDE.md / AGENTS.md "(v0.6 — ...)" version tag noise 제거
+- 사용자 지시 (2026-05-27): "하니스가 길어지면 claude가 규칙을 안 지킴 → obsolete 적극 제거"
+
+**Consequences**:
+
+- **positive**:
+  - 모듈 ≥4 + 결합도 낮은 프로젝트에서 wall-time 단축 (예상 2~4×)
+  - 각 child 컨텍스트가 깔끔 (parent의 다른 모듈 노이즈 없음)
+  - 재귀 모델 — coordinator가 root인지 leaf인지 의식 안 함, 자기 scope만 처리
+  - 인터페이스 lock + file ownership 명세가 *팀 분배* 시뮬레이션과 같음 → 실무 팀 분배 학습 효과
+  - cleanup pass로 HARNESS body 가독성 향상 (long-prompt compliance 개선 기대)
+
+- **negative**:
+  - 인터페이스 lock 실패 시 escalation 비용 큼 (parent replan + 다른 child stop)
+  - 횡단 invariant 누락이 가장 비싼 case (Blueprint Exit에 invariant 명시 의무 신설로 완화)
+  - 사용자 UX 부담: parent가 prompt 작성 → 사용자가 직접 N개 세션 spawn → 결과 회수 통보. 자동화는 v1.2+ 후보
+  - merge 시 conflict 부담 parent에 집중 (worktree 분리로 일부 완화)
+
+- **risk**:
+  - 첫 v1.1은 `examples/fleet-mini/` 단일 dogfood로만 검증 — real-world domain 검증은 v1.2부터
+  - depth ≥ 3 시 coordination overhead가 병렬 이득 잠식 가능 (depth ≤ 2 cap으로 완화)
+  - capability manifest freeze 규칙이 *long-running child*에서 답답함 줄 수 있음 (child의 candidate 채널로 완화)
+
+**Codex review evidence**:
+- review file: `.harness/reviews/harness-amend-20260527-v1.1-fleet-mode.md` (tokens 84,462)
+- verdict: 1 blocker + 6 majors + 1 minor; HC-7/8/9 위반 0
+- patches applied:
+  - **F71 (blocker)**: fleet-mini를 *mechanical simulation only*로 demote — RELEASE/status/blueprint/ADR-001에 `dogfood_simulation: true` flag + DoD note. 정식 dogfood 격상 절차는 Blueprint §9에 명세
+  - **F72**: Phase 01 + BLUEPRINT template §8.5 *Cross-cutting invariants* 섹션 의무 신설
+  - **F73**: spawn-subtree-prompts preflight에 `approver: user` 검증 + `dogfood_simulation: true` 명시 예외만 통과
+  - **F74**: SPLIT-DECISION-ADR + subtree marker에 `root_path / parent_subtree / current_depth / max_depth_allowed / root_capability_manifest_hash` 의무. spawn preflight가 `resulting_depth > max_depth_allowed` 시 die
+  - **F75**: HARNESS §14 F9 명확화 — "child may DRAFT capability files, may not USE/ACTIVATE unless in frozen root manifest"
+  - **F76**: Blueprint §8.6 *expected module set canonical list* + `.harness/docs/modules/index.md` 의무. Phase 02 split-decision은 expected == approved 일치 시에만 발동 (spawn preflight 강제)
+  - **F77**: MERGE-REPORT에 *conflict decision matrix* 섹션 신설. Phase 05 merge-collection에 matrix 회수 + §11 사용자 escalation 의무 명시
+  - **F78**: SUBTREE-PROMPT 시작 절차에 *required reads 7개 고정 list* (HARNESS / CLAUDE 또는 AGENTS / subtree marker / locked-interface / parent Blueprint / split ADR / root frozen capabilities)
+- 후속 codex 재리뷰: 본 patch 묶음에 대해 *별도 round* 불필요 (mechanical patch). 다음 *real-world* dogfood에서 검증
+
+**Approval gate**:
+- 사용자 승인 필수 (하니스 자체 변경 — strict 모드 의무)
+- approver: <user 승인 후 기입>
+- approved_at: <ISO 후 기입>
+- approval scope: HARNESS §14 신설 + Phase 02/05 amend + 4 templates + 2 base skills + ADR-010 + examples/fleet-mini simulation + cleanup pass + F71~F78 patches
+
+---
+
 ## ADR-009 — Hara v1.0 승격 (Phase E §10 5 criteria 충족, starpin v0.1.0 ship evidence)
 
 **Date**: 2026-05-27 · **Status**: accepted

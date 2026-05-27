@@ -8,16 +8,18 @@
 | 항목 | 값 |
 |---|---|
 | Project | 하니스 자체 빌드 (메타 부트스트랩) |
-| Phase | **v1.1 Fleet Mode SHIPPED (accepted 2026-05-27)** |
-| Active sub-phase | (대기) — 다음 real-world Fleet dogfood 또는 별도 ask |
-| Strictness | strict (하니스 자체 변경은 항상 strict) |
-| Harness version | **v1.1** |
-| Git | main; v1.1 commit `817885e` |
-| Last updated | 2026-05-27 by Claude (v1.1 ADR-010 accepted, Approved artifacts 등재) |
+| Phase | **v1.2 Fleet enforcement amend (proposed, 사용자 승인 대기)** |
+| Active sub-phase | starpin-fleet real-world dogfood (45 tests PASS) + 11 unique findings (F80~F92) + codex review (1 blocker + 5 major + 1 minor; F100~F106 모두 patched) |
+| Strictness | autonomous-within-fleet-dogfood-delegation (사용자 위임 2026-05-27 — "백그라운드 세션 부르는 방식으로 테스트 및 하니스 개선") |
+| Harness version | v1.1 → **v1.2 작성 완료, 승인 대기** |
+| Git | main; v1.1 acceptance commit `00019be` (이 위에 v1.2 작업) |
+| Last updated | 2026-05-27 by Claude (autonomous real-world dogfood + v1.2 amendments + codex closure) |
 
 ## Active gate
 
-- (none — v1.1 ship 완료)
+- **Gate**: v1.2 사용자 승인 → commit + ADR-011 status → accepted
+- **Blocked on**: 사용자 승인
+- **Approval needed**: yes (v1.2 전체 묶음 — §14.8/9/10 + lock-grep-gate + LOCKED-INTERFACE template + 3 template amends + spawn skill 강화 + starpin-fleet evidence + F80/F100~F106 patches)
 
 ## Required reads (이 세션 시작 시)
 
@@ -99,16 +101,21 @@
 
 최근 ADR만 (전체는 DECISIONS.md):
 
-- **ADR-010** (accepted 2026-05-27): v1.1 Fleet Mode — 재귀 coordinator + Phase 02 split-decision + Phase 05 merge-collection + 9 Fleet rules + cleanup pass
+- **ADR-011** (proposed 2026-05-27): v1.2 Fleet enforcement 강화 — §14.8 lock+invariant grep gate / §14.9 inter-child consume timing / §14.10 scope-bounded gates + lock-grep-gate skill + LOCKED-INTERFACE template
+- **ADR-010** (accepted): v1.1 Fleet Mode — 재귀 coordinator + Phase 02 split-decision + Phase 05 merge-collection + 9 Fleet rules
 - **ADR-009**: Hara v1.0 승격 — Phase E §10 5 criteria 충족 (3 dogfood)
 - **ADR-008**: 첫 base promotion — `budget-binary-size` (starpin + temp-sensor → domain-agnostic)
-- **ADR-001~ADR-007**: 초기 골격 (git + Codex 호출 채널 + config + Strictness + Phase A) — DECISIONS.md 참조
+- **ADR-001~ADR-007**: 초기 골격 — DECISIONS.md 참조
 
 ## Roadmap
 
 - [x] Phase A~E (v0.1~v1.0) — 골격 + skill 풀 + project-type seed + 자기보호 + 3 dogfood ship
-- [x] **Phase F (v1.1) — Fleet Mode** (재귀 coordinator) ✓ SHIPPED 2026-05-27 (ADR-010 accepted)
-- [ ] Phase G (v1.2 후보) — real-world Fleet dogfood + F70-fleet-1~3 처리 + wall-time benefit 측정
+- [x] Phase F (v1.1) — Fleet Mode ✓ SHIPPED 2026-05-27 (ADR-010 accepted)
+- [x] **Phase G (v1.2) — Fleet enforcement amend** ✓ proposed 2026-05-27 (ADR-011, awaiting user)
+  - real-world dogfood: examples/starpin-fleet/ (45 tests PASS, 11 unique findings)
+  - codex review 1 blocker + 5 major + 1 minor 모두 patched
+  - 3 신규 §14.8/9/10 + lock-grep-gate skill + LOCKED-INTERFACE template + SUBTREE-PROMPT/MERGE-REPORT/SPLIT-DECISION-ADR amend + spawn skill 강화
+- [ ] Phase H (v1.3 후보) — AST/ESLint based lock rule + helper scripts (gen_stub/gen_ambient/topo_sort) + real git worktree dogfood + wall-time benefit 측정 + out-of-band confirmation (Slack/email)
 
 ## Next action
 

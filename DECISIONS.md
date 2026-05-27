@@ -18,6 +18,108 @@
 
 ---
 
+## ADR-011 — Hara v1.2 Fleet enforcement 강화 (starpin-fleet real-world dogfood trigger)
+
+**Date**: 2026-05-27 · **Status**: proposed
+**References**:
+- HARNESS.md §14.8 (lock & invariant enforcement) + §14.9 (inter-child consume timing) + §14.10 (scope-bounded gates) 신설
+- skills/lock-grep-gate.md (신설 v0.1)
+- skills/spawn-subtree-prompts.md (preflight: inter_child_consume_strategy 의무)
+- templates/SUBTREE-PROMPT (Pre-review-gate scope-only section 신설; ownership SoT 참조로 일원화)
+- templates/MERGE-REPORT (INV evidence 코드 path 인용 의무)
+- templates/SPLIT-DECISION-ADR (inter_child_consume_strategy field + root_path/current_depth/resulting_depth/max_depth_allowed field 의무)
+- templates/LOCKED-INTERFACE.template.md (신설 — runtime/type-only import 구분 + 행동 spec + defensive validation policy 의무)
+- examples/starpin-fleet/ v0.1.0 (real-world dogfood evidence + 11 v1.2 findings)
+- F80 patch (ADR-001 split-decision 작성 즉시 발견 → HARNESS §14 F6 amend로 흡수)
+
+**Context**: Hara v1.1 ship 후 사용자 지시 (2026-05-27): "이제 다시 알아서 진행해 ... 백그라운드 세션 부르는 방식으로 테스트 및 하니스 개선". starpin Blueprint 기반 *real-world Fleet dogfood* (starpin-fleet) 진행 — 4 children parallel spawn (Agent run_in_background) + inter-child consume (sky→catalog, claim→auth) + 4 cross-cutting invariants.
+
+결과: Fleet pattern mechanically 작동 (45 tests PASS, lock 4/4, invariant 4/4, boundary 0 violation). **그러나** real-world에서 11 unique v1.2 finding 도출 — 모두 *enforcement gap* (TypeScript typecheck로 막히지 않는 lock 항목들).
+
+**Decision**: Hara v1.2 amend.
+
+### A. HARNESS §14 amendments (3 신규 subsections)
+
+1. **§14.8 Lock & invariant enforcement** (F87/F90/F82 patch)
+   - Single-method consume: locked-interface에 *runtime import vs type-only* 구분 의무
+   - Invariant-guard import 검증: (a) runtime gate wrapper redesign 또는 (b) `// @invariant-guard: <util>` 표준 marker
+   - MERGE-REPORT INV evidence는 *실제 코드 path 인용* 의무 (false evidence는 child re-work)
+   - parent의 `lock-grep-gate` skill이 자동 검증
+
+2. **§14.9 Inter-child consume timing** (F81 patch)
+   - SPLIT-DECISION-ADR에 `inter_child_consume_strategy: a|b|c` field 의무
+   - (a) lock-spec stub: parent가 provider stub 미리 작성
+   - (b) type-only ambient: consumer가 ambient declaration 자체 작성
+   - (c) topological spawn order: spawn skill이 provider 후 consumer dispatch
+   - spawn preflight가 strategy field 검증
+
+3. **§14.10 Scope-bounded pre-review-gate** (F85 patch)
+   - spawn-subtree-prompts skill이 SUBTREE-PROMPT 생성 시 *child별 scope-only* typecheck/test 명령 자동 주입
+   - Fleet F4 (ownership) 옆에 *gate scope rule* 신설 — child gate = files it owns + shared transitive imports
+
+### B. 신규 base skill
+
+- `skills/lock-grep-gate.md` v0.1 — parent Phase 05 merge-collection에서 자동 호출. consume allowlist + invariant util 호출 + INV evidence cross-check
+
+### C. 신규 base template
+
+- `templates/LOCKED-INTERFACE.template.md` — 그동안 *예제로만 존재*, 정식 template 신설. runtime/type-only import 명시 / 행동 spec / file ownership SoT / defensive validation policy 의무
+
+### D. Template amendments
+
+- `SUBTREE-PROMPT.template.md`: 작업 범위 섹션은 locked-interface §File ownership *참조*만 (F83 SoT). Pre-review-gate scope-only 섹션 신설 (F85). 종료 절차에서 MERGE-REPORT 양식 명시 (F88).
+- `MERGE-REPORT.template.md`: 횡단 invariant 섹션에 *실제 코드 path 인용 의무* (F87)
+- `SPLIT-DECISION-ADR.template.md`: front-matter에 `root_path/current_depth/resulting_depth/max_depth_allowed/inter_child_consume_strategy` field 의무화 (F74 강화 + F81)
+
+### E. F80 patch (이미 적용 — 본 ADR에서 명시)
+
+- HARNESS §14 F6: `approver: user` / `approver: user-delegated` + `delegation_source` / `dogfood_simulation: true` 3 path
+- spawn-subtree-prompts preflight: 3 path 검증 + 추가 게이트 (delegated이면 source 비어있지 않음; simulation이면 path가 examples/)
+- SPLIT-DECISION-ADR template: 3 path 양식 명시
+
+### F. Carry-over (v1.2 미해결)
+
+- F70-fleet-1: child mid-work escalation 위치 — v1.3 후보
+- F70-fleet-2 / F92: real git worktree dogfood — v1.3 후보
+- F70-fleet-3: parent codex review 대체 heuristic 명문화 — v1.3 후보
+- F86: ESM jest module isolation 표준 패턴 — project-type seed에 가이드 추가 검토
+
+**Consequences** (F106 v1.2 codex down-tone):
+
+- **positive**:
+  - lock enforcement에 **automated gap detection layer 추가** (lock-grep-gate skill — *typecheck 수준 아님*, grep first-line + MERGE-REPORT evidence + codex second-line)
+  - inter-child consume timing 명세화 — 3 strategy (stub/ambient/topo) 절차 작성, 단 helper script (`gen_stub.py` 등)는 v1.3 후속
+  - scope-bounded gates 명세 — spawn skill이 per-child tsconfig/jest config 생성 의무
+  - **real-world dogfood가 gap discovery로서 효과적** (11 unique finding) — *simulation에서 못 본 것을 real에서 본다* evidence. **단 본 dogfood는 same-worktree boundary + self-test로 진행** — *진짜 mechanical enforcement* 검증은 real git worktree + AST rule 적용한 v1.3 후속 dogfood에서
+
+- **negative**:
+  - HARNESS body가 v1.1 → v1.2에서 ~80줄 추가 (cleanup pass 후에도). 470 → ~550줄. 사용자 지시 "하니스가 길어지면 claude가 규칙을 안 지킴"과 trade-off — v1.2 amendment는 *enforcement 강화*가 본질이라 줄이기 어려움
+  - lock-grep-gate skill은 *grep 기반* — false positive/negative 가능 (간접 호출은 못 잡음). ESLint rule이 더 강할 수 있으나 본 v1.2는 grep으로 충분
+
+- **risk**:
+  - LOCKED-INTERFACE template은 *신규 양식* — 기존 fleet-mini/starpin-fleet의 locked-interface는 양식 후속 적용 필요 (또는 v1.2 template 적용 strict-only로 가능)
+  - inter_child_consume_strategy = (c) topo-order는 *parallel 이득 일부 포기* — heuristic 가이드 부재 (어떤 case에 어떤 strategy?) → v1.3 후보
+
+**Codex review evidence**:
+- review file: `.harness/reviews/harness-amend-20260527-v1.2-fleet-enforcement.md` (tokens 97,740)
+- verdict: 1 blocker + 5 major + 1 minor; HC-7/8/9 위반 0
+- patches applied:
+  - **F100 (blocker)**: `approver: user-delegated`는 examples/ 경로만 허용 (production은 `approver: user` 직접 승인 또는 out-of-band confirmation artifact 의무). v1.3 후보 — Slack/email signature 통합
+  - **F101 (major)**: spawn skill에 strategy a/b/c별 *실제 절차* 추가 — (a) stub 자동 생성, (b) ambient declaration 생성 + merge phase 제거 검증, (c) topological order *안내* (강제 dispatch는 Claude Code SDK multi-session 의존 — v1.3 후속). helper script들은 v1.3 후속
+  - **F102 (major)**: §14.8 + lock-grep-gate "mechanical" → "automated gap detection" language down-tone. AST/ESLint v1.3 carry-over 명시
+  - **F103 (major)**: Phase 05 Activities Step 0 + Exit 기준에 lock-grep-gate PASS 명시
+  - **F104 (major)**: spawn skill Step 3.5 신설 — per-child tsconfig.<child>.json + jest.config.<child>.mjs 자동 생성 (yq 의존; fallback은 inline)
+  - **F105 (major)**: spawn skill Step 3 — LOCKED-INTERFACE template *인스턴스화* + 6 필수 섹션 모두 채움 의무. 누락 시 die
+  - **F106 (minor)**: ADR-011 positive consequences "typecheck 수준에 근접" → "automated gap detection layer" 정직한 down-tone
+- 후속 codex 재리뷰: 본 patches에 대해 *별도 round 불필요* (mechanical). real-world enforcement 검증은 v1.3 후속 dogfood
+
+**Approval gate**:
+- 사용자 승인 필수 (하니스 자체 변경 — strict 모드)
+- approver: <pending>
+- approval scope: §14.8/9/10 신설 + lock-grep-gate skill + LOCKED-INTERFACE template + SUBTREE-PROMPT/MERGE-REPORT/SPLIT-DECISION-ADR template amend + F80 + F100~F106 patches + starpin-fleet v0.1.0 dogfood evidence
+
+---
+
 ## ADR-010 — Hara v1.1 Fleet Mode 도입 (재귀 coordinator 패턴, depth ≤ 2)
 
 **Date**: 2026-05-27 · **Status**: accepted

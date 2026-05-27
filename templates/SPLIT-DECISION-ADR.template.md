@@ -7,7 +7,11 @@ status: proposed
 type: fleet_split_decision
 parent_phase: 02-module-plan
 parent_scope: <root | child:<name>>
-depth_resulting: <1 or 2>
+root_path: <absolute path>                       # F74 — root tracking
+current_depth: <0=root, 1, 2>                    # F74
+resulting_depth: <current_depth + 1>             # F74 — spawn skill enforces ≤ max_depth_allowed
+max_depth_allowed: <2 default; ADR로 완화>       # F74
+inter_child_consume_strategy: a | b | c          # F81 v1.2 — see §14.9 (a=stub, b=ambient, c=topo-order)
 references:
   - HARNESS.md §14
   - .harness/docs/blueprint.md
@@ -81,9 +85,28 @@ references:
 4. 각 child가 자기 worktree에서 작업 → 완료 시 MERGE-REPORT.md commit
 5. 모든 child 완료 후 parent 세션에 통보 → parent가 Phase 05 merge-collection 실행
 
-## Approval
+## Approval (Fleet F6 — F80 v1.2 update)
 
-- **사용자 승인 필수 (모든 모드)** — autonomous도 예외. 이유: 사용자가 직접 N개 세션을 spawn하는 행동을 해야 함
-- approver: user
-- approved_at: <ISO> (승인 후 기입)
-- approval scope: 위 split 구성 + N개 child 인터페이스 lock + 횡단 invariant 목록
+다음 3 path 중 하나만 유효 (spawn-subtree-prompts preflight 강제):
+
+### Path (a) — 직접 승인 (기본)
+```yaml
+approver: user
+approved_at: <ISO>
+approval scope: <text>
+```
+
+### Path (b) — autonomous session 안 user delegation
+```yaml
+approver: user-delegated
+delegation_source: "<user message 인용 또는 file:line ref>"   # 비어있으면 spawn 거부
+approved_at: <ISO>
+approval scope: <text>
+```
+
+### Path (c) — example/test simulation (production 금지)
+```yaml
+dogfood_simulation: true     # examples/ 하위에서만 허용; spawn preflight가 path check
+approver: claude-self-test
+approved_at: <ISO>
+```

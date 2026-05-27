@@ -37,12 +37,14 @@ status: ready_for_merge | blocked | escalation
 **Lock 일치 확인**: ✓ / ✗
 - ✗면 §5 escalation 사유 명시
 
-## Cross-cutting invariant 준수
+## Cross-cutting invariant 준수 (F87 v1.2 — 실제 코드 path 인용 의무)
 
-| invariant | enforce 방식 | 증거 |
+| invariant | enforce 방식 | 코드 evidence (path:line + 내용) |
 |---|---|---|
-| <inv 1> | <unit test / skill grep / lint rule> | <test file / commit sha> |
+| <inv 1> | <runtime gate / @invariant-guard marker / unit test> | `src/<child>/index.ts:<line>` — `<actual code snippet>` |
 | ... | ... | ... |
+
+> parent의 [`lock-grep-gate`](../../skills/lock-grep-gate.md) skill이 본 evidence를 *실제 코드와 cross-check*. mismatch 시 child re-work.
 
 ## File ownership 준수
 

@@ -23,7 +23,7 @@ HARNESS.md의 *모든 규칙을 자기 scope에* 적용한다. 자기 scope 안�
 
 ## 작업 범위 (scope)
 
-- **소유 디렉토리**: `<src/path>/`, `<tests/path>/` (이 경계 외 파일은 *읽기 전용*)
+- **소유 디렉토리 + 읽기 권한**: 본 `./locked-interface.md` §File ownership 참조 (single source of truth — F83 v1.2)
 - **branch**: `feat/<child_name>` — 본인 worktree (`<worktree_path>`)에서만 작업
 - **모듈**: `<module 1>`, `<module 2>`, ... (총 N개; 또 분기 가능)
 - **owned LOC 예상**: ~<숫자>
@@ -70,10 +70,33 @@ HARNESS.md의 *모든 규칙을 자기 scope에* 적용한다. 자기 scope 안�
 3. STATUS.md ← *없으면 생성*. `templates/SUBTREE-STATUS.template.md`로 자기 scope 상태 초기화
 4. Phase 02 시작 (본 child scope 모듈의 plan; 본인 scope이 *또* 크다면 자기 Phase 02에서 또 split 가능 — F5 depth 게이트 강제)
 
+## Pre-review-gate (scope-only — v1.2 F85)
+
+본 child의 *자기 scope만* 검증 (sibling 미완과 무관):
+
+```bash
+# typecheck — own src + tests + shared
+npx tsc --noEmit --target ES2023 --module ES2022 --moduleResolution Bundler \
+  --strict --noUncheckedIndexedAccess --exactOptionalPropertyTypes \
+  --esModuleInterop --skipLibCheck --resolveJsonModule --isolatedModules \
+  src/<child>/*.ts src/shared/*.ts tests/<child>/*.ts
+
+# unit test — own test path
+npm run test -- --testPathPattern=<child>
+```
+
+또는 spawn-subtree-prompts가 *child별 tsconfig.<child>.json* 자동 생성한 경우:
+```bash
+npx tsc --noEmit -p tsconfig.<child>.json
+npm run test -- --testPathPattern=<child>
+```
+
+root scope (`npm run typecheck` / `npm run test:unit`)는 *Phase 05 merge-collection*에서 parent가 실행.
+
 ## 종료 절차
 
-1. Phase 04 codex review 완료 + 모든 finding resolved/deferred
-2. MERGE-REPORT.md 작성 (`templates/MERGE-REPORT.template.md` 사용)
+1. Phase 04 self-review (child scope codex 또는 dogfood scope에선 self-test) — 모든 finding resolved/deferred
+2. MERGE-REPORT.md 작성 — `templates/MERGE-REPORT.template.md` (F88 v1.2 — child 제출 양식 정식화)
 3. commit + branch push (또는 parent worktree로 fetch 가능 상태)
 4. STATUS.md last-updated 갱신
 5. parent에 완료 통보 (수동 또는 자동 — 본 v1.1은 수동)

@@ -37,16 +37,38 @@ references:
 # ADR 존재 확인
 test -f "$ADR_PATH" || die "SPLIT-DECISION-ADR not found"
 
-# F73 fix — status: accepted AND approver: user 확인 (모든 모드)
+# F73 fix — status: accepted AND 유효한 approval 경로 확인 (모든 모드, F80 update)
 grep -q "^status: accepted" "$ADR_PATH" || die "ADR not accepted"
 
-# user approval 검증 — 예외는 명시적 dogfood_simulation: true flag만
-if ! grep -q "^approver: user$" "$ADR_PATH"; then
-  if ! grep -q "^dogfood_simulation: true$" "$ADR_PATH"; then
-    die "Fleet F6 violation: SPLIT-DECISION-ADR requires approver: user (or explicit dogfood_simulation: true)"
+# F80 (v1.2) — 3 valid approval paths:
+#   (a) approver: user (직접 승인)
+#   (b) approver: user-delegated + delegation_source: <quote> (autonomous session 안 사용자 명시 delegation)
+#   (c) dogfood_simulation: true (example/test 한정 — production 금지)
+APPROVED=0
+if grep -q "^approver: user$" "$ADR_PATH"; then
+  APPROVED=1
+elif grep -q "^approver: user-delegated$" "$ADR_PATH"; then
+  # F100 v1.2 codex blocker patch — user-delegated는 examples/ path만 허용 (production 금지)
+  case "$ROOT_PATH" in
+    */examples/*) ;;
+    *) die "F100: approver: user-delegated는 examples/ 하위 dogfood만 허용 (production Fleet은 approver: user 직접 승인 또는 out-of-band confirmation artifact 의무)" ;;
+  esac
+  # delegation_source field 의무 + 비어있지 않음 (위조 가능성 인정 — examples 전용이라 weak gate 허용)
+  DELEGATION=$(grep "^delegation_source:" "$ADR_PATH" | sed 's/^delegation_source: *//')
+  if [ -z "$DELEGATION" ] || [ "$DELEGATION" = "<quote 또는 file ref>" ]; then
+    die "F80: approver: user-delegated requires non-empty delegation_source field (quote of user delegation message)"
   fi
+  APPROVED=1
+  echo "[warn] user-delegated approval (examples-only mode; source: $DELEGATION) — NOT for production Fleet"
+elif grep -q "^dogfood_simulation: true$" "$ADR_PATH"; then
+  # production 금지 — path가 examples/로 시작해야 함
+  case "$ROOT_PATH" in
+    */examples/*) APPROVED=1 ;;
+    *) die "F80: dogfood_simulation: true는 examples/ 하위만 허용 (production Fleet 금지)" ;;
+  esac
   echo "[warn] dogfood_simulation mode — user approval bypassed (NOT for production Fleet)"
 fi
+[ "$APPROVED" -eq 1 ] || die "Fleet F6 violation: SPLIT-DECISION-ADR requires one of: approver:user / approver:user-delegated+source / dogfood_simulation:true"
 
 # F74 fix — recursion depth enforcement
 CURRENT_DEPTH=$(grep "^current_depth:" "$ADR_PATH" | awk '{print $2}')
@@ -75,7 +97,67 @@ fi
 for m in .harness/docs/modules/*/plan.md; do
   grep -q "^status: approved" "$m" || die "module plan not approved: $m"
 done
+
+# F81 v1.2 — inter_child_consume_strategy 의무
+STRATEGY=$(grep "^inter_child_consume_strategy:" "$ADR_PATH" | awk '{print $2}')
+case "$STRATEGY" in
+  a|b|c) echo "[info] inter-child consume strategy: $STRATEGY (a=stub, b=ambient, c=topo-order)" ;;
+  *) die "F81: SPLIT-DECISION-ADR requires inter_child_consume_strategy ∈ {a, b, c} — see HARNESS §14.9" ;;
+esac
 ```
+
+### Step 1.5 — Strategy-specific 사전 작업 (F101 v1.2 codex patch)
+
+본 v1.2 patch는 strategy a/b/c별 *실제 절차* 구현:
+
+**(a) lock-spec stub** — parent가 spawn 전 *consumer 위한 stub* 작성:
+```bash
+if [ "$STRATEGY" = "a" ]; then
+  # ADR의 dependency graph 파싱 — provider list
+  for PROVIDER in $(grep -A 100 "## Dependency graph" "$ADR_PATH" | awk '/->/ {print $3}' | sort -u); do
+    STUB_PATH="src/$PROVIDER/index.ts"
+    if [ ! -f "$STUB_PATH" ]; then
+      # locked-interface §Public interface 섹션을 그대로 추출해 throw 본문으로
+      mkdir -p "src/$PROVIDER"
+      echo "// AUTO-GENERATED stub (Fleet F101 strategy=a). Replaced by provider child impl." > "$STUB_PATH"
+      echo "// Provider child는 이 파일을 *완전 덮어쓰기*한다." >> "$STUB_PATH"
+      # locked-interface에서 export signatures 추출 + throw 본문 자동 생성
+      python3 .harness/scripts/gen_stub.py "$LOCKED_INTERFACE_PATH" >> "$STUB_PATH"
+    fi
+  done
+fi
+```
+consumer test는 *integration test에서만 real provider 사용* (unit test는 lock signature 기반 OK).
+
+**(b) type-only ambient** — consumer worktree에 ambient declaration:
+```bash
+if [ "$STRATEGY" = "b" ]; then
+  for CONSUMER in $CONSUMERS; do
+    for PROVIDER in $(grep "depends_on:" ".harness/subtrees/$CONSUMER/locked-interface.md" | awk '{print $2}'); do
+      AMBIENT_PATH="../<repo>-$CONSUMER/src/<provider>.d.ts"
+      # locked-interface의 type/fn declarations만 추출
+      python3 .harness/scripts/gen_ambient.py "$PROVIDER_LOCK" > "$AMBIENT_PATH"
+      # parent merge phase에서 *제거 확인* — Phase 05 Exit checklist
+    done
+  done
+fi
+```
+
+**(c) topological spawn order** — parent가 sequential dispatch:
+```bash
+if [ "$STRATEGY" = "c" ]; then
+  # Step 2 (worktree 생성)는 모두 한 번에 OK (각 child workspace 독립)
+  # 단 Step 6 (사용자 spawn 안내)는 *topological order*로 segmented:
+  ORDER=$(python3 .harness/scripts/topo_sort.py "$ADR_PATH")
+  echo "Spawn order (topological):"
+  echo "$ORDER" | while read GROUP; do
+    echo "  Wave: $GROUP — provider children 먼저 spawn + 완료 통보 후 next wave"
+  done
+  # 본 v1.2는 *안내만* — 강제 dispatch는 v1.3 (Claude Code SDK multi-session 가능 시)
+fi
+```
+
+> *v1.2 한계*: helper script (`gen_stub.py` / `gen_ambient.py` / `topo_sort.py`) 미구현 — *명세만 정착*. v1.3에서 실 script 작성 + ESLint AST rule. 본 v1.2 ship 후 first real-world dogfood가 strategy 활용 시 helper 누락 발견되면 즉시 작성.
 
 ### Step 2 — Child별 worktree 생성
 
@@ -98,18 +180,57 @@ done
 
 각 child에 대해 parent의 `.harness/subtrees/<child>/` 디렉토리 생성:
 
-1. **`locked-interface.md`** — ADR의 해당 child 인터페이스 섹션을 *순수 spec 형태*로 추출. 다음 필수 항목 포함:
+1. **`locked-interface.md`** — **`templates/LOCKED-INTERFACE.template.md` 인스턴스화 의무 (F105 v1.2 codex patch)**. ADR의 해당 child 인터페이스 섹션을 다음 *모든* 섹션에 채움:
    - Public interface 시그니처 (타입까지)
-   - Consumed interface (의존)
+   - **행동 spec** (각 함수 valid range + invalid 처리 policy — F84)
+   - Consumed interface (의존) — **runtime imports vs type-only imports 구분** (F90)
+   - 횡단 invariant 목록 (ADR §6 그대로 복제) — enforcement 방식 명시 권장 (runtime gate / marker / wrapper)
+   - File ownership (해당 child 행만 — single source of truth, F83)
+   - **Defensive validation policy** (branded type input의 trust vs re-validate — F89)
    - DB 스키마 (해당 시)
-   - 횡단 invariant 목록 (ADR §6 그대로 복제)
-   - File ownership (해당 child 행만)
+
+   **die 조건**: 위 필수 섹션 중 하나라도 누락 시 spawn 거부. *생성된 locked-interface.md를 grep해서 §"Public interface" / §"행동 spec" / §"Consumed interface" / §"File ownership" / §"횡단 invariant" / §"Defensive validation policy" 6개 헤더 모두 존재 확인*. 누락 시 die + parent가 채울 것 요청.
 
 2. **`prompt.md`** — `templates/SUBTREE-PROMPT.template.md` 인스턴스화:
    - `child_name`, `parent_path`, `locked_interface_path`, `worktree_path`, `branch`, `depth` 채움
+   - Pre-review-gate 섹션은 Step 3.5의 *생성된* tsconfig/jest config 명령 주입
    - 본 prompt 자체가 child Claude 세션에 그대로 전달될 수 있어야 함 (stranger-proof)
 
 3. **`README.md`** (선택) — 사용자가 본 subtree 디렉토리를 열었을 때 1줄 안내
+
+### Step 3.5 — Per-child tsconfig / jest config 생성 (F104 v1.2 codex patch)
+
+ownership matrix 기반으로 *child별 scope tsconfig + jest config* 자동 생성:
+
+```bash
+for CHILD in $CHILDREN; do
+  OWNED_PATHS=$(yq ".ownership.\"$CHILD\".owned[]" "$ADR_PATH")
+  SHARED_PATHS="src/shared/**/*.ts"
+
+  # tsconfig.<child>.json
+  cat > "tsconfig.$CHILD.json" <<EOF
+{
+  "extends": "./tsconfig.json",
+  "include": [$(printf '"%s",' $OWNED_PATHS) "$SHARED_PATHS"],
+  "exclude": ["node_modules", "dist"]
+}
+EOF
+
+  # jest.config.<child>.mjs — testMatch만 override
+  cat > "jest.config.$CHILD.mjs" <<EOF
+import base from './jest.config.mjs';
+export default { ...base, testMatch: ['**/tests/$CHILD/**/*.test.ts'] };
+EOF
+done
+```
+
+SUBTREE-PROMPT의 "Pre-review-gate" 섹션은 생성된 config 사용:
+```bash
+npx tsc --noEmit -p tsconfig.<child>.json
+npm run test -- --config jest.config.<child>.mjs
+```
+
+**Fallback** (yq 미설치 등): inline `tsc` 명령 패턴 (HARNESS §14.10 참조). 단 fallback은 *fragile* — production Fleet은 위 config 생성 의무.
 
 ### Step 4 — Child worktree 내부 marker 작성
 

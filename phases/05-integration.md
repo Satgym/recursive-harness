@@ -21,6 +21,7 @@
      - 모듈 boundary 충돌이면 split-decision 자체 재검토 (drift 신호 — Fleet §14.7)
      - 결정 결과는 ADR로 명문화 (`merge-conflict-resolution-<slug>` ADR 신설)
    - 통합 후 cross-cutting integration codex review 1회 별도 호출 (Fleet F7) — *self-test 대체*는 dogfood/POC만; production Fleet은 codex 의무
+   - **(v1.2 F103 patch)** [`lock-grep-gate`](../skills/lock-grep-gate.md) skill 호출 의무 — consume allowlist + invariant util 호출 + MERGE-REPORT INV evidence cross-check. 결과는 `.harness/reviews/05-lock-grep-gate-<date>.md`. PASS 필수 (FAIL 시 해당 child re-work)
 1. **결합 환경 준비** — DI / config / fixture 로 실 의존성 (또는 mock vs real boundary 정책에 따라).
 2. **Integration test 실행** — Blueprint test strategy에 명시된 시나리오.
 3. **E2E 시나리오** (해당 시) — 사용자 관점 happy path + 핵심 실패 경로.
@@ -43,6 +44,8 @@
 - [ ] 발생한 모든 Postmortem이 `status: resolved`
 - [ ] HC-8 (외부 mutation) / HC-9 (destructive) 작업이 본 phase에 있었다면 모두 사용자 승인됨
 - [ ] **(Fleet 모드)** 모든 child branch merge 완료 + MERGE-REPORT 회수 + cross-cutting integration review 1회 완료 + child가 제출한 capability candidate에 대한 *수용/거부 결정* ADR로 명문화
+- [ ] **(Fleet 모드 v1.2 F103)** `lock-grep-gate` skill PASS (`.harness/reviews/05-lock-grep-gate-<date>.md` 존재 + verdict=PASS) + MERGE-REPORT INV evidence가 실제 코드와 일치 (mismatch 0)
+- [ ] **(Fleet 모드 strategy=b — F101 v1.2)** ambient declaration 파일들이 merge 시점에 *모두 제거됨* (real provider import로 대체 확인). strategy=a이면 모든 stub이 *real impl로 덮어쓰기됨* (throw 본문 grep으로 검증)
 
 ## 주도 역할
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Hara v1.8 commit-msg hook
+# Hara v1.9 commit-msg hook
 # Rule: if THIS commit is a ship-style commit (code|harness|note(...vN.N.N)),
 # fail when there are still wip() commits in recent history that should have
 # been squashed first.

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Hara v1.8 pre-commit hook
+# Hara v1.9 pre-commit hook
 # Enforces the few rules that v0.5/v0.6 dogfood proved Claude forgets:
 #   1. STATUS freshness — if RELEASE.md changes, STATUS.md must change in the same commit
 #   2. WIP residue — block commit messages starting with "wip(" unless --no-verify

@@ -18,6 +18,108 @@
 
 ---
 
+## ADR-018 — starpin v0.10 login flow fix (Mock OAuth + nickname tolerance)
+
+**Date**: 2026-05-27 · **Status**: accepted (user-directed "하니스 강화 후 UI/UX 검증")
+
+**Scope**: 2 root-cause fixes that v0.5~v0.9 ships didn't catch because the harness had no E2E user-flow gate. **Both bugs surfaced immediately when HC-12 smoke was added** — exactly the validation purpose of ADR-017.
+
+**Bug A — MockOAuthProvider authorize_url fake hostname**:
+- Backend's Mock OAuth fallback returned `https://mock.google.test/auth` (unreachable DNS)
+- Browser-based web-demo tried to redirect → ERR_NAME_NOT_RESOLVED
+- 100% of new-user login attempts failed in any environment using Mock providers
+
+**Bug B — frontend nickname strict typeof check**:
+- `users.nickname` column is nullable (schema design)
+- New users have `nickname: null` until they pick one
+- `auth-client.ts::handleCallback` had `typeof nickname !== 'string'` → reject → no `/sky.html` redirect
+- 100% of fresh signups dead-ended at callback.html
+
+**Decision**:
+
+### A. Mock OAuth → local stub
+- `backend/src/auth/providers/mock.ts` — accept relative `authorize_url` base
+- `backend/src/server.ts` — `mockAuthorizeBase()` returns `/dev-oauth-stub.html` unconditionally (Mock used only when real providers absent → always dev context)
+- `backend/public/dev-oauth-stub.html` + `.ts` (NEW) — reads state + redirect_uri from URL, synthesizes `mock-devuser001-dev@starpin.local` code (format matches Mock's `mock-<sub>-<email>` parser), redirects to callback
+
+### B. Frontend nickname tolerance
+- `backend/public/lib/auth-client.ts::handleCallback` — nickname null/empty → fallback to `user-<id-prefix>`
+- `users.nickname` schema remains nullable (correct — new users haven't picked one)
+- v0.11+ carry: nickname-setup screen for new users (proper UX)
+
+**Validation**: full Playwright E2E smoke (login → /sky.html → session in storage → canvas rendered → no JS errors) passes. Evidence: `.harness/runs/e2e-20260527-login-smoke.json` (`status: pass`).
+
+**Approval**: user · 2026-05-27 · autonomous
+
+---
+
+## ADR-017 — Hara v1.9 HC-12 User-Flow-Verified + E2E smoke gate
+
+**Date**: 2026-05-27 · **Status**: accepted (user-directed "하니스 강화 후 UI/UX 검증 이후 진행")
+
+**Context**:
+starpin v0.5~v0.9 (5 consecutive ships) all had a *broken first-user login flow* — clicking the Login button never reached the app. The harness gate stack (unit tests + lint + typecheck + codex r1+r2 + endpoint health) passed every time. The failure mode: each layer test verified its *component in isolation* (Mock OAuth works for backend tests; web-demo works with real OAuth; pre-push verifies review evidence exists), but **no gate verified the composition — the actual user clicking Login in a browser**.
+
+User dogfood post-mortem (sharp + correct): "시작부터 겪을 버그에 대한 검증 절차도 없었어?" — the harness had no first-experience smoke. The previous v1.8 minimize+hook discipline applies: this is a *critical* gate that must be enforced by hook (agent self-report not trustworthy under context pressure).
+
+**Decision**: Hara v1.9 — add HC-12 (User-Flow-Verified) + E2E smoke infrastructure + pre-push enforcement.
+
+### A. New HC
+
+- **HC-12 User-Flow-Verified**: UI surface가 있는 프로젝트는 ship 전 *첫 사용자 흐름* 자동 검증 필수. Evidence = `.harness/runs/e2e-<date>-<slug>.json` (`status: pass`, last 24h).
+
+### B. Infrastructure (canonical impl in starpin)
+
+- `backend/playwright.config.ts` (NEW) — chromium headless, sequential, JSON reporter for machine-readable result
+- `backend/tests/e2e/login-smoke.spec.ts` (NEW) — single test: open login → click provider → reach sky.html → session present → no JS errors
+- `scripts/run-e2e-smoke.sh` (NEW) — wrapper that runs Playwright + emits `.harness/runs/e2e-<date>-<slug>.json`
+- `@playwright/test` dev dep + chromium headless shell (~150MB one-time download)
+
+### C. pre-push hook addition
+
+`.githooks/pre-push` now detects "UI surface" projects (tracked path matching `public/` or `frontend/`). If detected + ship-style commit being pushed, require recent passing `.harness/runs/e2e-*.json` (mtime < 24h, contains `status: pass`). Block otherwise.
+
+`note(...)` exception (HC-11 carry) continues — gitignored sub-projects' smoke evidence lives outside the tracked tree.
+
+### D. Documentation
+
+- HARNESS.md HC-12 row added; `.githooks/README.md` updated; pre-push enforce details
+- v1.9 carry — `samples/playwright-smoke-template/` reusable scaffold (v1.10)
+
+**Validation by direct dogfood**:
+1. Built HC-12 + Playwright smoke
+2. Ran smoke against starpin's *broken-but-shipped* v0.9 state
+3. Smoke FAILED → hook would have blocked v0.9 push (had it existed). Bugs surfaced:
+   - Mock OAuth authorize_url unreachable
+   - Frontend nickname null reject
+4. Fixed both bugs (ADR-018) → re-ran smoke → PASS
+5. evidence `.harness/runs/e2e-20260527-login-smoke.json` (`status: pass`) emitted
+
+This is the first time in 6 ship rounds the actual login flow has been *verified to work in a browser*. The hook now enforces this on every future ship.
+
+**Consequences**:
+
+positive:
+- "First-impression" defects (composition bugs invisible to unit tests + codex review) caught before ship
+- Hook enforcement = agent can't bypass under context pressure (matches v1.8 discipline)
+- Single E2E test catches the most common class of UX defects with minimal infra
+
+negative:
+- Playwright + chromium ~150MB devDep (one-time download)
+- E2E smoke adds ~5-10s to ship workflow (acceptable for the bug-catching value)
+- Requires prod-sim running locally before smoke can run (operator step)
+
+후속 (v1.10+ carry):
+- `samples/playwright-smoke-template/` — reusable scaffold for new UI projects
+- Cross-browser matrix (webkit + firefox) once a starpin-specific browser bug emerges
+- CI integration of smoke (GitHub Actions / similar) so cloud pushes also gate
+- A11y axe-core integration in smoke (catches a11y regressions same way)
+- Multi-flow smoke (claim flow, message flow) once user has multiple paths
+
+**Approval**: user · 2026-05-27 · autonomous (사용자 "하니스 강화 후" directed)
+
+---
+
 ## ADR-016 — starpin v0.9 HD namespace + sky planet API
 
 **Date**: 2026-05-27 · **Status**: accepted (user-recommended "추천해줘")

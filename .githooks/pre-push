@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Hara v1.8 pre-push hook
+# Hara v1.9 pre-push hook
 # Enforces: if a release/ship-style commit is being pushed, recent codex
 # review evidence must exist. This catches the v0.5/v0.6 pattern of
 # "shipped without 2-round codex review" — the harness *requires* it but
@@ -128,6 +128,69 @@ if [[ $fail_count -gt 0 ]]; then
   echo "[pre-push]   Each ship needs r1 + r2 review file names containing its slug." >&2
   echo "[pre-push]   Bypass: git push --no-verify (requires explicit user authorization)." >&2
   exit 1
+fi
+
+# --- HC-12: User-Flow-Verified -----------------------------------------------
+# UI surface detection: a repo has UI when any tracked path matches `public/`
+# at depth 1 (e.g., `backend/public/`, `frontend/public/`). For dogfood
+# projects in `examples/` (gitignored from this repo), the smoke evidence
+# lives in the gitignored tree — `note(...)` ship-style was already exempted
+# above. For in-repo UI projects, ship requires recent passing smoke evidence
+# in `.harness/runs/e2e-*.json` (last 24h, status=pass).
+has_ui_surface=0
+while IFS= read -r path; do
+  case "$path" in
+    public|*/public|public/*|*/public/*) has_ui_surface=1; break;;
+    frontend|*/frontend|frontend/*|*/frontend/*) has_ui_surface=1; break;;
+  esac
+done < <(git ls-tree -r --name-only HEAD 2>/dev/null)
+
+if [[ $has_ui_surface -eq 1 ]]; then
+  # Find recent passing smoke evidence.
+  runs_dir="$REPO_ROOT/.harness/runs"
+  if [[ ! -d "$runs_dir" ]]; then
+    echo "[pre-push] FAIL: HC-12 — UI surface present but no $runs_dir/ directory." >&2
+    echo "[pre-push]   Run UI smoke: ./scripts/run-e2e-smoke.sh (or equivalent)" >&2
+    exit 1
+  fi
+  # r1 #2: tight evidence validation (not just mtime + grep). Parse JSON,
+  # require status=pass + exit_code=0 + test_count>=1 + ran_at within 24h
+  # (clock-skew-resistant). Hardens against accidentally-passing JSON files
+  # or hand-written forgeries.
+  recent_pass=""
+  for f in "$runs_dir"/e2e-*.json; do
+    [[ -f "$f" ]] || continue
+    if python3 - "$f" <<'PYEOF' 2>/dev/null
+import sys, json, datetime
+try:
+    d = json.load(open(sys.argv[1]))
+    if d.get('status') != 'pass': sys.exit(1)
+    if int(d.get('exit_code', -1)) != 0: sys.exit(1)
+    if int(d.get('test_count', 0)) < 1: sys.exit(1)
+    ran_at = d.get('ran_at', '')
+    if not ran_at: sys.exit(1)
+    ts = datetime.datetime.strptime(ran_at.replace('Z', '+00:00').replace('+0000', '+00:00'),
+                                    '%Y-%m-%dT%H:%M:%S%z')
+    age_sec = (datetime.datetime.now(datetime.timezone.utc) - ts).total_seconds()
+    if age_sec > 86400 or age_sec < -300:  # -5min slack for clock skew
+        sys.exit(1)
+    sys.exit(0)
+except Exception:
+    sys.exit(1)
+PYEOF
+    then
+      recent_pass="$f"
+      break
+    fi
+  done
+  if [[ -z "$recent_pass" ]]; then
+    echo "[pre-push] FAIL: HC-12 — UI surface detected but no valid passing e2e-*.json in last 24h." >&2
+    echo "[pre-push]   Evidence must have: status=pass, exit_code=0, test_count>=1, ran_at within 24h." >&2
+    echo "[pre-push]   Run: ./scripts/run-e2e-smoke.sh   (or your project's equivalent)" >&2
+    echo "[pre-push]   Then re-push. Bypass: git push --no-verify (explicit user authorization)." >&2
+    exit 1
+  fi
+  echo "[pre-push] OK — HC-12 UI smoke evidence: $(basename "$recent_pass")" >&2
 fi
 
 echo "[pre-push] OK — HC-11 r1+r2 evidence found for every ship in push" >&2

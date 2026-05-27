@@ -1,4 +1,4 @@
-# Hara git hooks (v1.8)
+# Hara git hooks (v1.9)
 
 These hooks enforce the few rules Claude+codex dogfood proved get forgotten.
 Hooks fire whether the agent remembers the harness rules or not — that's the
@@ -29,6 +29,7 @@ That's it. The hooks live in this directory and are committed to the repo
 
 1. **Codex evidence (HC-11)** — if any pushed commit subject matches `(code|harness)(…vN.N.N)` (the *in-repo* ship form), require BOTH `*r1*` AND `*r2*` review files whose name contains the ship slug, within the last 30 commits.
 2. **`note(...)` exception** — `note(<slug>-vN.N.N)` is the *metadata-only* ship form announcing work that lives in a gitignored sub-project (e.g., `examples/starpin/`). HC-11 evidence for that work lives outside this repo's tracked tree, so the hook does NOT block these pushes. (Discovered during starpin v0.7 dogfood — the hook needs to know what's actually shipped from THIS repo vs referenced from a sibling project.)
+3. **UI smoke evidence (HC-12)** — if the repo has tracked `public/` or `frontend/` paths, the pre-push hook requires a `.harness/runs/e2e-*.json` file with `status=pass`, `exit_code=0`, `test_count>=1`, and `ran_at` (ISO-8601) within the last 24h (clock skew ±5min). Parsing is via python3 — mtime alone is *not* trusted. Triggered by the starpin v0.5~v0.9 dogfood where login flow was broken across 5 ship rounds because nothing tested "user clicks Login → reaches app".
 
 ## Bypass
 

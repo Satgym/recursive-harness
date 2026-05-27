@@ -8,17 +8,18 @@
 | 항목 | 값 |
 |---|---|
 | Project | 하니스 자체 빌드 (메타 부트스트랩) |
-| Phase | **starpin v0.9.0 SHIPPED** — HD namespace + sky planet API (`/v1/sky/planets`); 2 codex review rounds, 3 findings → 0 open |
-| Active sub-phase | (대기) — v0.10 direction (multi-epoch planets / sky/now planet 통합 / mag≤12 / native mobile when toolchain / cloud deploy) |
-| Strictness | autonomous |
-| Harness version | v1.8 carry (5th round dogfood; 새 hook 버그 0건 — stability 추가 확인) |
-| Git | main + origin; v0.9 ship 진행 중 (이 commit에서) |
-| Last updated | 2026-05-27 by Claude (v0.9 HD + sky planet API; 279 tests; 3 codex findings closed) |
+| Phase | **Hara v1.9 + starpin v0.10 SHIPPED** — HC-12 User-Flow-Verified (Playwright E2E smoke gate) + login flow fix (Mock OAuth + nickname + `/v1/catalog/viewport` route 누락) — 모두 HC-12 dogfood로 발견된 v0.5~v0.9 누적 silent breakage |
+| Active sub-phase | (자율 작업 진행 중) — Wave B+ starpin 구현 확장 (multi-flow E2E + nickname-setup + sky planet 통합) |
+| Strictness | autonomous (사용자 잘 자는 시간 자율 위임) |
+| Harness version | **v1.9 (HC-12 신설)** — `STARPIN_ENABLE_MOCK_OAUTH` env gate, JSON evidence parse, response.status check, version label bump |
+| Git | main + origin; v1.9 ship 진행 |
+| Last updated | 2026-05-27 by Claude (Hara v1.9 HC-12 + starpin v0.10 login fix + missing /v1/catalog/viewport route) |
 
 ## Active gate
 
-- (none — v0.9 ship 직전 STATUS 갱신)
-- **하니스 검증 결과 (v1.8 5th dogfood round)**: 3 hooks 모두 정상. cumulative: 5 ship rounds × 3 hooks = 15 hook fire 기회 × 0 false positives × 0 missing enforcement. v1.8 minimize+hook stability strongly validated.
+- (none — v1.9 + v0.10 ship 직전 STATUS 갱신)
+- **HC-12 검증 결과**: smoke가 v0.5~v0.9에서 1번도 작동 안 했던 login 흐름 즉시 catch. 또한 tightened response.status check가 `/v1/catalog/viewport` route 부재 (5 round silent) 발견. Gate가 실제로 작동.
+- **Codex r2 결과**: r1 7건 모두 closed + r2 #8 (STATUS staleness, 이 갱신으로 closure) + r2 #9 minor docs (post-ship fix).
 
 ## Required reads (세션 시작 시)
 

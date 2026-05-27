@@ -1,4 +1,4 @@
-# HARNESS.md — Hara 헌법 (v1.8)
+# HARNESS.md — Hara 헌법 (v1.9)
 
 > Claude+Codex 협업의 **절대 규칙**과 **워크플로우 정의**.
 > 변경은 §10 "하니스 수정 절차"를 거쳐야 한다. 버전 이력은 §11.
@@ -29,8 +29,9 @@
 | HC-9 | **Destructive-Confirmed** | Destructive 작업(rm/drop/truncate/force-push/branch -D/reset --hard 등)은 **모든 모드에서 사용자 승인** |
 | HC-10 | **Local-Extends-Only** | Project-local layer(`.harness/skills/`, `.harness/roles/`, `.harness/capabilities.md`)는 base HC-1~9를 약화·재정의·우회할 수 없다. extension·specialization만 허용. **base phase Exit 기준의 결정 권한은 항상 base에 있음** (local skill이 phase Exit을 자체 판단으로 통과시킬 수 없다) |
 | HC-11 | **Codex-Cadence** | 모든 ship-style 커밋(`code|harness|note(...vN.N.N)`)은 r1+r2 codex 리뷰 통과 필수. **pre-push hook이 enforce** (직전 20 커밋 내 review file 부재 시 push 차단) |
+| HC-12 | **User-Flow-Verified** | *web UI surface*가 있는 프로젝트(현 detection: tracked `public/` or `frontend/` 경로)는 ship 전 **첫 사용자 흐름 happy-path** 자동 검증 필수. 증거 = `.harness/runs/e2e-<date>-<slug>.json` (`status: pass`, `exit_code: 0`, `test_count ≥ 1`, `ran_at` last 24h). **pre-push hook이 enforce**. **Scope explicit**: HC-12는 *first-flow happy-path composition* (시작 → 1차 액션 → 인증/성공) 만 보장. 다중 flow matrix / 성능 / 크로스브라우저 / a11y / security / destructive 검증은 *별도 gate*. Non-web surfaces (CLI, mobile native, headless service)는 v1.10+ config-driven 확장 carry. 트리거: starpin v0.5~v0.9 5회 ship에서 login 흐름이 깨진 채 통과한 dogfood. |
 
-HC-7/HC-8/HC-9는 strictness 모드 무관 항상 적용. HC-6/HC-11은 hook으로 자동 enforce — 잊어버려도 못 빠져나감.
+HC-7/HC-8/HC-9는 strictness 모드 무관 항상 적용. HC-6/HC-11/HC-12는 hook으로 자동 enforce — 잊어버려도 못 빠져나감.
 
 ## 2. Strictness 모드
 
@@ -173,7 +174,8 @@ stranger (다음 세션 / 다른 사람)가 STATUS.md만 보고 "지금 무엇�
 
 | 버전 | 변경 | ADR |
 |---|---|---|
-| v1.8 | minimize + hook (565→~200줄 cut, .githooks/ enforce HC-6/HC-11, PATTERNS.md/FLEET.md 분리) | ADR-012 |
+| v1.9 | HC-12 User-Flow-Verified — Playwright E2E smoke 의무, JSON evidence parse (status/exit_code/test_count/ran_at TTL), `pre-push`가 tracked `public/`+`frontend/` 감지 시 enforce. Trigger: starpin v0.5~v0.9 5회 ship에서 login 흐름 silent breakage. | ADR-017 |
+| v1.8 | minimize + hook (565→~200줄 cut, .githooks/ enforce HC-6/HC-11, PATTERNS.md/FLEET.md 분리) | ADR-013 |
 | v1.7 | F126 (gen_eslint_lock Layer 3 named-import allowlist) | (inline) |
 | v1.6 | cleanup round (meta-review 12 finding, M3 adaptive learning, M9 machine-readable lock) | ADR-008+ |
 | v1.5 | inflight patches (F120/F121/F122/F124 codex round) | (inline) |

@@ -20,7 +20,7 @@
 
 ## ADR-010 — Hara v1.1 Fleet Mode 도입 (재귀 coordinator 패턴, depth ≤ 2)
 
-**Date**: 2026-05-27 · **Status**: proposed
+**Date**: 2026-05-27 · **Status**: accepted
 **References**:
 - HARNESS.md §14 (신설)
 - skills/estimate-project-scope.md (신설 v0.1)
@@ -88,11 +88,11 @@
   - **F78**: SUBTREE-PROMPT 시작 절차에 *required reads 7개 고정 list* (HARNESS / CLAUDE 또는 AGENTS / subtree marker / locked-interface / parent Blueprint / split ADR / root frozen capabilities)
 - 후속 codex 재리뷰: 본 patch 묶음에 대해 *별도 round* 불필요 (mechanical patch). 다음 *real-world* dogfood에서 검증
 
-**Approval gate**:
-- 사용자 승인 필수 (하니스 자체 변경 — strict 모드 의무)
-- approver: <user 승인 후 기입>
-- approved_at: <ISO 후 기입>
-- approval scope: HARNESS §14 신설 + Phase 02/05 amend + 4 templates + 2 base skills + ADR-010 + examples/fleet-mini simulation + cleanup pass + F71~F78 patches
+**Approval**:
+- approver: user
+- approved_at: 2026-05-27
+- approval scope: HARNESS §14 신설 + Phase 01/02/05 amend + BLUEPRINT template + 4 new templates + 2 new base skills + CLAUDE/AGENTS amend + ADR-010 + examples/fleet-mini *mechanical simulation* + cleanup pass + F71~F78 patches 일괄
+- 후속: 다음 real-world Fleet dogfood가 v1.2 amendment 후보 (F70-fleet-1~3 + 미검증 wall-time benefit 측정 + 실 git worktree merge conflict 패턴 검증)
 
 ---
 

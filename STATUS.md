@@ -8,18 +8,16 @@
 | 항목 | 값 |
 |---|---|
 | Project | 하니스 자체 빌드 (메타 부트스트랩) |
-| Phase | **v1.1 Fleet Mode amend — codex review 통과 (1 blocker + 6 major + 1 minor 모두 resolved)** |
-| Active sub-phase | F71~F78 patches 적용 완료 → 사용자 승인 게이트 → commit |
+| Phase | **v1.1 Fleet Mode SHIPPED (accepted 2026-05-27)** |
+| Active sub-phase | (대기) — 다음 real-world Fleet dogfood 또는 별도 ask |
 | Strictness | strict (하니스 자체 변경은 항상 strict) |
-| Harness version | v1.0 ship 완료 → **v1.1 작성 완료, 승인 대기** |
-| Git | main; v0.1.1 starpin hardening commit `9e04d24` + STATUS `a9a5b3f` |
-| Last updated | 2026-05-27 by Claude (v1.1 codex review patches + fleet-mini simulation) |
+| Harness version | **v1.1** |
+| Git | main; v1.1 commit `817885e` |
+| Last updated | 2026-05-27 by Claude (v1.1 ADR-010 accepted, Approved artifacts 등재) |
 
 ## Active gate
 
-- **Gate**: v1.1 묶음 사용자 승인 → commit
-- **Blocked on**: 사용자 승인
-- **Approval needed**: yes (v1.1 전체 묶음 — HARNESS §14 + Phase 02/05 amend + 4 templates + 2 base skills + ADR-010 + examples/fleet-mini *mechanical simulation* + F71~F78 patches + cleanup pass)
+- (none — v1.1 ship 완료)
 
 ## Required reads (이 세션 시작 시)
 
@@ -37,18 +35,52 @@
 
 ```yaml
 - artifact: HARNESS.md
-  version_or_hash: "v1.0"
+  version_or_hash: "v1.1"
   approver: user
   mode: strict
   approved_at: 2026-05-27
-  scope: ADR-009 Phase E ship + 3 dogfood 검증 + base promotion 첫 사례
+  scope: ADR-010 Fleet Mode 도입 — §14 신설 + 9 rules + 재귀 coordinator (depth ≤ 2)
+
+- artifact: phases/01-blueprint.md + phases/02-module-plan.md + phases/05-integration.md
+  version_or_hash: "v1.1-fleet-amend"
+  approver: user
+  mode: strict
+  approved_at: 2026-05-27
+  scope: cross-cutting invariant 의무 + split-decision step + merge-collection step
+
+- artifact: templates/SUBTREE-PROMPT + SUBTREE-STATUS + SPLIT-DECISION-ADR + MERGE-REPORT + BLUEPRINT(§8.5/§8.6 amend)
+  version_or_hash: "v0.1 / amend"
+  approver: user
+  mode: strict
+  approved_at: 2026-05-27
+  scope: Fleet Mode 4 신규 templates + BLUEPRINT cross-cutting/expected-modules 추가
+
+- artifact: skills/estimate-project-scope.md + skills/spawn-subtree-prompts.md
+  version_or_hash: "v0.1"
+  approver: user
+  mode: strict
+  approved_at: 2026-05-27
+  scope: Fleet Mode 2 신규 base skills — split heuristic + worktree/prompt 자동 생성 (F73/F74/F76 mechanical 강제 포함)
+
+- artifact: examples/fleet-mini/
+  version_or_hash: "v0.1.0 mechanical simulation"
+  approver: user
+  mode: strict
+  approved_at: 2026-05-27
+  scope: Fleet pattern 작동 evidence (32 tests PASS, dogfood_simulation:true flag); 정식 dogfood는 v1.2 real-world로 후속
+
+- artifact: HARNESS.md (v1.0)
+  version_or_hash: "v1.0"
+  approver: user
+  approved_at: 2026-05-27
+  scope: ADR-009 Phase E ship + 3 dogfood 검증 (v1.1로 superseded)
 
 - artifact: examples/starpin/v0.1.0
   version_or_hash: "RELEASE.md v0.1.0/v0.1.1"
   approver: user
   mode: autonomous (delegated)
   approved_at: 2026-05-27
-  scope: 3차 dogfood ship — adaptive vision 검증 완료
+  scope: 3차 dogfood ship
 
 - artifact: examples/temp-sensor/v0.1.0
   version_or_hash: "RELEASE.md v0.1.0"
@@ -67,7 +99,7 @@
 
 최근 ADR만 (전체는 DECISIONS.md):
 
-- **ADR-010** (in progress): v1.1 Fleet Mode — 재귀 coordinator + Phase 02 split-decision + Phase 05 merge-collection
+- **ADR-010** (accepted 2026-05-27): v1.1 Fleet Mode — 재귀 coordinator + Phase 02 split-decision + Phase 05 merge-collection + 9 Fleet rules + cleanup pass
 - **ADR-009**: Hara v1.0 승격 — Phase E §10 5 criteria 충족 (3 dogfood)
 - **ADR-008**: 첫 base promotion — `budget-binary-size` (starpin + temp-sensor → domain-agnostic)
 - **ADR-001~ADR-007**: 초기 골격 (git + Codex 호출 채널 + config + Strictness + Phase A) — DECISIONS.md 참조
@@ -75,24 +107,13 @@
 ## Roadmap
 
 - [x] Phase A~E (v0.1~v1.0) — 골격 + skill 풀 + project-type seed + 자기보호 + 3 dogfood ship
-- [x] **Phase F (v1.1) — Fleet Mode** (재귀 coordinator)
-  - [x] HARNESS §14 신설 + Phase 02/05 amend + 4 templates + 2 base skills
-  - [x] CLAUDE.md / AGENTS.md 재귀 진입 모델
-  - [x] ADR-010
-  - [x] examples/fleet-mini *mechanical simulation* (32 tests PASS)
-  - [x] Codex review (review id 84,462 tokens; 1 blocker + 6 major + 1 minor 모두 resolved)
-  - [x] F71~F78 patches 적용
-  - [ ] 사용자 승인 + commit ← *현재*
-- [ ] Phase G (v1.2 후보) — real-world Fleet dogfood + F70-fleet-1~3 처리
+- [x] **Phase F (v1.1) — Fleet Mode** (재귀 coordinator) ✓ SHIPPED 2026-05-27 (ADR-010 accepted)
+- [ ] Phase G (v1.2 후보) — real-world Fleet dogfood + F70-fleet-1~3 처리 + wall-time benefit 측정
 
 ## Next action
 
-- **Claude**: 본 묶음 사용자 승인 대기. 승인 시 commit (`harness(v1.1): Fleet Mode + cleanup + codex F71~F78 closed`)
-- **사용자**: v1.1 묶음 검토 — 핵심 결정 항목:
-  1. HARNESS §14 9 rules가 의도와 맞는가?
-  2. fleet-mini를 simulation으로 유지 OK? 정식 dogfood는 v1.2로 미루기?
-  3. depth ≤ 2 cap, dogfood_simulation 예외 등 게이트 강도 적절한가?
-- **Codex**: 본 라운드 review 완료. 다음 *real-world* dogfood 시 재호출
+- v1.1 ship 완료. 대기 — 다음 사용자 ask 또는 real-world Fleet dogfood 시작.
+- v1.2 trigger 후보: 실 large project에 Fleet 적용 → wall-time benefit 측정 + F70-fleet-1~3 (escalation 위치, 실 git worktree, codex 대체 heuristic) 처리
 
 ## Open findings (carry-over)
 

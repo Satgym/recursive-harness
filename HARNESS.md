@@ -1,11 +1,12 @@
-# HARNESS.md — Hara 헌법 (v1.9)
+# HARNESS.md — Hara 헌법 (v2.0)
 
 > Claude+Codex 협업의 **절대 규칙**과 **워크플로우 정의**.
-> 변경은 §10 "하니스 수정 절차"를 거쳐야 한다. 버전 이력은 §11.
+> 변경은 §10 절차. 버전 이력은 §11.
 >
-> **v1.8 원칙 (minimize + hook)**: 본 문서는 *매 세션 강제 read 대상*만 담는다.
-> 패턴/레시피/Fleet 상세 등 *상황별 참조*는 [PATTERNS.md](PATTERNS.md), [FLEET.md](FLEET.md)에 분리.
-> 치명적 buget을 막는 규칙은 [.githooks/](.githooks/)가 자동 enforce — 본 문서가 *지시*하는 게 아니라 hook이 *강제*.
+> **운영 원칙**:
+> - **Minimize + hook** (v1.8): 본 문서는 매 세션 강제 read 대상만. 상황별 참조는 [PATTERNS.md](PATTERNS.md) / [FLEET.md](FLEET.md).
+> - **Hook-enforced**: 치명적 규칙은 [.githooks/](.githooks/)가 자동 enforce. 본 문서는 *왜*만 설명, hook이 *강제*.
+> - **Trim over append** (v2.0): 새 HC/섹션 추가 전 "실제 잘 안 지켜져서 규칙이 필요한가, 아니면 documentation theater인가" 자가 검증. 사용자 지시 (2026-05-27): "안지켜짐 → 규칙 추가 → 길어져서 안 읽힘" 루프 금지. 세션 개성은 전체 흐름만 지키면 수용.
 
 ---
 
@@ -29,7 +30,7 @@
 | HC-9 | **Destructive-Confirmed** | Destructive 작업(rm/drop/truncate/force-push/branch -D/reset --hard 등)은 **모든 모드에서 사용자 승인** |
 | HC-10 | **Local-Extends-Only** | Project-local layer(`.harness/skills/`, `.harness/roles/`, `.harness/capabilities.md`)는 base HC-1~9를 약화·재정의·우회할 수 없다. extension·specialization만 허용. **base phase Exit 기준의 결정 권한은 항상 base에 있음** (local skill이 phase Exit을 자체 판단으로 통과시킬 수 없다) |
 | HC-11 | **Codex-Cadence** | 모든 ship-style 커밋(`code|harness|note(...vN.N.N)`)은 r1+r2 codex 리뷰 통과 필수. **pre-push hook이 enforce** (직전 20 커밋 내 review file 부재 시 push 차단) |
-| HC-12 | **User-Flow-Verified** | *web UI surface*가 있는 프로젝트(현 detection: tracked `public/` or `frontend/` 경로)는 ship 전 **첫 사용자 흐름 happy-path** 자동 검증 필수. 증거 = `.harness/runs/e2e-<date>-<slug>.json` (`status: pass`, `exit_code: 0`, `test_count ≥ 1`, `ran_at` last 24h). **pre-push hook이 enforce**. **Scope explicit**: HC-12는 *first-flow happy-path composition* (시작 → 1차 액션 → 인증/성공) 만 보장. 다중 flow matrix / 성능 / 크로스브라우저 / a11y / security / destructive 검증은 *별도 gate*. Non-web surfaces (CLI, mobile native, headless service)는 v1.10+ config-driven 확장 carry. 트리거: starpin v0.5~v0.9 5회 ship에서 login 흐름이 깨진 채 통과한 dogfood. |
+| HC-12 | **User-Flow-Verified** | web UI surface (tracked `public/` or `frontend/`) 프로젝트는 ship 전 첫 사용자 흐름 happy-path 자동 검증 필수. 증거 = `.harness/runs/e2e-<date>-<slug>.json` (`status: pass`, `exit_code: 0`, `test_count ≥ 1`, `ran_at` ≤ 24h). **pre-push hook이 enforce**. Scope: first-flow composition만 — 다중 flow / 성능 / 크로스브라우저 / a11y / security는 별도 gate. 트리거 + 상세: ADR-017. |
 
 HC-7/HC-8/HC-9는 strictness 모드 무관 항상 적용. HC-6/HC-11/HC-12는 hook으로 자동 enforce — 잊어버려도 못 빠져나감.
 
@@ -174,14 +175,10 @@ stranger (다음 세션 / 다른 사람)가 STATUS.md만 보고 "지금 무엇�
 
 | 버전 | 변경 | ADR |
 |---|---|---|
-| v1.9 | HC-12 User-Flow-Verified — Playwright E2E smoke 의무, JSON evidence parse (status/exit_code/test_count/ran_at TTL), `pre-push`가 tracked `public/`+`frontend/` 감지 시 enforce. Trigger: starpin v0.5~v0.9 5회 ship에서 login 흐름 silent breakage. | ADR-017 |
-| v1.8 | minimize + hook (565→~200줄 cut, .githooks/ enforce HC-6/HC-11, PATTERNS.md/FLEET.md 분리) | ADR-013 |
-| v1.7 | F126 (gen_eslint_lock Layer 3 named-import allowlist) | (inline) |
-| v1.6 | cleanup round (meta-review 12 finding, M3 adaptive learning, M9 machine-readable lock) | ADR-008+ |
-| v1.5 | inflight patches (F120/F121/F122/F124 codex round) | (inline) |
-| v1.3 | AST-level lock (ESLint no-restricted-imports), helper scripts | ADR (proposed) |
-| v1.2 | Fleet enforcement + lock enforcement (F87/F90/F82/F102) | ADR |
+| v2.0 | trim discipline — STATUS/HARNESS bloat 제거, HC-12 row 압축, 운영 원칙 명시. user direction: "안지켜짐 → 규칙 추가" 루프 금지 | ADR-020 |
+| v1.9 | HC-12 User-Flow-Verified (Playwright E2E smoke + pre-push enforce) | ADR-017 |
+| v1.8 | minimize + hook (565→200줄, .githooks/ enforce HC-6/HC-11) | ADR-013 |
 | v1.1 | Fleet Mode (다중 세션 병렬, depth ≤ 2) | ADR-010 |
 | v1.0 | constitution + 6-phase loop + HC-1~9 | initial |
 
-상세 변경 이력 / archived sections / postmortems: [PATTERNS.md §history](PATTERNS.md).
+v1.2~v1.7 inflight patch 이력 + archived sections: [PATTERNS.md §history](PATTERNS.md).

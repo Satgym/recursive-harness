@@ -22,12 +22,13 @@
 - Codex 리뷰 결과 반영은 Claude 책임
 - Review wrapper: `scripts/codex-bundle-review.sh` (bundle/dogfood path, 가장 자주 사용) / `scripts/codex-review.sh` (clean branch diff) / `scripts/codex-exec-review.sh` (alias for bundle)
 
-## 절대 규칙 (전체는 HARNESS.md §1 — HC-1~HC-11)
+## 절대 규칙 (전체는 HARNESS.md §1 — HC-1~HC-12)
 
 - Blueprint 승인 전 코드 X / Module Plan 승인 전 해당 모듈 코드 X
 - pre-review-gate 통과 전 codex 리뷰 X
 - STATUS.md 갱신 의무 (`.githooks/pre-commit`이 RELEASE-STATUS 동시 staging 강제)
 - ship 커밋 전 r1+r2 codex 리뷰 의무 (`.githooks/pre-push`이 enforce)
+- web UI 프로젝트는 ship 전 E2E smoke pass 의무 (HC-12; `.githooks/pre-push`이 enforce)
 - HC-7/HC-8/HC-9 strictness 모드 무관 항상 사용자 승인
 - 머신용 필드값은 canonical 영어 enum: `severity / status / role / phase / strictness`
 - 하니스 자체 변경은 별도 절차 (HARNESS.md §10)

@@ -1,8 +1,7 @@
-# PATTERNS.md — Hara reference patterns (v1.8 split-out)
+# PATTERNS.md — Hara reference patterns
 
-> **Optional read**. HARNESS.md is the must-read; this file contains recipes,
-> postmortem templates, and historical context that you consult *when stuck*,
-> not every session.
+> **Optional read**. HARNESS.md is the must-read; this file is for recipes,
+> postmortem templates, and historical context — consult when stuck.
 
 ---
 
@@ -175,31 +174,14 @@ Codex finding에 Claude가 `disputed`로 응답하는 경우:
 
 ---
 
-## §history — Archived sections (pre-v1.8)
+## §history — Version archive (v1.2~v1.7)
 
-HARNESS.md v1.7 이전 본문에 있던 reference content. 현재는 본 파일이 canonical:
+| 버전 | 핵심 변경 | ADR / finding |
+|---|---|---|
+| v1.7 | gen_eslint_lock Layer 3 named-import allowlist | F126 inline |
+| v1.6 | meta-review cleanup (12 finding, M3 adaptive learning, M9 machine-readable lock) | ADR-008+ |
+| v1.5 | inflight codex patches | F120/F121/F122/F124 |
+| v1.3 | AST-level lock (ESLint no-restricted-imports) + Strategy helper scripts | ADR-012 |
+| v1.2 | Fleet enforcement amend (lock+invariant grep gate, inter-child timing, scope gates) | ADR-011 |
 
-- **§5.2 모델 설정 상세** → `§codex-config`
-- **§6.3-6.4 Postmortem 상세** → `§drift`
-- **§11 Dispute protocol** → `§dispute`
-- **§13.5-13.7 Adaptive 상세** → `§adaptive-layer`
-- **§14 Fleet Mode 상세** → [FLEET.md](FLEET.md)
-- **§9-10 archived sections** → docs/history/ 디렉토리 (외부 archive)
-
-각 cut의 근거 + 어떤 dogfood signal이 cut을 정당화했는지: `DECISIONS.md` ADR-012.
-
----
-
-## §session-bridging — 세션 간 컨텍스트 핸드오프
-
-신규 세션 (Claude / Codex 모두) 시작 시:
-
-1. `HARNESS.md` (이 파일 X — must-read)
-2. `STATUS.md`
-3. `DECISIONS.md` (최근 ADR-NNN-NNN 범위)
-4. `INBOX/` (codex 능동 피드백)
-5. (프로젝트 작업이면) `.harness/status.md` + `.harness/capabilities.md` Active 섹션 + 명시된 active skills
-
-본 PATTERNS.md는 *문제 발생 시 참조*. 세션 시작 시 의무 read 아님.
-
-세션 간 메모리는 `STATUS.md` + commit history + reviews/가 source of truth. 채팅 컨텍스트나 임시 메모는 *반드시* 산출물에 영속화 후 종료.
+세션 핸드오프 규약 (read 순서 / 영속화): [STATUS.md "Required reads"](STATUS.md), [CLAUDE.md](CLAUDE.md) 참조.

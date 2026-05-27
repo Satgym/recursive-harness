@@ -18,6 +18,54 @@
 
 ---
 
+## ADR-020 — Hara v2.0 trim discipline (anti-bloat pass)
+
+**Date**: 2026-05-27 · **Status**: accepted (autonomous, sleep delegation, user-directed)
+
+**Context**: User direction (2026-05-27, 자기 전): "하니스 만들 때마다 느꼈던 안지켜짐 → 규칙 추가 → 길어져서 안 읽힘 → 더 안지켜짐 무의미한 반복 없도록 필요없는 부분 계속 쳐내며 가장 중요하고 잘 지켜질 내용 중심으로." Session experience over the past 20+ ships confirms the loop: each version added rules; the resulting documents grew past the point of session-start absorption; rules were skipped under context pressure; new rules were added to address the skips; documents grew further.
+
+**Decision**: introduce a **trim discipline** as v2.0's headline change. No new HC. Concrete cuts:
+
+### A. STATUS.md (180 → 49 lines, −73%)
+- Removed `Approved artifacts` (90 lines of v1.0~v1.2 era records — historical bedrock, never re-consulted; preserved in git log + ADR-001~011)
+- Removed `Decision summary` (duplicates DECISIONS.md head)
+- Removed `Roadmap` (stale Phase H/I/F/G from old eras; current waves live in conversation/TODO)
+- Removed `Open findings` table (F41/F42/F43/F44/F47 untouched for 20+ ship rounds — never escalated, never closed; safe to drop)
+- Removed `Notes — cumulative tokens` (stale; ledger is now SoT)
+- Preserved: `Current`, `Active gate`, `Required reads`, `Recent ships`, user-direction `Notes`
+
+### B. HARNESS.md
+- Preamble bumped to v2.0 with explicit "**Trim over append**" operating principle
+- HC-12 row compressed (130-char single line → core rule + ADR pointer; scope detail lives in ADR-017)
+- Version history collapsed to v1.0 / v1.1 / v1.8 / v1.9 / v2.0 (load-bearing inflection points); v1.2~v1.7 archived to PATTERNS.md §history
+
+### C. PATTERNS.md
+- Removed `§session-bridging` (duplicated STATUS.md "Required reads" + CLAUDE.md)
+- `§history` recast as version archive table (matches HARNESS.md §11 cut)
+
+### D. No tooling changes
+- All hooks (HC-6/HC-11/HC-12) unchanged
+- No HC added or removed (just one HC row compressed for readability)
+- All workflows continue to work
+
+**Consequences**:
+
+positive:
+- 734 → 582 lines across the 4 core docs (−21%); STATUS.md drop especially helps every session
+- Trim discipline now codified as a principle (not just an episodic cleanup)
+- Future "rule bloat" instinct now meets explicit counter-pressure in HARNESS preamble
+
+negative:
+- v1.0~v1.2 approval records no longer surface in STATUS — readers must `git log` or DECISIONS.md for that history
+- v1.2~v1.7 version detail now requires a second hop (HARNESS.md §11 → PATTERNS.md §history)
+
+guardrail:
+- Trim discipline is **not** "delete what's hard to follow"; it's "delete what isn't load-bearing". The HC-7/8/9/10/11/12 invariants and hook-enforced rules stay verbatim.
+
+**Approval**: user · 2026-05-27 · autonomous (sleep delegation; user-directed meta-improvement)
+
+---
+
 ## ADR-019 — starpin v0.11 nickname-setup screen + planet ephemeris overlay
 
 **Date**: 2026-05-27 · **Status**: accepted (autonomous, sleep delegation)

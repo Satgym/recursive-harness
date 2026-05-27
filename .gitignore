@@ -16,3 +16,14 @@ Thumbs.db
 
 # .claude는 settings.local만 보호 (settings 공유본은 commit 가능)
 .claude/settings.local.json
+.claude/scheduled_tasks.lock
+
+# Dogfood / test examples — kept locally, not pushed to public repo.
+# Each example is a full sub-project (starpin / starpin-fleet / fleet-mini / temp-sensor / todo-api)
+# used for harness development; not needed by harness consumers.
+examples/
+
+# Operational byproducts of the harness itself (codex run accounting + processed inbox archive).
+# These regenerate per-session and are not deliverable artifacts.
+.harness/codex-token-ledger.jsonl
+INBOX/processed/

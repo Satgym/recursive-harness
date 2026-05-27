@@ -12,6 +12,9 @@ current_depth: <0=root, 1, 2>                    # F74
 resulting_depth: <current_depth + 1>             # F74 — spawn skill enforces ≤ max_depth_allowed
 max_depth_allowed: <2 default; ADR로 완화>       # F74
 inter_child_consume_strategy: a | b | c          # F81 v1.2 — see §14.9 (a=stub, b=ambient, c=topo-order)
+codex_review_replacement: self_test | codex_full # F70-fleet-3 v1.3 — self_test 갈음 조건 4개 모두 충족 시만 (§14.2 F7);
+                                                 # gray area는 codex_full default 권장
+loc_estimate_kind: estimate | measured           # F117 v1.3 codex finding — LOC 출처 명시 (estimate면 codex_full 보수 default 권장)
 references:
   - HARNESS.md §14
   - .harness/docs/blueprint.md

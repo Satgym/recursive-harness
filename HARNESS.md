@@ -242,6 +242,7 @@ STATUS.md는 다음 섹션을 **모두** 포함해야 한다 (없으면 양식 �
 | v1.0 | Phase E ship — 3 dogfood 검증 (todo-api/temp-sensor/starpin) + base promotion 첫 사례(`budget-binary-size`) + autonomous mode 검증 | ADR-009 |
 | v1.1 | **Fleet Mode** — §14 신설. Phase 02 split-decision + Phase 05 merge-collection. 재귀 coordinator 패턴 (root → leaf, depth ≤ 2). 4 templates + 2 base skills | ADR-010 |
 | v1.2 | **Fleet enforcement 강화** — §14.8 lock & invariant enforcement (grep gate) + §14.9 inter-child consume timing (stub/ambient/topo) + §14.10 scope-bounded gates. F80 (user-delegated approval path). 신규 base skill `lock-grep-gate`. SUBTREE-PROMPT + MERGE-REPORT + locked-interface template 정비 | ADR-011 |
+| v1.3 | **AST-level lock enforcement** — §14.8 promote: lock-grep-gate → `lock-eslint-gen` skill (ESLint flat config + `no-restricted-imports`) primary, grep fallback. §14.9 strategy a/b/c *helper script 실 구현* (`scripts/fleet/{gen_stub,gen_ambient,topo_sort,gen_eslint_lock}.py`). Small wins: mid-work escalation 명세 (F70-fleet-1), codex 대체 heuristic (F70-fleet-3), ESM jest pattern (F86) | ADR-012 |
 
 ## 9. (history) Bootstrap exception — **REMOVED**
 
@@ -445,7 +446,7 @@ drift 발견 시 §6.2 절차 + ADR.
 | F4 | **file ownership 명시** | SPLIT-DECISION-ADR에 *디렉토리 단위 ownership* 명시. shared 파일(types.ts, config, root 산출물)은 parent 소유 — child는 *읽기 허용, 쓰기 금지*. 변경 필요 시 patch candidate로 (MERGE-REPORT에) |
 | F5 | **재귀 depth ≤ 2 (v1.1)** | root(depth=0) → child(depth=1) → grandchild(depth=2)까지. *기계적 강제*: SPLIT-DECISION-ADR `current_depth`+1 = `resulting_depth`, `resulting_depth > max_depth_allowed`면 spawn-subtree-prompts skill이 die. 더 깊은 split은 ADR 별도 정당화. v1.2에서 완화 가능 |
 | F6 | **승인 게이트 (기계적 강제)** | SPLIT-DECISION-ADR는 production Fleet에서 **`approver: user` (직접 승인) 의무**. 예외 2 (examples/ 경로 한정 — *production 금지*): (b) `approver: user-delegated` + `delegation_source` field (autonomous session 안의 user delegation 인용 — 본질적으로 자기-진술이라 위조 가능성 인정. examples 외 사용 시 spawn skill이 die), (c) `dogfood_simulation: true` flag. spawn-subtree-prompts preflight가 paths 검증: production code path는 *(a)만*. **F100 v1.2 codex finding**: (b) `user-delegated`는 *검증 불가능한 claim* — production은 hard rule로 (a) 또는 사용자가 별도 confirmation artifact 직접 sign-off. v1.3 후보: out-of-band confirmation (Slack/email signature 등) 통합 |
-| F7 | **Codex review 분배** | 각 child는 *자기 scope에 대한* codex review (Phase 04)를 독립 수행. parent는 merge 후 *cross-cutting integration review*를 별도 1회 수행. *self-test 대체*는 dogfood/POC 수준에서만; production Fleet은 codex 의무 |
+| F7 | **Codex review 분배** | 각 child는 *자기 scope에 대한* codex review (Phase 04)를 독립 수행. parent는 merge 후 *cross-cutting integration review*를 별도 1회 수행. **v1.3 self-test 대체 heuristic** (F70-fleet-3): self-test로 갈음 가능한 조건은 *모두* 충족 시만 — (i) `examples/` 또는 `dogfood/` 경로, (ii) 총 LOC < 1500, (iii) HC-7/8/9 영향 없음 (Blueprint에서 no라고 명시), (iv) 외부 통신 / DB write / 인증 / 결제 모듈 *부재*. 위 4 모두 아니면 codex 의무. SPLIT-DECISION-ADR의 `codex_review_replacement: self_test \| codex_full` field에 명시 (preflight가 heuristic 자동 평가 + override 시 사유) |
 | F8 | **STATUS 위계** | parent STATUS는 *tree 구조*만 표시 (child별 상태 dashboard). 각 child는 *자기 scope*만 자기 `.harness/status.md`에. root는 `current_depth=0`, child의 `parent_subtree` field가 immediate parent 식별 |
 | F9 | **HC-10 invariant 유지 + draft/activate 분리** | child는 본인의 `.harness/skills/` 파일을 *draft만* 가능 (extension 후보 작성). **load·use·activate는 frozen root manifest에 이미 있는 capability만 허용**. 신규 draft는 MERGE-REPORT의 capability candidate 섹션에 등재만; parent merge phase에서 root manifest 수용 결정 후에야 activate. parent의 active manifest를 *제거*하는 것은 불가 |
 
@@ -516,19 +517,19 @@ git worktree로 분리하므로 각 child 세션은 **독립 디렉토리 + 독�
 
 drift 시 §6.2 절차 + ADR. 반복되면 *Fleet Mode 자체 회의 후보* — split 패턴이 본 프로젝트에 안 맞을 수 있음.
 
-### 14.8 Lock & invariant enforcement — *automated gap detection* (v1.2 — F87/F90/F82 patch)
+### 14.8 Lock & invariant enforcement (v1.2 + v1.3 — F87/F90/F82/F102 patches)
 
-**관찰**: F1 (interface lock) + F2 (cross-cutting invariant)는 *명세는 명확*하지만 *enforcement는 child의 self-discipline*에 의존. TypeScript typecheck로 막히지 않는 invariant (예: "verifySession만 import" / "redact util을 *실제 호출*") 다수.
+**관찰**: F1 (interface lock) + F2 (cross-cutting invariant)는 *명세는 명확*하지만 *enforcement는 child의 self-discipline*에 의존했었음. TypeScript typecheck로 막히지 않는 invariant (예: "verifySession만 import" / "redact util을 *실제 호출*") 다수.
 
-> **honest 제한 (F102 v1.2 codex finding)**: v1.2의 enforcement는 *grep-based first-line check* + *MERGE-REPORT evidence 의무*. **AST/ESLint 수준의 mechanical enforcement는 v1.3 후보**. v1.2 patch는 *gap을 detect*하지만 *완전히 막지는 못함* — alias/namespace/multiline/re-export로 우회 가능. *codex review + MERGE-REPORT evidence cross-check가 second-line defense*.
+**v1.3 핵심 변경**: F1 (single-method consume lock)이 **AST-level mechanical enforcement**로 격상. v1.2의 grep은 fallback.
 
 **규칙**:
-1. **Single-method consume**: locked-interface는 *runtime import* vs *type-only import* 명시 의무. parent Phase 05 merge-collection에서 base skill [`lock-grep-gate`](skills/lock-grep-gate.md)로 *first-line grep check*. 정확한 enforcement는 codex review + MERGE-REPORT evidence 결합.
+1. **Single-method consume (lock-eslint-gen — primary, v1.3)**: locked-interface §"Consumed interface"가 *runtime import allowlist*. spawn-subtree-prompts skill이 [`lock-eslint-gen`](skills/lock-eslint-gen.md) 호출 → 각 child용 `eslint.config.<child>.mjs` (flat config) 자동 생성. `no-restricted-imports` rule이 allowlist 외 모든 named import를 *AST error*로 차단. child의 pre-review-gate + Phase 05 merge-collection에서 *기계적 실패*. ESLint v9+ 의존; 미설치 시 [`lock-grep-gate`](skills/lock-grep-gate.md) fallback.
 2. **Invariant-guard import 검증**: import만 하고 호출 안 함을 막기 위한 두 옵션:
    - (a) **권장 default** — 횡단 invariant를 *runtime gate function*으로 redesign (예: `safeError(code, ...rawValues)` wrapper) — import가 자연스럽게 호출됨. tree-shaker도 못 제거
-   - (b) **fallback** — `// @invariant-guard: <util>` 표준 주석 marker. 단 marker 있어도 *실제 호출 보장은 codex review 책임* (grep만으로는 marker 위조 가능)
-3. **MERGE-REPORT INV evidence 의무**: child는 각 invariant별 *실제 코드 path 인용*해야 함 (예: `INV-3: src/claim/index.ts:28 — import { verifySession } from '../auth/index.js'`). parent가 회수 시 evidence 누락 또는 false면 child re-work.
-4. **v1.3 roadmap**: AST 기반 lock rule (`@typescript-eslint/no-restricted-imports` + named import allowlist 자동 생성) — v1.3 amendment 후보.
+   - (b) **fallback** — `// @invariant-guard: <util>` 표준 주석 marker. 단 marker 있어도 *실제 호출 보장은 codex review 책임*
+3. **MERGE-REPORT INV evidence 의무**: child는 각 invariant별 *실제 코드 path 인용*. parent가 회수 시 evidence 누락/false면 child re-work.
+4. **v1.4 roadmap**: re-export barrel walker + namespace import (`import * as X`)에 대한 deeper AST analysis (현 v1.3 ESLint rule은 direct named import + alias까지만). custom `@typescript-eslint` rule 후보.
 
 ### 14.9 Inter-child consume timing (v1.2 — F81 patch)
 
@@ -536,11 +537,11 @@ drift 시 §6.2 절차 + ADR. 반복되면 *Fleet Mode 자체 회의 후보* —
 
 **규칙**: SPLIT-DECISION-ADR의 child 구성에 dependency graph 명시 + 3 옵션 중 하나 선택 의무:
 
-| option | 절차 | 권장 case |
-|---|---|---|
-| **(a) lock-spec stub** | parent가 spawn 전 *consumer 위한 stub*을 placeholder로 작성 (`src/<provider>/index.ts`에 lock signature만 + `throw new Error('not-implemented')`). consumer는 stub에 typecheck PASS. parent merge phase에 real impl로 교체 검증 | dependency가 *type만*일 때 깔끔 |
-| **(b) type-only ambient** | consumer가 자기 worktree에 `<provider>.d.ts` ambient declaration 작성 (lock-spec 복제). parent merge phase에 ambient 제거 + real import 검증 | git worktree 격리 시 |
-| **(c) topological spawn order** | spawn-subtree-prompts skill이 dependency graph topological sort → provider child가 *완료된 후* consumer child spawn (parent가 sequential dispatch) | parallel 이득 일부 포기 OK일 때 |
+| option | 절차 | helper (v1.3 실 구현) | 권장 case |
+|---|---|---|---|
+| **(a) lock-spec stub** | parent가 spawn 전 *consumer 위한 stub*을 placeholder로 작성 (`src/<provider>/index.ts`에 lock signature만 + `throw new Error('not-implemented')`). consumer는 stub에 typecheck PASS. parent merge phase에 real impl 덮어쓰기 검증 | `python3 scripts/fleet/gen_stub.py <locked-interface.md> --out src/<provider>/index.ts` | dependency 가 *type + 가벼운 runtime call*일 때 |
+| **(b) type-only ambient** | consumer가 자기 worktree에 `<provider>.d.ts` ambient declaration 작성 (lock-spec 복제). parent merge phase에 ambient 제거 + real import 검증 | `python3 scripts/fleet/gen_ambient.py <provider-locked-interface.md> --out src/<consumer>/<provider>.d.ts` | type-only dependency가 대부분일 때 |
+| **(c) topological spawn order** | spawn-subtree-prompts skill이 dependency graph topological sort → provider child가 *완료된 후* consumer child spawn (parent가 sequential dispatch) | `python3 scripts/fleet/topo_sort.py <SPLIT-DECISION-ADR.md>` → wave별 spawn 안내 | parallel 이득 일부 포기 OK 또는 인터페이스 lock confidence 낮음 |
 
 SPLIT-DECISION-ADR에 `inter_child_consume_strategy: a|b|c` field 의무. spawn skill이 검증.
 

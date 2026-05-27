@@ -70,25 +70,29 @@ HARNESS.md의 *모든 규칙을 자기 scope에* 적용한다. 자기 scope 안�
 3. STATUS.md ← *없으면 생성*. `templates/SUBTREE-STATUS.template.md`로 자기 scope 상태 초기화
 4. Phase 02 시작 (본 child scope 모듈의 plan; 본인 scope이 *또* 크다면 자기 Phase 02에서 또 split 가능 — F5 depth 게이트 강제)
 
-## Pre-review-gate (scope-only — v1.2 F85)
+## Pre-review-gate (scope-only — v1.2 F85 + v1.3 F111 AST lock)
 
-본 child의 *자기 scope만* 검증 (sibling 미완과 무관):
+본 child의 *자기 scope만* 검증 (sibling 미완과 무관). spawn-subtree-prompts skill이 *자동 생성*한 config 사용:
 
 ```bash
-# typecheck — own src + tests + shared
+# Layer 0 (v1.3 primary) — AST lock enforcement (F1, F102)
+npx eslint --config eslint.config.<child>.mjs --no-config-lookup src/<child>/**/*.ts tests/<child>/**/*.ts
+
+# Layer 1 — typecheck (child-scoped tsconfig)
+npx tsc --noEmit -p tsconfig.<child>.json
+
+# Layer 2 — unit test
+npm run test -- --testPathPattern=<child>
+```
+
+ESLint가 없는 fallback 환경 (legacy):
+```bash
+# inline tsc (sibling files 미완 무시 — child 자기 scope만)
 npx tsc --noEmit --target ES2023 --module ES2022 --moduleResolution Bundler \
   --strict --noUncheckedIndexedAccess --exactOptionalPropertyTypes \
   --esModuleInterop --skipLibCheck --resolveJsonModule --isolatedModules \
   src/<child>/*.ts src/shared/*.ts tests/<child>/*.ts
-
-# unit test — own test path
-npm run test -- --testPathPattern=<child>
-```
-
-또는 spawn-subtree-prompts가 *child별 tsconfig.<child>.json* 자동 생성한 경우:
-```bash
-npx tsc --noEmit -p tsconfig.<child>.json
-npm run test -- --testPathPattern=<child>
+# lock-grep-gate가 fallback (Phase 05에서 parent 실행)
 ```
 
 root scope (`npm run typecheck` / `npm run test:unit`)는 *Phase 05 merge-collection*에서 parent가 실행.
@@ -100,6 +104,44 @@ root scope (`npm run typecheck` / `npm run test:unit`)는 *Phase 05 merge-collec
 3. commit + branch push (또는 parent worktree로 fetch 가능 상태)
 4. STATUS.md last-updated 갱신
 5. parent에 완료 통보 (수동 또는 자동 — 본 v1.1은 수동)
+
+## Mid-work escalation (v1.3 F70-fleet-1)
+
+작업 *중간*에 다음 발견 시 — `.harness/subtrees/<self>/escalation.md`에 *즉시* 기록 + 작업 일시 정지 + parent 통보 대기:
+
+1. **locked-interface로 invariant 못 지킴** — lock spec이 *횡단 invariant 위반 강요* (예: spec이 throw 요구하는데 INV-2는 Result; lock vs invariant 모순)
+2. **shared file 변경 *없이는* impossible** — 본 child가 *진짜 막힌* shared 변경 필요 (단순 nice-to-have는 patch candidate로)
+3. **횡단 invariant 신규 발견** — Blueprint §8.5에 *없는* invariant가 본 child scope에서 critical로 드러남 (다른 child도 영향 가능)
+4. **HC-7/8/9 위반 위험** — lock spec을 따르면 secret leak / external mutation / destructive op 발생
+5. **다른 child의 lock spec과 *내 lock spec*의 모순** — A의 출력 형식이 B의 입력 형식과 불일치
+
+**escalation.md 양식**:
+```yaml
+---
+artifact: subtree_escalation
+child: <self>
+date: <ISO>
+severity: blocker | major
+category: invariant_conflict | shared_change_required | new_crosscutting | hc_violation_risk | inter_lock_mismatch
+---
+
+## 문제
+<text — concrete 인용 + 영향 받는 sibling/parent>
+
+## 시도한 우회
+<없음 OR <리스트>>
+
+## parent decision needed
+- (a) lock spec amend (SPLIT-DECISION-ADR amend ADR 발행)
+- (b) Blueprint §8.5 amend (횡단 invariant 추가)
+- (c) shared file 변경 (Fleet F4 patch candidate)
+- (d) split 자체 재검토 (drift 신호)
+
+## 본 child status
+paused
+```
+
+기록 후 parent 세션에 직접 통보 (수동: escalation.md 경로 + commit sha 전달).
 
 ## 금지 사항
 

@@ -44,7 +44,8 @@
 - [ ] 발생한 모든 Postmortem이 `status: resolved`
 - [ ] HC-8 (외부 mutation) / HC-9 (destructive) 작업이 본 phase에 있었다면 모두 사용자 승인됨
 - [ ] **(Fleet 모드)** 모든 child branch merge 완료 + MERGE-REPORT 회수 + cross-cutting integration review 1회 완료 + child가 제출한 capability candidate에 대한 *수용/거부 결정* ADR로 명문화
-- [ ] **(Fleet 모드 v1.2 F103)** `lock-grep-gate` skill PASS (`.harness/reviews/05-lock-grep-gate-<date>.md` 존재 + verdict=PASS) + MERGE-REPORT INV evidence가 실제 코드와 일치 (mismatch 0)
+- [ ] **(Fleet 모드 v1.3 primary)** 모든 child별 `npx eslint --config eslint.config.<child>.mjs ... PASS` (no-restricted-imports violation 0). ESLint 미설치 환경에선 `lock-grep-gate` fallback PASS
+- [ ] **(Fleet 모드 v1.2 F103 fallback)** `lock-grep-gate` skill PASS (`.harness/reviews/05-lock-grep-gate-<date>.md` 존재 + verdict=PASS) + MERGE-REPORT INV evidence가 실제 코드와 일치 (mismatch 0)
 - [ ] **(Fleet 모드 strategy=b — F101 v1.2)** ambient declaration 파일들이 merge 시점에 *모두 제거됨* (real provider import로 대체 확인). strategy=a이면 모든 stub이 *real impl로 덮어쓰기됨* (throw 본문 grep으로 검증)
 
 ## 주도 역할

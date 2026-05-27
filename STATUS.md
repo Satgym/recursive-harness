@@ -8,16 +8,18 @@
 | 항목 | 값 |
 |---|---|
 | Project | 하니스 자체 빌드 (메타 부트스트랩) |
-| Phase | **v1.2 Fleet enforcement SHIPPED (accepted 2026-05-27)** |
-| Active sub-phase | (대기) — v1.3 trigger 후보 또는 별도 ask |
-| Strictness | strict (하니스 자체 변경은 항상 strict) |
-| Harness version | **v1.2** |
-| Git | main; v1.2 commit `53185bf` |
-| Last updated | 2026-05-27 by Claude (v1.2 ADR-011 accepted, Approved artifacts 등재) |
+| Phase | **v1.3 AST lock + Strategy helper scripts (proposed, 사용자 승인 대기)** |
+| Active sub-phase | 4 helper script 실 구현 + ESLint AST primary lock + codex 2 blocker + 5 major + 1 minor 모두 patched |
+| Strictness | autonomous-within-fleet-dogfood-delegation |
+| Harness version | v1.2 → **v1.3 작성 완료, 승인 대기** |
+| Git | main; v1.2 acceptance commit `be8c5e5` (이 위에 v1.3 작업) |
+| Last updated | 2026-05-27 by Claude (autonomous v1.3 + AST lock + helper scripts + F110~F117 patches) |
 
 ## Active gate
 
-- (none — v1.2 ship 완료)
+- **Gate**: v1.3 사용자 승인 → commit + ADR-012 status → accepted
+- **Blocked on**: 사용자 승인
+- **Approval needed**: yes (v1.3 — §14.8 promote AST primary + 4 helper scripts + lock-eslint-gen skill + esm-jest-pattern seed + mid-work escalation + codex 대체 heuristic + F110~F117 patches)
 
 ## Required reads (이 세션 시작 시)
 
@@ -123,7 +125,8 @@
 
 최근 ADR만 (전체는 DECISIONS.md):
 
-- **ADR-011** (accepted 2026-05-27): v1.2 Fleet enforcement 강화 — §14.8 lock+invariant grep gate / §14.9 inter-child consume timing / §14.10 scope-bounded gates + lock-grep-gate skill + LOCKED-INTERFACE template
+- **ADR-012** (proposed 2026-05-27): v1.3 AST-level lock + Strategy helper scripts 실 구현 — §14.8 promote (ESLint AST primary, grep fallback) + 4 helper scripts (gen_stub/gen_ambient/topo_sort/gen_eslint_lock) + lock-eslint-gen skill + mid-work escalation + codex 대체 heuristic + ESM jest seed
+- **ADR-011** (accepted): v1.2 Fleet enforcement 강화 — §14.8 lock+invariant grep gate / §14.9 inter-child consume timing / §14.10 scope-bounded gates + lock-grep-gate skill + LOCKED-INTERFACE template
 - **ADR-010** (accepted): v1.1 Fleet Mode — 재귀 coordinator + Phase 02 split-decision + Phase 05 merge-collection + 9 Fleet rules
 - **ADR-009**: Hara v1.0 승격 — Phase E §10 5 criteria 충족 (3 dogfood)
 - **ADR-008**: 첫 base promotion — `budget-binary-size`
@@ -133,24 +136,24 @@
 
 - [x] Phase A~E (v0.1~v1.0) — 골격 + skill 풀 + project-type seed + 자기보호 + 3 dogfood ship
 - [x] Phase F (v1.1) — Fleet Mode ✓ SHIPPED 2026-05-27 (ADR-010 accepted)
-- [x] **Phase G (v1.2) — Fleet enforcement amend** ✓ SHIPPED 2026-05-27 (ADR-011 accepted)
-  - real-world dogfood: examples/starpin-fleet/ (45 tests PASS, 11 unique findings)
-  - codex review 1 blocker + 5 major + 1 minor 모두 patched (F100~F106)
-  - 3 신규 §14.8/9/10 + lock-grep-gate skill + LOCKED-INTERFACE template + SUBTREE-PROMPT/MERGE-REPORT/SPLIT-DECISION-ADR amend + spawn skill 강화
-- [ ] Phase H (v1.3 후보) — AST/ESLint based lock rule + helper scripts (gen_stub/gen_ambient/topo_sort) + real git worktree dogfood + wall-time benefit 측정 + out-of-band confirmation (Slack/email)
+- [x] Phase G (v1.2) — Fleet enforcement amend ✓ SHIPPED (ADR-011 accepted)
+- [x] **Phase H (v1.3) — AST lock + Strategy helper scripts** ✓ proposed (ADR-012, awaiting user)
+  - 4 helper scripts (gen_stub / gen_ambient / topo_sort / gen_eslint_lock) — *실 작동* + retroactive validation PASS
+  - lock-eslint-gen skill — fail-closed (sibling internal path + named allowlist) AST gate; v1.2 lock-grep-gate는 fallback
+  - mid-work escalation 명세 (F70-fleet-1), codex 대체 heuristic 4 조건 (F70-fleet-3), ESM jest seed (F86)
+  - codex review 2 blocker + 5 major + 1 minor 모두 patched (F110~F117)
+- [ ] Phase I (v1.4 후보) — custom AST walker (re-export barrel / namespace import) + real git worktree dogfood + wall-time benefit 측정 + out-of-band confirmation + new-project.sh esm-jest seed 자동화
 
 ## Next action
 
-- v1.2 ship 완료. 대기 — 다음 사용자 ask 또는 v1.3 trigger
-- v1.3 trigger 후보:
+- v1.3 사용자 승인 대기 → ADR-012 accepted + commit
+- v1.4 trigger 후보:
+  - custom AST walker (re-export barrel + namespace import — v1.3 partial)
   - real git worktree dogfood (F70-fleet-2 / F92)
-  - AST/ESLint based lock rule (F102 typecheck-level 강화)
-  - helper scripts 실 구현 (gen_stub.py / gen_ambient.py / topo_sort.py — F101)
   - wall-time benefit 측정 (large project)
   - out-of-band confirmation 통합 (F100 production-grade — Slack/email)
-  - mid-work escalation 위치 명세 (F70-fleet-1)
-  - codex 대체 heuristic 명문화 (F70-fleet-3)
-  - ESM jest module isolation 표준 패턴 (F86)
+  - `new-project.sh` esm-jest seed 자동화 (F116)
+  - SPLIT-DECISION-ADR의 codex_review_replacement preflight heuristic 자동 평가 (F117)
 
 ## Open findings (carry-over)
 

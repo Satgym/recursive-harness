@@ -106,58 +106,76 @@ case "$STRATEGY" in
 esac
 ```
 
-### Step 1.5 — Strategy-specific 사전 작업 (F101 v1.2 codex patch)
+### Step 1.5 — Strategy-specific 사전 작업 (F101 v1.2 + v1.3 helper 실 구현)
 
-본 v1.2 patch는 strategy a/b/c별 *실제 절차* 구현:
+`$HARNESS_ROOT/scripts/fleet/*.py` 호출. (F112 v1.3 patch — 경로 통일).
 
-**(a) lock-spec stub** — parent가 spawn 전 *consumer 위한 stub* 작성:
+**(a) lock-spec stub** — parent가 spawn 전 *consumer가 import할 provider stub* 작성:
 ```bash
 if [ "$STRATEGY" = "a" ]; then
-  # ADR의 dependency graph 파싱 — provider list
-  for PROVIDER in $(grep -A 100 "## Dependency graph" "$ADR_PATH" | awk '/->/ {print $3}' | sort -u); do
-    STUB_PATH="src/$PROVIDER/index.ts"
+  # parse_children: ADR's '## Decision' child table OR ownership matrix
+  CHILDREN=$($HARNESS_ROOT/scripts/fleet/topo_sort.py "$ADR_PATH" | sed 's/^wave_[0-9]*: //')
+  for CHILD in $CHILDREN; do
+    LI="$ROOT_PATH/.harness/subtrees/$CHILD/locked-interface.md"
+    STUB_PATH="$ROOT_PATH/src/$CHILD/index.ts"
     if [ ! -f "$STUB_PATH" ]; then
-      # locked-interface §Public interface 섹션을 그대로 추출해 throw 본문으로
-      mkdir -p "src/$PROVIDER"
-      echo "// AUTO-GENERATED stub (Fleet F101 strategy=a). Replaced by provider child impl." > "$STUB_PATH"
-      echo "// Provider child는 이 파일을 *완전 덮어쓰기*한다." >> "$STUB_PATH"
-      # locked-interface에서 export signatures 추출 + throw 본문 자동 생성
-      python3 .harness/scripts/gen_stub.py "$LOCKED_INTERFACE_PATH" >> "$STUB_PATH"
+      mkdir -p "$ROOT_PATH/src/$CHILD"
+      $HARNESS_ROOT/scripts/fleet/gen_stub.py "$LI" --out "$STUB_PATH"
     fi
   done
 fi
 ```
-consumer test는 *integration test에서만 real provider 사용* (unit test는 lock signature 기반 OK).
+consumer test는 *integration test에서만 real provider 사용* (unit test는 stub signature 기반 OK).
 
-**(b) type-only ambient** — consumer worktree에 ambient declaration:
+**(b) type-only ambient** — consumer 자기 디렉토리에 `<provider>.d.ts`:
 ```bash
 if [ "$STRATEGY" = "b" ]; then
-  for CONSUMER in $CONSUMERS; do
-    for PROVIDER in $(grep "depends_on:" ".harness/subtrees/$CONSUMER/locked-interface.md" | awk '{print $2}'); do
-      AMBIENT_PATH="../<repo>-$CONSUMER/src/<provider>.d.ts"
-      # locked-interface의 type/fn declarations만 추출
-      python3 .harness/scripts/gen_ambient.py "$PROVIDER_LOCK" > "$AMBIENT_PATH"
-      # parent merge phase에서 *제거 확인* — Phase 05 Exit checklist
-    done
+  # For each (consumer, provider) edge in dep graph, emit ambient
+  $HARNESS_ROOT/scripts/fleet/topo_sort.py "$ADR_PATH" >/dev/null  # validate
+  # 명시적으로 ADR의 dependency graph 파싱
+  grep -oE "[\w-]+\s*->\s*[\w-]+" "$ADR_PATH" | while IFS= read -r EDGE; do
+    CONSUMER=$(echo "$EDGE" | awk '{print $1}')
+    PROVIDER=$(echo "$EDGE" | awk '{print $3}')
+    # Skip 'cli'/'parent' tokens
+    [ "$CONSUMER" = "cli" ] && continue
+    [ "$CONSUMER" = "parent" ] && continue
+    PROVIDER_LI="$ROOT_PATH/.harness/subtrees/$PROVIDER/locked-interface.md"
+    AMBIENT="$ROOT_PATH/src/$CONSUMER/$PROVIDER.d.ts"
+    [ -f "$PROVIDER_LI" ] && $HARNESS_ROOT/scripts/fleet/gen_ambient.py "$PROVIDER_LI" --out "$AMBIENT"
   done
+  # Phase 05 Exit checklist가 *모든 .d.ts 제거* 검증 의무
 fi
 ```
 
-**(c) topological spawn order** — parent가 sequential dispatch:
+**(c) topological spawn order** — parent가 wave별 sequential 안내:
 ```bash
 if [ "$STRATEGY" = "c" ]; then
-  # Step 2 (worktree 생성)는 모두 한 번에 OK (각 child workspace 독립)
-  # 단 Step 6 (사용자 spawn 안내)는 *topological order*로 segmented:
-  ORDER=$(python3 .harness/scripts/topo_sort.py "$ADR_PATH")
-  echo "Spawn order (topological):"
-  echo "$ORDER" | while read GROUP; do
-    echo "  Wave: $GROUP — provider children 먼저 spawn + 완료 통보 후 next wave"
+  ORDER=$($HARNESS_ROOT/scripts/fleet/topo_sort.py "$ADR_PATH")
+  echo "Spawn order (topological — wave-by-wave):"
+  echo "$ORDER" | while IFS= read -r LINE; do
+    echo "  $LINE — wave 완료 후 다음 wave 진행 (parent가 wait gate 관리)"
   done
-  # 본 v1.2는 *안내만* — 강제 dispatch는 v1.3 (Claude Code SDK multi-session 가능 시)
+  # v1.3 한계: Step 6 사용자 안내에 wave 정보 포함 — 실 sequential dispatch는
+  # Claude Code SDK multi-session API 가능 시 자동화 (v1.4 후보)
 fi
 ```
 
-> *v1.2 한계*: helper script (`gen_stub.py` / `gen_ambient.py` / `topo_sort.py`) 미구현 — *명세만 정착*. v1.3에서 실 script 작성 + ESLint AST rule. 본 v1.2 ship 후 first real-world dogfood가 strategy 활용 시 helper 누락 발견되면 즉시 작성.
+### Step 1.6 — ESLint lock config 생성 (F111 v1.3 codex patch — primary AST gate)
+
+각 child별 ESLint flat config 자동 생성:
+
+```bash
+# Strategy와 무관하게 항상 실행 — F1 lock의 primary mechanical gate
+$HARNESS_ROOT/scripts/fleet/gen_eslint_lock.py "$ADR_PATH" --out-dir "$ROOT_PATH"
+# 결과: eslint.config.<child>.mjs (per-child flat config with no-restricted-imports)
+# child의 SUBTREE-PROMPT Pre-review-gate 섹션에 실 명령 주입 (Step 3에서 처리)
+
+# eslint deps 확인
+if ! [ -d "$ROOT_PATH/node_modules/eslint" ]; then
+  echo "[warn] eslint not installed — F102 AST gate skipped, falls back to lock-grep-gate"
+  echo "[hint] cd $ROOT_PATH && npm install -D eslint @typescript-eslint/parser"
+fi
+```
 
 ### Step 2 — Child별 worktree 생성
 

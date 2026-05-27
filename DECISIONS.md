@@ -18,6 +18,74 @@
 
 ---
 
+## ADR-012 — Hara v1.3 AST-level lock enforcement + Strategy helper scripts 실 구현
+
+**Date**: 2026-05-27 · **Status**: proposed
+**References**:
+- HARNESS.md §14.8 promote (grep → AST primary, ESLint flat config `no-restricted-imports`)
+- HARNESS.md §14.9 strategy a/b/c helper script *실 구현* 명시
+- HARNESS.md §14.2 F7 codex 대체 heuristic 4 조건 명문화 (F70-fleet-3)
+- skills/lock-eslint-gen.md (신설 v0.1)
+- scripts/fleet/gen_stub.py / gen_ambient.py / topo_sort.py / gen_eslint_lock.py (신설)
+- templates/SUBTREE-PROMPT.template.md (mid-work escalation 섹션 신설 — F70-fleet-1)
+- project-types/_generic/esm-jest-pattern.md (신설 seed — F86)
+- 실 validation: starpin-fleet 4 child에 ESLint lock rule 적용 → 의도적 violation 정확히 catch (F102 mechanical evidence)
+
+**Context**: v1.2 ship 후 사용자 지시 "진행해" — v1.3 trigger 후보 중 highest-value 선택. v1.2 codex F102가 "lock-grep-gate는 advisory not mechanical"이라 지적했고, v1.3은 *그 한계를 실 ESLint AST rule로 해결*. 동시에 v1.2 §14.9의 strategy a/b/c가 *명세만 있고 helper script는 명시되지 않은 상태*였음 — v1.3에서 *실제 작동하는 4 Python script* 작성 + retroactive validation.
+
+**Decision**: Hara v1.3 amend.
+
+### A. AST-level lock enforcement (primary, grep fallback)
+
+1. **신규 base skill `lock-eslint-gen.md`** — ESLint v9+ flat config (`eslint.config.<child>.mjs`)을 child별 자동 생성. `no-restricted-imports` rule이 locked-interface allowlist 외 모든 named import를 *AST error*로 차단
+2. **신규 helper script `scripts/fleet/gen_eslint_lock.py`** — SPLIT-DECISION-ADR + 각 child의 locked-interface §"Consumed interface"를 파싱하여 flat config 생성. multi-line import + type-only import 구분 + 모든 provider module exports와 cross-check
+3. **HARNESS §14.8 promote** — primary는 `lock-eslint-gen` (AST), v1.2의 `lock-grep-gate`는 fallback (ESLint 미설치 / legacy 환경)
+
+### B. Strategy a/b/c helper scripts 실 구현 (F101 closure)
+
+4. **`scripts/fleet/gen_stub.py`** — Strategy (a). locked-interface §Public interface → stub file with `throw new Error('not-implemented')` bodies. Provider child가 완전 덮어쓰기 의무
+5. **`scripts/fleet/gen_ambient.py`** — Strategy (b). locked-interface → `.d.ts` ambient declaration. Consumer worktree에 둠. Phase 05 merge 시 *제거 검증* 의무 (v1.2 Phase 05 amend로 이미 명세)
+6. **`scripts/fleet/topo_sort.py`** — Strategy (c). SPLIT-DECISION-ADR §"Dependency graph"의 `a -> b` 형식 파싱 → wave별 spawn order 출력. parent가 wave별 순차 dispatch
+
+### C. Small wins
+
+7. **`templates/SUBTREE-PROMPT.template.md` mid-work escalation 섹션 신설** (F70-fleet-1) — child가 작업 중간에 lock/invariant 위반, shared change 필요, 횡단 invariant 신규 발견, HC 위반 risk, inter-lock mismatch 5 카테고리 발견 시 `.harness/subtrees/<self>/escalation.md` 즉시 기록 + paused 의무. 양식 명시
+8. **HARNESS §14.2 F7 codex 대체 heuristic 4 조건** (F70-fleet-3) — self-test 갈음 가능은 (i) examples/ or dogfood/ 경로 (ii) LOC < 1500 (iii) HC-7/8/9 없음 (iv) 외부 통신/DB write/auth/결제 부재. 4 모두 충족 시만; SPLIT-DECISION-ADR의 `codex_review_replacement` field에 명시
+9. **`project-types/_generic/esm-jest-pattern.md` seed 신설** (F86) — `jest` import / `isolateModulesAsync` / `.js` extension / `tsconfig: { strict: false }` override 함정 / 표준 config 양식. dogfood 신호 3건 (starpin / fleet-mini / starpin-fleet) 통합
+
+### D. Retroactive validation
+
+- `gen_stub.py` + `gen_ambient.py` + `topo_sort.py` + `gen_eslint_lock.py` 모두 **starpin-fleet locked-interfaces에 실 적용 PASS**
+- ESLint lock config가 starpin-fleet의 4 child source에 적용: 실 코드는 violation 0 (children이 lock 준수했음을 confirm)
+- 의도적 violation (claim에 `createSession` import) → ESLint **정확히 catch**:
+  ```
+  src/claim/violation.ts
+    1:10  error  'createSession' import from '../auth/index.js' is restricted. Lock violation (Fleet F1 / F90)...
+  ```
+  → F102 mechanical enforcement 실 작동 evidence
+
+**Consequences**:
+
+- positive:
+  - lock enforcement가 *진짜 typecheck-level*에 도달 (ESLint AST rule — alias / multi-line import 모두 catch). v1.2의 "automated gap detection"에서 v1.3의 "mechanical enforcement"로 격상
+  - Strategy a/b/c가 *실 helper script로 작동* (v1.2의 "명세만"에서 v1.3 "실 실행")
+  - dogfood 신호의 v1.4 buffer 비움 (mid-work escalation / codex 대체 heuristic / ESM jest 표준 — 모두 처리)
+  - HARNESS body 증가 *최소* (§14.8/9 amend 위주, 새 §X 신설 없음)
+- negative:
+  - ESLint v9+ 의존 추가 (legacy v8 사용자에겐 grep fallback 의존)
+  - re-export barrel / namespace import (`import * as X`)는 ESLint rule으로 *부분* catch — *완전*은 v1.4 custom AST walker 후보
+  - helper script들이 Python 3 의존 (Node-only 환경에서는 별도 설치)
+- risk:
+  - SPLIT-DECISION-ADR template이 v1.3 신규 field (`codex_review_replacement`) 의무화하지 않음 — 본 ADR-012는 *권장*만, 차후 amendment에서 mandatory 전환
+  - locked-interface §"Consumed interface"가 정확히 명시 안 됐을 때 ESLint config는 allowlist=∅로 처리 → child 의도와 다를 수 있음. spec 작성 책임은 root coordinator
+
+**Approval gate**:
+- 사용자 승인 필수 (하니스 자체 변경 — strict 모드)
+- approver: <pending>
+- approval scope: §14.8 promote (AST primary) + §14.9 helper scripts 실 구현 명시 + lock-eslint-gen skill + 4 Python helper scripts + SUBTREE-PROMPT mid-work escalation + §14.2 F7 codex 대체 heuristic + esm-jest-pattern seed
+
+---
+
 ## ADR-011 — Hara v1.2 Fleet enforcement 강화 (starpin-fleet real-world dogfood trigger)
 
 **Date**: 2026-05-27 · **Status**: accepted

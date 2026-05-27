@@ -18,6 +18,69 @@
 
 ---
 
+## ADR-015 — starpin v0.8 catalog data quality bundle (sentinel→NULL + aliases + planet_positions)
+
+**Date**: 2026-05-27 · **Status**: accepted (user-directed "진행해줘")
+
+**Scope**: 3 carry items from v0.6 codex r1 (#18) + v0.6 deferred features (object_aliases population, planet_positions table). Closes catalog data quality gaps without expanding stack.
+
+**References**:
+- codex v0.6 r1 #18 (sentinel pollution)
+- v0.6 STATUS "v0.7 carry-over" — object_aliases + planet_positions
+- ADR-002 amended (manifest sha `dc13e2ba71263b…`)
+- migrations 0030, 0031
+- codex v0.8 r1 (5 findings) + r2 (1 partial closed)
+
+**Decision**:
+
+### A. Sentinel → NULL (codex v0.6 #18)
+1. Migration 0030 — ALTER COLUMN mag DROP NOT NULL + CHECK allows NULL + tight predicate backfill (`source_catalog='simbad' AND parallax_mas IS NULL`) with `> 50 rows aborts` HC-9 guard
+2. Python ingest writes `mag=None` directly for fallback rows (no sentinel)
+3. Repository viewport queries: `ORDER BY mag ASC NULLS LAST`
+4. Loader NO LONGER normalizes — passes mag through honestly (r2 #6)
+
+### B. object_aliases population (v0.6 carry)
+1. `ingest/fetch_aliases.py` (NEW) — SIMBAD batch query, bounded to 6 fixtures + 30 brightest Gaia rows
+2. Per-call rate limit (1.2s) + retry — re-uses common.with_retry
+3. Loader extension: aliases.ndjson → object_aliases UPSERT with SAVEPOINT (FK orphan tolerance)
+4. Phase-ordered load: objects → aliases → planets (FK dependency)
+5. HD dropped from SIMBAD prefix map (r1 #2 — HD ≠ HIP namespace; v0.9 carry: dedicated `hd` source)
+
+### C. planet_positions table (v0.6 carry)
+1. Migration 0031 — new table, PRIMARY KEY (body_id, epoch_utc), separate from objects
+2. Loader extension: horizons-*.json → planet_positions UPSERT
+3. v0.8 ships single-epoch only; multi-epoch in v0.9 hourly cadence
+
+### D. Codex review evidence
+- r1: 5 findings (1 blocker + 2 major + 2 minor)
+- r2: 4 closed + 1 partial → patched + closed
+- 247 unit tests pass (+6 new loader tests)
+- End-to-end smoke: 646 objects + 82 aliases (HD-free) + 8 planets
+
+**Consequences**:
+
+positive:
+- Real fixture-target lookup via HIP aliases works (Polaris by name → Gaia DR3 source_id)
+- mag NULL preserves percentile/avg integrity (no sentinel pollution)
+- Planet ephemerides queryable by body_id + epoch
+- HC-9 migration guards prevent future lossy backfills
+
+negative:
+- 35 alias rows dropped (HD entries) — name-based lookup via HD numbers won't work until v0.9
+- SIMBAD batch scope is bounded to 36 calls; full Gaia bright sample alias cross-match deferred to v0.9 (streaming)
+- planet_positions ships with 1 epoch — sky service doesn't yet query it (route work in v0.9)
+
+후속 (v0.9+ carry):
+- `hd` canonical namespace (object_aliases.source_catalog enum + canonical-id update)
+- Streaming SIMBAD batch for full bright sample
+- Sky service planet integration (current /v1/sky/viewport returns stars only)
+- Temp-table swap-on-commit for snapshot rotation (M2 §6.2)
+- Full mag ≤ 12 Gaia ingest
+
+**Approval**: user · 2026-05-27 · autonomous
+
+---
+
 ## ADR-014 — starpin v0.7 deploy-ready level 1 (prod-sim, observability scaffold)
 
 **Date**: 2026-05-27 · **Status**: accepted (user-directed 2026-05-27 "완전성 우선")

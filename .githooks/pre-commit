@@ -1,0 +1,156 @@
+#!/usr/bin/env bash
+# Hara v1.8 pre-commit hook
+# Enforces the few rules that v0.5/v0.6 dogfood proved Claude forgets:
+#   1. STATUS freshness — if RELEASE.md changes, STATUS.md must change in the same commit
+#   2. WIP residue — block commit messages starting with "wip(" unless --no-verify
+#   3. capability_candidates extraction — auto-update .harness/capability-candidates.md
+#      when a new review/merge-report file is staged
+#
+# Install: `git config core.hooksPath .githooks` (once per clone)
+# Bypass:  `git commit --no-verify` (Claude must NOT use this without user approval)
+
+set -u
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+cd "$REPO_ROOT"
+
+staged() { git diff --cached --name-only --diff-filter=ACMR; }
+fail() { echo "[pre-commit] FAIL: $*" >&2; exit 1; }
+warn() { echo "[pre-commit] WARN: $*" >&2; }
+
+# --- Rule 1: STATUS freshness ----------------------------------------------
+# v1.8 r1 #2 — broaden to catch the harness-ship case (HARNESS.md / DECISIONS.md
+# changes without STATUS update). The original check only fired for RELEASE.md
+# changes; codex r1 found STATUS could stay stale across a major harness ship.
+release_changed=0
+harness_changed=0
+status_changed=0
+for f in $(staged); do
+  case "$f" in
+    *RELEASE.md|*release.md)            release_changed=1;;
+    HARNESS.md|DECISIONS.md|PATTERNS.md|FLEET.md|CLAUDE.md|AGENTS.md)
+                                        harness_changed=1;;
+    *STATUS.md|*status.md)              status_changed=1;;
+  esac
+done
+if [[ ($release_changed -eq 1 || $harness_changed -eq 1) && $status_changed -eq 0 ]]; then
+  trigger=""
+  [[ $release_changed -eq 1 ]] && trigger="RELEASE.md"
+  [[ $harness_changed -eq 1 ]] && trigger="${trigger:+$trigger / }harness-scaffold"
+  fail "STATUS.md not staged but $trigger changed. HC-6 — STATUS must be updated at every handoff."
+fi
+
+# --- Rule 2 moved to commit-msg hook (git pre-commit does not receive the
+#     message). See .githooks/commit-msg.
+
+# --- Rule 3: capability_candidates auto-collect ---------------------------
+# When a new review or merge-report file is staged, extract any
+# `capability_candidate: yes` blocks into .harness/capability-candidates.md.
+# Hook auto-stages the updated candidates file so the commit captures it.
+collect_candidates() {
+  local out="$REPO_ROOT/.harness/capability-candidates.md"
+  local any_review_staged=0
+  for f in $(staged); do
+    case "$f" in
+      */reviews/*.md|*/subtrees/*/merge-report.md|.harness/reviews/*.md)
+        any_review_staged=1; break;;
+    esac
+  done
+  [[ $any_review_staged -eq 0 ]] && return 0
+
+  # Header (idempotent)
+  if [[ ! -f "$out" ]]; then
+    mkdir -p "$(dirname "$out")"
+    printf "# Capability candidates (auto-collected by .githooks/pre-commit)\n\nFindings flagged \`capability_candidate: yes\` in reviews / merge-reports.\nReview + promote (or close) before next harness maturation round.\n\n---\n\n" > "$out"
+  fi
+
+  # Append new candidates that don't already appear.
+  local appended=0
+  for f in $(staged); do
+    case "$f" in
+      */reviews/*.md|*/subtrees/*/merge-report.md|.harness/reviews/*.md)
+        ;;
+      *) continue;;
+    esac
+    [[ -f "$f" ]] || continue
+    # v1.8 r1 #3 — accept both YAML-style and bold-markdown style markers,
+    # and extract candidate name from inline "— `foo`" or following lines.
+    # r2 #3 close — wrap in try/except so a future regex bug doesn't silently
+    # fail the collection (was: Python traceback ate the candidates).
+    if python3 - "$f" "$out" <<'PYEOF'
+import sys, pathlib, re
+src_path = pathlib.Path(sys.argv[1])
+out_path = pathlib.Path(sys.argv[2])
+text = src_path.read_text(encoding="utf-8", errors="replace")
+existing = out_path.read_text(encoding="utf-8") if out_path.exists() else ""
+lines = text.splitlines()
+last_heading = ""
+out_lines = []
+# Marker variants:
+#   capability_candidate: yes
+#   **capability_candidate**: yes
+#   - **capability_candidate**: yes — `name`
+marker_re = re.compile(r"(?:\*\*)?capability_candidate(?:\*\*)?\s*:\s*yes", re.IGNORECASE)
+inline_name_re = re.compile(r"[`']([A-Za-z0-9_\-]+)[`']")
+next_line_name_re = re.compile(r"candidate[_ ]name\s*:\s*[`']?([A-Za-z0-9_\-]+)", re.IGNORECASE)
+for i, line in enumerate(lines):
+    if re.match(r"^###\s+", line):
+        last_heading = line.strip()
+    if marker_re.search(line):
+        name = ""
+        # Try inline name first: text after `yes` on the same line.
+        after_yes = marker_re.split(line, maxsplit=1)
+        if len(after_yes) > 1:
+            m = inline_name_re.search(after_yes[1])
+            if m:
+                name = m.group(1)
+        # Fallback: scan next 8 lines for `candidate_name:` or backticked slug.
+        if not name:
+            for nxt in lines[i+1:i+9]:
+                m = next_line_name_re.search(nxt)
+                if m:
+                    name = m.group(1); break
+        # r2 #3 close — robust path display: try relative, fallback to absolute.
+        # `relative_to` raises on macOS /private/tmp ↔ /tmp symlink mismatch and
+        # other CWD-disjoint cases; catch + show absolute as last resort.
+        try:
+            display_path = str(src_path.relative_to(pathlib.Path.cwd()))
+        except ValueError:
+            display_path = str(src_path)
+        key = f"- source: `{display_path}` | finding: `{last_heading or '(unknown)'}`"
+        if name:
+            key += f" | candidate_name: `{name}`"
+        if key in existing or any(key == ol for ol in out_lines):
+            continue
+        out_lines.append(key)
+if out_lines:
+    with out_path.open("a", encoding="utf-8") as f:
+        for ol in out_lines:
+            f.write(ol + "\n")
+    print(f"[pre-commit] capability-candidates: +{len(out_lines)} from {src_path}", file=sys.stderr)
+PYEOF
+    then
+      appended=1
+    else
+      warn "capability-candidate collector exit nonzero on $f — file skipped (hook continues)"
+    fi
+  done
+
+  if [[ $appended -eq 1 ]]; then
+    git add "$out"
+  fi
+}
+collect_candidates
+
+# --- Lint/typecheck on changed code paths (best-effort) -------------------
+# Only if package.json + tsc available and there are .ts changes. Skipped
+# when project not detected; hook stays out of the way.
+if [[ -f package.json ]] && command -v npm >/dev/null 2>&1; then
+  if echo "$(staged)" | grep -qE '\.(ts|tsx|js|mjs)$'; then
+    if [[ -f tsconfig.json ]] && command -v npx >/dev/null 2>&1; then
+      npx --no-install tsc -p tsconfig.json --noEmit 2>/dev/null || warn "typecheck issues — fix before pushing"
+    fi
+  fi
+fi
+
+exit 0

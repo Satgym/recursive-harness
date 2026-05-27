@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+# Hara v1.8 commit-msg hook
+# Rule: if THIS commit is a ship-style commit (code|harness|note(...vN.N.N)),
+# fail when there are still wip() commits in recent history that should have
+# been squashed first.
+#
+# Bypass: `git commit --no-verify` (Claude must NOT use this without user approval).
+
+set -u
+
+msg_file="$1"
+[[ -f "$msg_file" ]] || exit 0
+
+subject="$(grep -v '^#' "$msg_file" | head -1)"
+
+# If this commit IS a wip, allow it (fresh WIP is the intended use).
+wip_re='^wip\('
+if [[ "$subject" =~ $wip_re ]]; then
+  exit 0
+fi
+
+# Only enforce for ship-style commits — other commits (refactor, doc, fix)
+# can land on top of WIPs without forcing squash. Regex stored in variable
+# because bash [[ =~ ]] mis-parses parenthesized alternations inline.
+ship_re='^(code|harness|note)\([^)]*v[0-9]+\.[0-9]+\.[0-9]+\)'
+if [[ ! "$subject" =~ $ship_re ]]; then
+  exit 0
+fi
+
+wip_count=$(git log -10 --pretty=%s 2>/dev/null | grep -c '^wip(' || true)
+if [[ ${wip_count:-0} -gt 0 ]]; then
+  echo "[commit-msg] FAIL: ship-style commit but $wip_count wip() commit(s) in last 10." >&2
+  echo "[commit-msg]   Subject: $subject" >&2
+  echo "[commit-msg]   Squash first: git reset --soft HEAD~$wip_count && git commit" >&2
+  echo "[commit-msg]   (this is destructive; check with user before running git reset)" >&2
+  exit 1
+fi
+
+exit 0

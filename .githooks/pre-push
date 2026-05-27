@@ -1,0 +1,127 @@
+#!/usr/bin/env bash
+# Hara v1.8 pre-push hook
+# Enforces: if a release/ship-style commit is being pushed, recent codex
+# review evidence must exist. This catches the v0.5/v0.6 pattern of
+# "shipped without 2-round codex review" — the harness *requires* it but
+# nothing enforced it.
+#
+# Trigger: any push that includes a commit with subject matching
+# `^(code|harness|note)\(.*v\d+\.\d+\.\d+\)` (the conventional ship form).
+#
+# Bypass: `git push --no-verify` (Claude must NOT use this without user OK).
+
+set -u
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+cd "$REPO_ROOT"
+
+# Read the refs being pushed via stdin (git pre-push protocol).
+ship_pattern='^(code|harness|note)\([^)]*v[0-9]+\.[0-9]+\.[0-9]+\)'
+ship_subjects=""
+
+while read -r local_ref local_sha remote_ref remote_sha; do
+  [[ -z "$local_sha" ]] && continue
+  if [[ "$remote_sha" =~ ^0+$ ]]; then
+    # New branch — review all commits in it.
+    range="$local_sha"
+  else
+    range="${remote_sha}..${local_sha}"
+  fi
+  while read -r subject; do
+    if [[ "$subject" =~ $ship_pattern ]]; then
+      ship_subjects+="$subject"$'\n'
+    fi
+  done < <(git log --pretty=%s "$range" 2>/dev/null)
+done
+
+if [[ -z "$ship_subjects" ]]; then
+  exit 0   # no ship-style commit; pass
+fi
+
+echo "[pre-push] ship-style commits detected:" >&2
+echo "$ship_subjects" | sed 's/^/    /' >&2
+
+# r1 #1 — HC-11 requires r1+r2 for THIS ship slug, not "any recent review".
+# Extract version slug (the captured part: e.g. starpin-v0.6.0, v1.8).
+# We accept either:
+#   (a) explicit version like v0.6.0, vN.N.N anywhere in subject
+#   (b) the parenthesized scope token, lower-cased
+# Then require BOTH a file matching `*r1*.md` AND `*r2*.md` whose name contains
+# at least one of those slugs, added in last 30 commits.
+# Collect candidate slugs from ship-style commit subjects.
+# Portable to macOS bash 3.2 (no mapfile, no arrays-of-quoted-strings).
+ship_slugs_raw=""
+while IFS= read -r subj; do
+  [[ -z "$subj" ]] && continue
+  # Parenthesized scope: code(STARPIN-v0.6.0) → starpin-v0.6.0
+  paren="${subj#*\(}"; paren="${paren%%\)*}"
+  if [[ -n "$paren" ]]; then
+    slug_full="$(echo "$paren" | tr '[:upper:]' '[:lower:]')"
+    ship_slugs_raw+="$slug_full"$'\n'
+    # Compressed: starpin-v0.6.0 → starpin-v060, v1.8.0 → v180, v0.6 → v06
+    slug_compact="$(echo "$slug_full" | sed -E 's/v([0-9]+)\.([0-9]+)\.?([0-9]*)/v\1\2\3/g')"
+    [[ "$slug_compact" != "$slug_full" ]] && ship_slugs_raw+="$slug_compact"$'\n'
+    # Two-digit major.minor compressed (drop patch): v1.8.0 → v18, v0.6.x → v06
+    slug_short="$(echo "$slug_full" | sed -E 's/v([0-9]+)\.([0-9]+)\.[0-9]+/v\1\2/g; s/v([0-9]+)\.([0-9]+)/v\1\2/g')"
+    [[ "$slug_short" != "$slug_full" && "$slug_short" != "$slug_compact" ]] && ship_slugs_raw+="$slug_short"$'\n'
+  fi
+done <<< "$ship_subjects"
+
+ship_slugs="$(echo "$ship_slugs_raw" | grep -v '^$' | sort -u)"
+
+# Collect review files added in last 30 commits (covers patch round + ship).
+recent_review_files="$(git log -30 --diff-filter=A --name-only --pretty=format: -- '*.harness/reviews/*.md' 2>/dev/null | grep -v '^$' | sort -u)"
+if [[ -z "$recent_review_files" ]]; then
+  echo "[pre-push] FAIL: ship commit but 0 codex review files in last 30 commits." >&2
+  echo "[pre-push]   HC-11 requires r1 + r2 reviews for every ship." >&2
+  echo "[pre-push]   Run: scripts/codex-bundle-review.sh --phase 04 --prompt-file <prompt>" >&2
+  exit 1
+fi
+
+# r2 #1 partial close — track r1/r2 *per primary slug* (the parenthesized
+# scope from each ship subject). If ANY ship in the push lacks r1+r2 for its
+# own slug, fail. Compressed slug variants are still tried but the BOOK is
+# kept per primary so multi-ship pushes are detected.
+fail_count=0
+missing_summary=""
+# Re-extract primary (parenthesized) slug per ship subject.
+while IFS= read -r subj; do
+  [[ -z "$subj" ]] && continue
+  paren="${subj#*\(}"; paren="${paren%%\)*}"
+  [[ -z "$paren" ]] && continue
+  primary="$(echo "$paren" | tr '[:upper:]' '[:lower:]')"
+  # Generate same compressed variants as before, but scoped to THIS primary.
+  variants="$primary"$'\n'
+  variants+="$(echo "$primary" | sed -E 's/v([0-9]+)\.([0-9]+)\.?([0-9]*)/v\1\2\3/g')"$'\n'
+  variants+="$(echo "$primary" | sed -E 's/v([0-9]+)\.([0-9]+)\.[0-9]+/v\1\2/g; s/v([0-9]+)\.([0-9]+)/v\1\2/g')"$'\n'
+  variants="$(echo "$variants" | grep -v '^$' | sort -u)"
+
+  has_r1=0; has_r2=0
+  while IFS= read -r variant; do
+    [[ -z "$variant" ]] && continue
+    while IFS= read -r f; do
+      [[ -z "$f" ]] && continue
+      fname_lc="$(echo "$(basename "$f")" | tr '[:upper:]' '[:lower:]')"
+      if [[ "$fname_lc" == *"$variant"* ]]; then
+        [[ "$fname_lc" == *r1* ]] && has_r1=1
+        [[ "$fname_lc" == *r2* ]] && has_r2=1
+      fi
+    done <<< "$recent_review_files"
+  done <<< "$variants"
+
+  if [[ $has_r1 -ne 1 || $has_r2 -ne 1 ]]; then
+    fail_count=$((fail_count+1))
+    missing_summary+="  - $subj: r1=$has_r1 r2=$has_r2 (slug='$primary')"$'\n'
+  fi
+done <<< "$ship_subjects"
+
+if [[ $fail_count -gt 0 ]]; then
+  echo "[pre-push] FAIL: HC-11 cadence not met for $fail_count ship-style commit(s)." >&2
+  echo "$missing_summary" >&2
+  echo "[pre-push]   Each ship needs r1 + r2 review file names containing its slug." >&2
+  echo "[pre-push]   Bypass: git push --no-verify (requires explicit user authorization)." >&2
+  exit 1
+fi
+
+echo "[pre-push] OK — HC-11 r1+r2 evidence found for every ship in push" >&2
+exit 0

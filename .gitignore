@@ -18,6 +18,10 @@ Thumbs.db
 .claude/settings.local.json
 .claude/scheduled_tasks.lock
 
+# Python __pycache__ generated when scripts/_codex_postprocess.py is imported
+__pycache__/
+*.pyc
+
 # Dogfood / test examples — kept locally, not pushed to public repo.
 # Each example is a full sub-project (starpin / starpin-fleet / fleet-mini / temp-sensor / todo-api)
 # used for harness development; not needed by harness consumers.

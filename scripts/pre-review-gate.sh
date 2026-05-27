@@ -3,21 +3,52 @@
 # Detects project type from layout. Counts attempted checks; "0 attempted" is
 # treated as FAIL unless `--allow-no-checks` is given (F23 fix).
 #
+# v1.8 (F127) — root detection uses nearest `.harness/` ancestor instead of
+# git toplevel, fixing the monorepo case where `examples/<project>/` has its
+# own `.harness/` but git toplevel returns the outer harness repo (which
+# would run harness self-checks instead of the project's gates). Pass
+# `--root <path>` to override explicitly.
+#
 # Usage:
-#   scripts/pre-review-gate.sh [--allow-no-checks]
+#   scripts/pre-review-gate.sh [--allow-no-checks] [--root <path>]
 
 set -uo pipefail
-ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
-cd "$ROOT"
+
+find_project_root() {
+  # v1.8 r1 #4 — bound search to git toplevel so we never select a `.harness/`
+  # outside the repo (catches the "outer user dir has .harness/" case).
+  local dir="$PWD"
+  local toplevel
+  toplevel="$(git rev-parse --show-toplevel 2>/dev/null)" || toplevel=""
+  while [[ "$dir" != "/" ]]; do
+    [[ -d "$dir/.harness" ]] && { echo "$dir"; return 0; }
+    # Stop at git toplevel — don't escape the repo.
+    [[ -n "$toplevel" && "$dir" == "$toplevel" ]] && break
+    dir="$(dirname "$dir")"
+  done
+  echo "${toplevel:-$PWD}"
+}
 
 ALLOW_NO_CHECKS=0
-for arg in "$@"; do
-  case "$arg" in
-    --allow-no-checks) ALLOW_NO_CHECKS=1;;
+ROOT_OVERRIDE=""
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --allow-no-checks) ALLOW_NO_CHECKS=1; shift;;
+    --root)
+      [[ -z "${2:-}" || "$2" == --* ]] && { echo "--root requires a value" >&2; exit 2; }
+      ROOT_OVERRIDE="$2"; shift 2;;
     -h|--help) sed -n '2,/^set -uo/p' "$0" | sed '$d' | sed 's/^# //'; exit 0;;
-    *) echo "Unknown arg: $arg" >&2; exit 2;;
+    *) echo "Unknown arg: $1" >&2; exit 2;;
   esac
 done
+
+if [[ -n "$ROOT_OVERRIDE" ]]; then
+  ROOT="$ROOT_OVERRIDE"
+else
+  ROOT="$(find_project_root)"
+fi
+cd "$ROOT"
+echo "[gate] root: $ROOT" >&2
 
 ok=1
 attempted=0

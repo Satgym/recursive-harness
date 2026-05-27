@@ -110,6 +110,24 @@ BASE="${BASE:-$(read_config git.base_branch main)}"
 MODEL="$(read_config models.review)"
 EFFORT="$(read_config reasoning.review high)"
 
+# v1.8 r1 #7 — early-error BEFORE pre-review-gate. codex CLI 0.132+ rejects
+# `--uncommitted/--commit/--base` combined with PROMPT positional, so any
+# call passing --prompt-file with one of those flags will fail later. We
+# detect that up front so the user doesn't wait for a full test suite to
+# discover an argument-shape error.
+if [[ -n "$PROMPT_FILE" ]]; then
+  if [[ $UNCOMMITTED -eq 1 || -n "$COMMIT" ]] || [[ $UNCOMMITTED -ne 1 && -z "$COMMIT" ]]; then
+    # --base path always set (has default); detect only when user explicitly
+    # combined --prompt-file with a diff flag they passed in.
+    if [[ $UNCOMMITTED -eq 1 || -n "$COMMIT" ]]; then
+      echo "[codex-review] ERROR: codex CLI 0.132+ rejects custom prompt with --uncommitted/--commit/--base." >&2
+      echo "[codex-review] Use 'scripts/codex-bundle-review.sh --prompt-file $PROMPT_FILE ...' for bundle review with custom prompt," >&2
+      echo "[codex-review] or rerun this command without --prompt-file to use the default diff-review instructions." >&2
+      exit 4
+    fi
+  fi
+fi
+
 # --- pre-review gate (HC-1, §5.4) — invoke sibling from harness scripts dir (F27) ---
 if [[ $SKIP_GATE -eq 0 && -x "$SCRIPT_DIR/pre-review-gate.sh" ]]; then
   echo "[codex-review] running pre-review-gate..." >&2
@@ -147,13 +165,22 @@ mkdir -p "$DEST_DIR"
 DEST="$DEST_DIR/${PHASE:+${PHASE}-}${DATE}-${SLUG}.md"
 
 # --- invoke + capture ---
+# (CLI-incompat check moved earlier — see v1.8 r1 #7.)
+USES_DIFF_FLAG=0
+case " ${CMD[*]} " in *" --uncommitted "*|*" --commit "*|*" --base "*) USES_DIFF_FLAG=1;; esac
+
 INVOKED_AT="$(date -u +%Y-%m-%dT%H:%M)"
 echo "[codex-review] cmd: ${CMD[*]}" >&2
 echo "[codex-review] dest: $DEST" >&2
 
 RAW="$(mktemp -t codex-review.XXXXXX)"
 trap 'rm -f "$RAW"' EXIT
-"${CMD[@]}" "$PROMPT" 2>&1 | tee "$RAW"
+if [[ $USES_DIFF_FLAG -eq 1 ]]; then
+  # No prompt — codex review uses its default instructions.
+  "${CMD[@]}" 2>&1 | tee "$RAW"
+else
+  "${CMD[@]}" "$PROMPT" 2>&1 | tee "$RAW"
+fi
 
 # --- post-process with rich metadata (F20) ---
 PP_ARGS=()

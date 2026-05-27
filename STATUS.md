@@ -8,36 +8,28 @@
 | 항목 | 값 |
 |---|---|
 | Project | 하니스 자체 빌드 (메타 부트스트랩) |
-| Phase | **starpin v0.6.0 SHIPPED** — data-ingest-ready (Python ingest worker + Node loader + ADR-002 Gate A closed; 2 codex review rounds, 9 findings → 0 open) |
-| Active sub-phase | (대기) — v0.7 direction 사용자 선택 (sentinel→NULL migration, content_manifest split, object_aliases, planet_positions, native mobile, deploy) |
+| Phase | **Hara v1.8 SHIPPED** — minimize + hook (HARNESS.md 559→185줄, .githooks/ enforce HC-6/HC-11, 11 codex findings → 0 open in r1+r2) |
+| Active sub-phase | (대기) — v0.7 starpin (native/deploy) vs v1.9 하니스 carry vs 별도 ask |
 | Strictness | autonomous |
-| Harness version | v1.7 (F126 carry — `gen_eslint_lock` Layer 3 `allowImportNames`); no new harness patches this round |
-| Git | main; v0.6 examples/ stays local per push policy (gitignored) — only root STATUS/RELEASE references the ship |
-| Last updated | 2026-05-27 by Claude (v0.6 ingest round — Python worker + Node loader + ADR-002 Gate A; 231 tests; 9 codex findings closed) |
+| Harness version | **v1.8 (minimize + hook)** — HARNESS.md 559→185 (66% 감소), PATTERNS.md + FLEET.md 분리, `.githooks/{pre-commit,commit-msg,pre-push}` enforce critical gates, HC-11 (Codex-Cadence) 신설, P0 3 bug fixes |
+| Git | main + origin; v1.8 ship 진행 중 (이 commit에서) |
+| Last updated | 2026-05-27 by Claude (v1.8 minimize+hook round — meta-review codex 트리거 ADR-013) |
 
 ## Active gate
 
-- **Gate**: 사용자 ask 대기 — v0.7 direction 선택
-- **starpin v0.6 status**: ingest worker (Python 3.12 in Docker — astropy/astroquery + pyarrow) + Node loader + ADR-002 Gate A real checksum (`d2f9de0...`); 20 suites / 231 tests pass; lint+typecheck clean; end-to-end DB load smoke 646 rows
-- **Hara v1.7 status**: no new harness patches this round; v0.6 was purely project-level evolution
+- (none — v1.8 ship 직전 STATUS 갱신)
 
-## Required reads (이 세션 시작 시)
+## Required reads (세션 시작 시)
 
-1. `HARNESS.md` v1.5+ (~580줄; v1.6 cleanup adjustments)
-2. `STATUS.md` (본 파일)
-3. `DECISIONS.md` (ADR-001~007 summary table; ADR-008~012 full)
-4. `CLAUDE.md` / `AGENTS.md`
-5. `INBOX/` (현재 0 unread)
-6. (project work 시) `examples/<project>/.harness/status.md` + `capabilities.md` + 모든 active local skills (v1.6 M3 — SUBTREE-PROMPT enforces)
+1. [HARNESS.md](HARNESS.md) v1.8 (185줄, must-read)
+2. [STATUS.md](STATUS.md) (본 파일)
+3. [DECISIONS.md](DECISIONS.md) (최근 ADR-013)
+4. `ls INBOX/` (codex 피드백 unread 확인)
+5. [CLAUDE.md](CLAUDE.md) / [AGENTS.md](AGENTS.md)
 
-## Required reads (이 세션 시작 시)
+**참조용 (문제 발생 / 패턴 확인)**: [PATTERNS.md](PATTERNS.md), [FLEET.md](FLEET.md)
 
-1. `HARNESS.md` v1.0 (→ v1.1 작성 중)
-2. `STATUS.md` (본 파일)
-3. `DECISIONS.md` (최근 ADR-008 ~ ADR-010 작성 중)
-4. `CLAUDE.md` / `AGENTS.md`
-5. `INBOX/` (현재 0 unread)
-6. (Fleet Mode 작업 중) `phases/02-module-plan.md` + `phases/05-integration.md` (amend 대상)
+**Hook 설치 (clone 1회)**: `git config core.hooksPath .githooks` — pre-commit + commit-msg + pre-push가 HC-6/HC-11 자동 enforce.
 
 ## Approved artifacts
 

@@ -41,8 +41,32 @@ def extract_review_body(raw: str) -> str:
     codex_marks = list(re.finditer(r"\ncodex\n", raw))
     if codex_marks and end > 0:
         start = codex_marks[-1].end()
-        return raw[start:end].rstrip()
-    return raw.rstrip()
+        body = raw[start:end].rstrip()
+    else:
+        body = raw.rstrip()
+    return _strip_leading_frontmatter(body)
+
+
+def _strip_leading_frontmatter(body: str) -> str:
+    """
+    v1.8 (F128) — codex sometimes wraps its review with its *own* YAML
+    frontmatter (since the prompt asked for REVIEW.template.md format which
+    starts with `---`). build_front_matter() then prepends another wrapper,
+    producing two consecutive YAML blocks in the saved file — flagged by
+    meta-review codex Q2.3. Strip the inner one here so postprocess output
+    has exactly one canonical frontmatter (built from invocation metadata).
+    """
+    stripped = body.lstrip()
+    if not stripped.startswith("---\n"):
+        return body
+    # Find the closing `\n---\n` of the leading frontmatter block.
+    after_open = stripped[4:]
+    close_match = re.search(r"\n---\n", after_open)
+    if not close_match:
+        return body  # malformed; leave alone
+    inner_end = 4 + close_match.end()
+    leading_space = body[: len(body) - len(stripped)]
+    return leading_space + stripped[inner_end:].lstrip("\n")
 
 
 def extract_tokens(raw: str) -> str:

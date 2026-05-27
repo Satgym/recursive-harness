@@ -18,6 +18,82 @@
 
 ---
 
+## ADR-013 — Hara v1.8 minimize + hook (rule doc cut + git hook enforcement)
+
+**Date**: 2026-05-27 · **Status**: accepted (user-directed 2026-05-27 "치명적인 문제가 발생하지 않을 점들에 대해서는 최대한 줄이고, 정말 중요한 로직과 치명적인 버그를 막는 구조만 유지 + 훅 활용")
+
+**References**:
+- `.harness/reviews/06-20260527-meta-harness-usage-gap-r1.md` (codex meta-review, 205k tokens)
+- HARNESS.md v1.7 (559줄) → v1.8 (185줄)
+- PATTERNS.md / FLEET.md (신설 — cut content 분리)
+- `.githooks/{pre-commit,commit-msg,pre-push,README.md}` (신설)
+- `scripts/codex-bundle-review.sh` (신설 — bundle review formal path)
+
+**Context**:
+v0.5 + v0.6 dogfood 회고 (codex + self-review)에서 일관된 패턴 surfaced — 하니스 표면적의 ~40%만 실제 사용, 60%는 spec-only / bypassed. 내가 놓친 7건 (codex가 catch한)이 모두 "문서에 있지만 안 읽음" 패턴 (pre-review-gate root, STATUS 내부 모순, Fleet worktree spec drift 등). 추가 구조를 11개 신규 제안한 것이 *정확히 이 악순환의 다음 사이클*임을 사용자가 지적.
+
+**Decision**: Hara v1.8 — 두 축으로 amend.
+
+### A. Minimize (cut HARNESS.md 565→185줄, 66% 감소)
+
+1. **HARNESS.md 재작성** — must-read content만 유지. 구체 cut:
+   - §6.3-6.4 Postmortem 상세 → PATTERNS.md
+   - §11 Dispute protocol (24줄) → PATTERNS.md (v0.5/v0.6 dogfood에서 0회 invoke)
+   - §13.5-13.7 Adaptive 상세 → PATTERNS.md
+   - §14 Fleet Mode 본문 160줄 → FLEET.md
+   - §5.2 Codex 모델 spec 상세 → PATTERNS.md
+2. **PATTERNS.md 신설** (205줄) — reference 자료. 문제 발생 시만 read
+3. **FLEET.md 신설** (162줄) — Fleet 작업 시만 read (split / child / merge)
+4. **CLAUDE.md 갱신** — read 순서 명확화 (must vs reference 분리)
+
+원본 559줄 → must-read 185줄 → 상시 read 부담 -66%.
+
+### B. Hook enforcement (.githooks/ 신설)
+
+5. **pre-commit**: 
+   - RELEASE.md staged → STATUS.md 동시 staged 강제 (v0.6 r2 #21 패턴 자동 차단)
+   - capability_candidates 자동 수집 (reviews/merge-reports에서 `capability_candidate: yes` grep → `.harness/capability-candidates.md` append, 자동 staging)
+   - 베스트-에포트 typecheck (`npx tsc --noEmit`)
+6. **commit-msg**:
+   - ship-style 커밋 (`code|harness|note(...vN.N.N)`)에 직전 10개 안에 `wip(` 잔존 시 차단
+7. **pre-push**:
+   - ship-style 커밋 push 시 직전 20개 안에 `.harness/reviews/*.md` 신규 추가 부재면 차단 (HC-11 자동 enforce)
+8. **설치 안내**: `git config core.hooksPath .githooks` (clone 1회). README 별도
+
+### C. 보조 (Wave 1 P0 bug fixes)
+
+9. **`scripts/pre-review-gate.sh`** — root detection을 git toplevel → nearest `.harness/` ancestor + `--root` 옵션 (F127). monorepo case에서 harness self-checks가 잘못 실행되던 버그 해결.
+10. **`scripts/_codex_postprocess.py`** — body의 leading `---...---` YAML 블록을 strip하여 outer frontmatter와 중복 방지 (F128). machine-readability 회복.
+11. **`scripts/codex-bundle-review.sh`** 신설 — bundle review (실제 dogfood path)를 formal 지원. `codex-exec-review.sh`의 alias이지만 의도 명시.
+12. **`scripts/codex-review.sh`** — codex CLI 0.132+ 호환성 fix. `--uncommitted/--commit/--base` + custom prompt 조합 시 early-error + bundle-review 안내 (F129).
+
+### D. 신규 HC (Hard Constraint)
+
+- **HC-11 Codex-Cadence**: ship-style 커밋은 r1+r2 codex 리뷰 통과 의무. pre-push hook이 enforce. 1-round ship 금지 — v0.4/v0.5/v0.6 dogfood data가 모두 r2까지 패치 필요 입증.
+
+**Consequences**:
+
+positive:
+- HARNESS.md 강제 read 의무 66% 감소 → 읽힐 확률 ↑
+- hook enforce → 에이전트 망각 / 컨텍스트 압박에 무관하게 critical gate 작동
+- codex finding이 catch한 7건 중 4건이 hook으로 자동 닫힘 (HC-6/HC-11/capability-collection/WIP-residue)
+- bundle review가 공식 path로 promote — codex CLI 0.132 호환성 회복
+
+negative:
+- 첫 clone 후 `git config core.hooksPath .githooks` 수동 실행 의무 (one-time)
+- hook `--no-verify` bypass 가능 — 사용자 명시 승인 필요 (CLAUDE.md 명시)
+- PATTERNS.md/FLEET.md 분리로 문제 발생 시 어디 보는지 학습 필요 (HARNESS.md §11이 가이드)
+
+후속:
+- v1.9 carry: phases/ roles/ templates/ skills/ 디렉토리 full audit (현재는 spot trim만)
+- v1.9 carry: shared-findings broadcast (FLEET.md §11에 명시)
+- v1.9 carry: collect_merge_reports.py + 자동화
+- v1.9 carry: review-rerun-prompt template (4회 ad-hoc 작성한 패턴)
+
+**Approval**: user · 2026-05-27 · autonomous (사용자가 P0+P1+P2 전면 채택 선택)
+
+---
+
 ## ADR-012 — Hara v1.3 AST-level lock enforcement + Strategy helper scripts 실 구현
 
 **Date**: 2026-05-27 · **Status**: accepted (user-delegated 2026-05-27 — "자체적으로 계속 최선의 진행방향으로 발전")

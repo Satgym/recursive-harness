@@ -7,15 +7,16 @@
 | 항목 | 값 |
 |---|---|
 | Project | Hara 메타 부트스트랩 (이 레포) + starpin dogfood (`examples/starpin/`) |
-| Harness version | **v1.9** (HC-12 신설) — v2.0 trim pass 진행 중 |
-| Last ship | (pending) note(starpin-v0.12.0) — planet interactivity (click + a11y list). codex r1+r2 both ship/0 findings. Earlier: `3bf567c` harness(v2.0.0). |
-| Strictness | autonomous (사용자 sleep delegation) |
-| Last updated | 2026-05-27 by Claude |
+| Harness version | **v2.0** (trim discipline) |
+| Last ship | `4e0c71d` note(starpin-v0.12.0) — planet interactivity. 야간 작업 5 ship 완료 (Hara v1.9/v2.0 + starpin v0.10/v0.11/v0.12). |
+| Strictness | autonomous (사용자 sleep delegation; 마무리 상태) |
+| Last updated | 2026-05-27 by Claude (sleep-delegation session 완료) |
 
 ## Active gate
 
-- starpin v0.12 ship 직전 — codex r1 (ship/0 findings) + r2 (ship/0 findings) closed. HC-12 smoke green.
+- (none) — 야간 자율 작업 모두 ship 완료. 사용자 wake-up 핸드오프 대기.
 - Open findings: 0. INBOX: 0 unread.
+- HC-12 evidence: `examples/starpin/.harness/runs/e2e-20260527-login-smoke.json` (pass, 모든 ship 직전 갱신).
 
 ## Required reads (세션 시작 시)
 
@@ -29,14 +30,15 @@
 
 **Hook 설치** (clone 1회): `git config core.hooksPath .githooks` — HC-6/HC-11/HC-12 자동 enforce.
 
-## Recent ships
+## Recent ships (이번 sleep-delegation session)
 
 | commit | scope | 내용 |
 |---|---|---|
-| 9f23d2a | note(starpin-v0.11.0) | nickname-setup + planet overlay (codex r2 minor-followup) |
-| 74391d5 | harness(v1.9.0) + starpin v0.10 | HC-12 신설 + Mock OAuth/route 누락 fix |
-| d529e3f | note(starpin-v0.9.0) | HD namespace + sky planet API |
-| (older) | — | git log; ADR-001~ADR-018은 DECISIONS.md |
+| 4e0c71d | note(starpin-v0.12.0) | planet interactivity — click + a11y list buttons (ADR-021, codex r1+r2 ship/0) |
+| 3bf567c | harness(v2.0.0) | trim discipline — STATUS −73% / HARNESS HC-12 row + version history 압축 (ADR-020) |
+| 9f23d2a | note(starpin-v0.11.0) | nickname-setup + planet overlay (ADR-019, codex r2 minor-followup) |
+| 74391d5 | harness(v1.9.0) + starpin v0.10 | HC-12 신설 + Mock OAuth/route 누락 fix (ADR-017/018) |
+| (older) | — | git log; ADR-001~ADR-016은 DECISIONS.md |
 
 ## Open findings
 

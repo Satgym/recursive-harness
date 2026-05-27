@@ -40,6 +40,56 @@ from collections import defaultdict
 from pathlib import Path
 
 
+def parse_owned_paths(locked_iface_path: Path) -> tuple[list[str], list[str]]:
+    """
+    F121 v1.4 patch — parse `## File ownership` section of locked-interface to extract
+    the *actual* writable paths (real projects don't always have `src/<child>/` layout).
+
+    Returns (file_globs, test_globs) for ESLint `files:` pattern.
+    Falls back to `src/<child>/**/*.ts` if section missing.
+    """
+    content = locked_iface_path.read_text(encoding="utf-8")
+    m = re.search(r"##\s+File ownership[^\n]*\n(.*?)(?=\n##\s|\Z)", content, re.DOTALL)
+    if m is None:
+        return [], []
+    section = m.group(1)
+    files: list[str] = []
+    tests: list[str] = []
+    # Match `쓰기...: <path1>, <path2>, ...` or bullet list `- <path>` or backticks
+    # Strategy: extract all backtick-quoted paths in the "쓰기" (write) bullet
+    write_match = re.search(r"\b쓰기[^:]*[::]([^\n]*(?:\n\s+[^\n]+)*)", section)
+    if not write_match:
+        # Also support English "Write" / "writable"
+        write_match = re.search(r"\b[Ww]rit[a-z]*[^:]*[::]([^\n]*(?:\n\s+[^\n]+)*)", section)
+    if write_match:
+        write_block = write_match.group(1)
+        # Extract backtick paths
+        for path_m in re.finditer(r"`([^`]+)`", write_block):
+            p = path_m.group(1).strip()
+            # Skip non-path entries like merge-report.md within .harness/
+            if p.startswith(".harness/") or p.endswith(".md"):
+                continue
+            # Categorize: tests/ → test, else → src
+            if "tests/" in p or p.startswith("test"):
+                # Path may be a file or dir; ESLint pattern needs glob
+                if p.endswith(".ts"):
+                    tests.append(p)
+                elif p.endswith("/") or "*" not in p:
+                    tests.append(f"{p.rstrip('/')}/**/*.ts")
+                else:
+                    tests.append(p)
+            elif p.endswith(".ts"):
+                files.append(p)
+            elif p.endswith(".sql") or p.endswith(".yml") or p.endswith(".yaml") or p.endswith(".sh"):
+                # Non-ts files — skip ESLint (it only lints .ts)
+                continue
+            elif p.endswith("/") or "*" not in p:
+                files.append(f"{p.rstrip('/')}/**/*.ts")
+            else:
+                files.append(p)
+    return files, tests
+
+
 def parse_runtime_allowlist(locked_iface_path: Path) -> dict[str, list[str]]:
     """
     Parse `## Consumed interface` section. Look for `import { ... } from '...';` lines
@@ -81,29 +131,43 @@ def parse_runtime_allowlist(locked_iface_path: Path) -> dict[str, list[str]]:
     return dict(allowlist)
 
 
-def find_all_provider_modules(split_decision_path: Path) -> dict[str, list[str]]:
+def discover_child_lockfiles(split_decision_path: Path) -> dict[str, Path]:
     """
-    Discover all provider modules a child *might* import (across all locked-interfaces
-    in the same project). Used to deny ALL imports of non-listed providers too.
+    F120 v1.4 patch — recursive discovery of all `locked-interface.md` under
+    `.harness/subtrees/`. Supports nested round prefixes (e.g. `subtrees/v02/<child>/`)
+    used by long-lived projects with multiple Fleet rounds.
 
-    Returns {provider_module_path: [exported_method_names]} — for emitting `restrictedImports`
-    on the entire module (when consumer didn't list it at all).
+    Returns {child_name: locked_interface_path}.
+    Child name = parent directory name of the locked-interface.md.
     """
-    project_root = split_decision_path.parents[2]  # .harness/decisions/X.md → project root
+    project_root = split_decision_path.parents[2]
     subtrees_dir = project_root / ".harness" / "subtrees"
     if not subtrees_dir.exists():
         return {}
 
+    children: dict[str, Path] = {}
+    for li in subtrees_dir.rglob("locked-interface.md"):
+        child_name = li.parent.name
+        # Round prefix (e.g. 'v02') itself shouldn't be a child — skip directories that contain
+        # only sub-subtrees, no locked-interface.md
+        if child_name in children:
+            # Duplicate name across rounds — collision; prefer most-recent-modified
+            existing = children[child_name]
+            if li.stat().st_mtime > existing.stat().st_mtime:
+                children[child_name] = li
+        else:
+            children[child_name] = li
+    return children
+
+
+def find_all_provider_modules(split_decision_path: Path) -> dict[str, list[str]]:
+    """
+    Discover all provider modules a child *might* import (across all locked-interfaces).
+    Returns {provider_module_path: [exported_method_names]}.
+    """
     providers: dict[str, list[str]] = {}
-    for child_dir in subtrees_dir.iterdir():
-        if not child_dir.is_dir():
-            continue
-        li = child_dir / "locked-interface.md"
-        if not li.exists():
-            continue
-        # Module path the provider exposes
-        provider_module = f"../{child_dir.name}/index.js"
-        # Extract exported function names from `## Public interface`
+    for child_name, li in discover_child_lockfiles(split_decision_path).items():
+        provider_module = f"../{child_name}/index.js"
         content = li.read_text(encoding="utf-8")
         m = re.search(
             r"##\s+Public interface[^\n]*\n.*?```ts\n(.*?)\n```",
@@ -117,14 +181,16 @@ def find_all_provider_modules(split_decision_path: Path) -> dict[str, list[str]]
 
 
 def child_names(split_decision_path: Path) -> list[str]:
-    project_root = split_decision_path.parents[2]
-    subtrees_dir = project_root / ".harness" / "subtrees"
-    if not subtrees_dir.exists():
-        return []
-    return sorted([d.name for d in subtrees_dir.iterdir() if d.is_dir() and (d / "locked-interface.md").exists()])
+    return sorted(discover_child_lockfiles(split_decision_path).keys())
 
 
-def build_eslint_flat_config(child: str, allowlist: dict[str, list[str]], all_providers: dict[str, list[str]]) -> str:
+def build_eslint_flat_config(
+    child: str,
+    allowlist: dict[str, list[str]],
+    all_providers: dict[str, list[str]],
+    owned_src_globs: list[str] | None = None,
+    owned_test_globs: list[str] | None = None,
+) -> str:
     """
     Emit ESLint v9+ flat config (eslint.config.<child>.mjs) — F110 v1.3 codex patch:
     **fail-closed** approach.
@@ -186,17 +252,23 @@ def build_eslint_flat_config(child: str, allowlist: dict[str, list[str]], all_pr
     paths_indented = "\n".join("        " + ln for ln in paths_json.splitlines())
     patterns_indented = "\n".join("        " + ln for ln in patterns_json.splitlines())
 
-    return f"""// AUTO-GENERATED by scripts/fleet/gen_eslint_lock.py (Fleet F102 v1.3 + F110 fail-closed)
-// source: .harness/subtrees/{child}/locked-interface.md
+    # F121 v1.4 — use owned_paths from locked-interface, fallback to src/<child>/**
+    src_globs = owned_src_globs if owned_src_globs else [f"src/{child}/**/*.ts"]
+    test_globs = owned_test_globs if owned_test_globs else [f"tests/{child}/**/*.ts"]
+    all_globs = src_globs + test_globs
+    files_str = json.dumps(all_globs)
+
+    return f"""// AUTO-GENERATED by scripts/fleet/gen_eslint_lock.py (Fleet F102 v1.3 + F110 fail-closed + F121 v1.4 owned-paths)
+// child: {child}
 // Layer 1 (patterns): blocks sibling internal paths (../<provider>/store.js etc.)
 // Layer 2 (paths):    on ../<provider>/index.js, denies named imports outside allowlist
-// Limitation (v1.4 후보): export const/class + re-export barrel + namespace import partial
+// Limitation (v1.4+ 후보): export const/class + re-export barrel + namespace import partial
 
 import tsParser from '@typescript-eslint/parser';
 
 export default [
   {{
-    files: ['src/{child}/**/*.ts', 'tests/{child}/**/*.ts'],
+    files: {files_str},
     languageOptions: {{
       parser: tsParser,
       parserOptions: {{ ecmaVersion: 2023, sourceType: 'module' }},
@@ -230,13 +302,20 @@ def main() -> int:
     if not children:
         raise SystemExit(f"FAIL: no children found under {project_root}/.harness/subtrees/")
 
-    for child in children:
-        li_path = project_root / ".harness" / "subtrees" / child / "locked-interface.md"
+    # F120 v1.4 — use recursive discovery (supports nested round prefixes)
+    li_map = discover_child_lockfiles(args.adr)
+    for child, li_path in sorted(li_map.items()):
         allowlist = parse_runtime_allowlist(li_path)
-        config_text = build_eslint_flat_config(child, allowlist, all_providers)
+        # F121 v1.4 — parse owned paths from locked-interface
+        src_globs, test_globs = parse_owned_paths(li_path)
+        config_text = build_eslint_flat_config(
+            child, allowlist, all_providers,
+            owned_src_globs=src_globs or None,
+            owned_test_globs=test_globs or None,
+        )
         out = out_dir / f"eslint.config.{child}.mjs"
         out.write_text(config_text, encoding="utf-8")
-        print(f"[gen_eslint_lock] wrote {out}")
+        print(f"[gen_eslint_lock] wrote {out} (src globs: {src_globs or '[fallback]'}, test globs: {test_globs or '[fallback]'})")
     return 0
 
 

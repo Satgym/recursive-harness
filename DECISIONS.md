@@ -20,7 +20,7 @@
 
 ## ADR-012 — Hara v1.3 AST-level lock enforcement + Strategy helper scripts 실 구현
 
-**Date**: 2026-05-27 · **Status**: proposed
+**Date**: 2026-05-27 · **Status**: accepted (user-delegated 2026-05-27 — "자체적으로 계속 최선의 진행방향으로 발전")
 **References**:
 - HARNESS.md §14.8 promote (grep → AST primary, ESLint flat config `no-restricted-imports`)
 - HARNESS.md §14.9 strategy a/b/c helper script *실 구현* 명시

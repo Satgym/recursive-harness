@@ -8,18 +8,21 @@
 | 항목 | 값 |
 |---|---|
 | Project | 하니스 자체 빌드 (메타 부트스트랩) |
-| Phase | **v1.3 AST lock + Strategy helper scripts (proposed, 사용자 승인 대기)** |
-| Active sub-phase | 4 helper script 실 구현 + ESLint AST primary lock + codex 2 blocker + 5 major + 1 minor 모두 patched |
-| Strictness | autonomous-within-fleet-dogfood-delegation |
-| Harness version | v1.2 → **v1.3 작성 완료, 승인 대기** |
-| Git | main; v1.2 acceptance commit `be8c5e5` (이 위에 v1.3 작업) |
-| Last updated | 2026-05-27 by Claude (autonomous v1.3 + AST lock + helper scripts + F110~F117 patches) |
+| Phase | **starpin v0.2.0 SHIPPED** (Hara v1.3 real-product validation) |
+| Active sub-phase | (대기) — v1.5 trigger F122 (parent module reach-around lock) 또는 starpin v0.3 |
+| Strictness | autonomous-within-delegation |
+| Harness version | **v1.3** + v1.4 inflight (F120/F121 applied; F122 v1.5 carry-over) |
+| Git | main; v1.3 commit `b71324d` + 본 round commits 추가 |
+| Last updated | 2026-05-27 by Claude (starpin v0.2.0 SHIPPED — 16 suites/177 pass; codex 2 blocker + 4 major + 1 minor 모두 closed) |
 
 ## Active gate
 
-- **Gate**: v1.3 사용자 승인 → commit + ADR-012 status → accepted
-- **Blocked on**: 사용자 승인
-- **Approval needed**: yes (v1.3 — §14.8 promote AST primary + 4 helper scripts + lock-eslint-gen skill + esm-jest-pattern seed + mid-work escalation + codex 대체 heuristic + F110~F117 patches)
+- (none — starpin v0.2.0 + Hara v1.3 ship 완료)
+
+### v1.4 patches inflight (실 dogfood가 노출)
+- **F120** (resolved): gen_eslint_lock nested subtree path 미지원 — `discover_child_lockfiles()` rglob recursive 적용
+- **F121** (resolved): `src/<child>/**` hard-coded path — locked-interface `## File ownership` 섹션에서 `parse_owned_paths()` 추출
+- **F122** (open, v1.5 carry-over): ESLint lock이 stable parent module (catalog/service.js 등) reach-around 미차단 — `consumed_stable_modules` field 신설 + helper enhancement 필요
 
 ## Required reads (이 세션 시작 시)
 

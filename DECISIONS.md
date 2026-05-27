@@ -18,6 +18,46 @@
 
 ---
 
+## ADR-019 — starpin v0.11 nickname-setup screen + planet ephemeris overlay
+
+**Date**: 2026-05-27 · **Status**: accepted (autonomous, sleep delegation)
+
+**Context**: v0.10 unblocked the login flow but routed fresh signups to `/sky.html` with a placeholder nickname (`user-<id-prefix>`). v0.11 finishes the first-run UX by giving new users a real name-picker, and lands the long-pending JPL Horizons planet overlay on `sky.html` (route existed since v0.9 but was never rendered).
+
+**Decision**:
+
+### A. Nickname-setup screen
+- `backend/src/routes/user-routes.ts` (NEW) — `POST /v1/user/nickname` auth-gated:
+  - 1–30 visible chars after trim, no control chars (U+0000–U+001F, U+007F), no leading/trailing whitespace
+  - 23505 unique_violation → `409 nickname_taken` (via existing `users_nickname_unique` constraint on `nickname_normalized` generated column — case-insensitive)
+  - 200 returns `{ nickname }` on success
+- `backend/public/nickname.html` + `lib/nickname.ts` (NEW) — CSP-safe module, posts then `saveSession` → `/sky.html`
+- `auth-client.ts::handleCallback` — routes by `hasRealNickname`: real name → `/sky.html`, placeholder → `/nickname.html`
+- 7 unit tests covering 401 / 400 (missing / length / whitespace) / 409 / 200 paths
+
+### B. Planet ephemeris overlay
+- `sky-canvas.ts` — `fetchPlanets()` + `renderPlanets()` (amber `#fbb142`, fixed 5px radius — planets ignore mag scale) + `renderPlanetList()` (a11y list, INV-XSS via `textContent`)
+- `sky.html` — new `<section class="sky-planet-section">` hosting `<aside id="planet-list">` with `aria-live="polite"`
+- `bootstrapSkyPage` — planet fetch is **non-blocking**: failure surfaces softly via `showError`, viewport rendering continues. Keeps existing star functionality independent of planet ephemeris freshness.
+
+### C. HC-12 smoke extension
+- `login-smoke.spec.ts` — added `expect(page.locator('#planet-list')).toBeAttached()` assertion. Catches contract drift (renderPlanetList target removed / fetchPlanets throwing pre-render) without coupling to ephemeris content which legitimately varies.
+
+**Validation**: 288 unit tests pass (+9 nickname incl. r2 contract tests); E2E smoke pass. Evidence: `.harness/runs/e2e-20260527-login-smoke.json`.
+
+**Codex review**: r1 (`04-20260527-starpin-v11.md`) found STATUS gate inconsistency — closed pre-ship. r2 (`04-20260527-starpin-v11-r2.md`) verdict: **minor-followup, ship can proceed**. r2 minor findings closed before ship:
+- r2 #1: raw whitespace check (was trimming first, contradicting "no leading/trailing whitespace" contract)
+- r2 #2: `e.constraint === 'users_nickname_unique'` precision (prevents other 23505 from masquerading as nickname_taken)
+
+**Consequences**:
+- First-run UX is now coherent: login → pick name → see sky with planets
+- `users.nickname_normalized` generated column carries the uniqueness invariant (DB-enforced) — application code does not need to re-implement case folding
+- Planet rendering is additive: stable, non-blocking, degrades gracefully
+
+**Approval**: user · 2026-05-27 · autonomous (sleep delegation; HC-11 carveout via `note(starpin-v0.11.0)` form for gitignored sub-project)
+
+---
+
 ## ADR-018 — starpin v0.10 login flow fix (Mock OAuth + nickname tolerance)
 
 **Date**: 2026-05-27 · **Status**: accepted (user-directed "하니스 강화 후 UI/UX 검증")

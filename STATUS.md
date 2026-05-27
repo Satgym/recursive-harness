@@ -8,18 +8,17 @@
 | 항목 | 값 |
 |---|---|
 | Project | 하니스 자체 빌드 (메타 부트스트랩) |
-| Phase | **Hara v1.9 + starpin v0.10 SHIPPED** — HC-12 User-Flow-Verified (Playwright E2E smoke gate) + login flow fix (Mock OAuth + nickname + `/v1/catalog/viewport` route 누락) — 모두 HC-12 dogfood로 발견된 v0.5~v0.9 누적 silent breakage |
-| Active sub-phase | (자율 작업 진행 중) — Wave B+ starpin 구현 확장 (multi-flow E2E + nickname-setup + sky planet 통합) |
+| Phase | **starpin v0.11 ship 준비** — nickname-setup screen (`POST /v1/user/nickname` + `nickname.html`) + JPL Horizons planet overlay on `sky.html`. HC-12 smoke 확장 (planet-list assertion) 통과 |
+| Active sub-phase | Wave B finishing: ADR-019 written, codex r1+r2 다음. 이후 Wave C는 Hara v2.0 trim pass (user meta-direction) |
 | Strictness | autonomous (사용자 잘 자는 시간 자율 위임) |
-| Harness version | **v1.9 (HC-12 신설)** — `STARPIN_ENABLE_MOCK_OAUTH` env gate, JSON evidence parse, response.status check, version label bump |
-| Git | main + origin; v1.9 ship 진행 |
-| Last updated | 2026-05-27 by Claude (Hara v1.9 HC-12 + starpin v0.10 login fix + missing /v1/catalog/viewport route) |
+| Harness version | v1.9 (HC-12 신설) — 변경 없음 |
+| Git | main + origin; v0.11 ship 준비 중 (HC-11 carveout: `note(starpin-v0.11.0)`) |
+| Last updated | 2026-05-27 by Claude (v0.11 nickname + planet overlay, ADR-019, smoke green) |
 
 ## Active gate
 
-- (none — v1.9 + v0.10 ship 직전 STATUS 갱신)
-- **HC-12 검증 결과**: smoke가 v0.5~v0.9에서 1번도 작동 안 했던 login 흐름 즉시 catch. 또한 tightened response.status check가 `/v1/catalog/viewport` route 부재 (5 round silent) 발견. Gate가 실제로 작동.
-- **Codex r2 결과**: r1 7건 모두 closed + r2 #8 (STATUS staleness, 이 갱신으로 closure) + r2 #9 minor docs (post-ship fix).
+- **starpin v0.11 ship 직전** — codex r1+r2 모두 closed. r1: control-byte + STATUS gate inconsistency 패치. r2 verdict: **minor-followup**, ship can proceed. r2 #1 (raw whitespace 검사) + #2 (constraint precision) 모두 패치 + 2 추가 unit test (288 pass / 3 skipped).
+- HC-12 evidence 갱신: `.harness/runs/e2e-20260527-login-smoke.json` (pass, planet-list assertion).
 
 ## Required reads (세션 시작 시)
 

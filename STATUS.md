@@ -8,18 +8,18 @@
 | 항목 | 값 |
 |---|---|
 | Project | 하니스 자체 빌드 (메타 부트스트랩) |
-| Phase | **Hara v1.6 cleanup round (proposed)** — codex meta-review B1~M12 + 2차 review B1+M2~M5 patches 적용 완료 |
-| Active sub-phase | (대기) — v0.5 starpin direction 또는 별도 ask |
-| Strictness | autonomous-within-delegation |
-| Harness version | **v1.5 → v1.6 cleanup (proposed)** — sibling-file F123 closure 진행 중; HARNESS body 565→~580 (honest 한계 추가); ADR-001~007 archive; m11/m12/m9 모두 적용 |
-| Git | main; cumulative — v0.2/v0.3/v0.4 commits + v1.6 commits pending |
-| Last updated | 2026-05-27 by Claude (v1.6 cleanup round — 2 codex reviews + patches; ledger 자동 갱신 작동) |
+| Phase | **starpin v0.5.0 SHIPPED** — web-demo byproduct (4 children + parent wiring + 2 codex review rounds, 12 findings → 0 open) |
+| Active sub-phase | (대기) — v0.6 direction 선택 (native mobile, ingest, deploy, or harness v1.7 maturation) |
+| Strictness | autonomous |
+| Harness version | **v1.7 (F126 added)** — `gen_eslint_lock.py` Layer 3에 `allowImportNames` 강제 추가 (consumed_stable_modules 명시된 named-import allowlist를 ESLint v9 paths rule로 lint-time 강제); v1.6 cleanup carry |
+| Git | main; v0.5.0 ship commit + Hara v1.7 commit pending |
+| Last updated | 2026-05-27 by Claude (v0.5 web-demo round 종료; codex r1 10건 + r2 2건 모두 closed) |
 
 ## Active gate
 
-- **Gate**: v1.6 cleanup 최종 commit 후 starpin v0.5 direction 선택
-- **codex meta-review closure** (1차): B1+B2+M3~M10+m11+m12 모두 적용
-- **codex v1.6 cleanup review closure** (2차): B1 (manifest path) + M2 (v03 retrofit) + M3 (dead ref) + M4 (root STATUS 본 update) + M5 (validator boundary) 모두 적용
+- **Gate**: 사용자 ask 대기 — v0.6 direction 선택
+- **starpin v0.5 status**: 4 children + parent wiring shipped; 19 suites / 227 tests pass; lint+typecheck clean; dev server smoke-tested (5 pages 200 + CSP/nosniff/referrer 검증)
+- **Hara v1.7 status**: F126 (ESLint named-import enforcement on stable siblings) shipped; v1.6 cleanup carry items applied
 
 ## Required reads (이 세션 시작 시)
 

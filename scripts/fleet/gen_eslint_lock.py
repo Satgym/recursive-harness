@@ -98,8 +98,9 @@ def parse_owned_paths(locked_iface_path: Path) -> tuple[list[str], list[str]]:
                     tests.append(p)
             elif p.endswith(".ts"):
                 files.append(p)
-            elif p.endswith(".sql") or p.endswith(".yml") or p.endswith(".yaml") or p.endswith(".sh"):
+            elif p.endswith((".sql", ".yml", ".yaml", ".sh", ".html", ".css", ".md", ".json")):
                 # Non-ts files — skip ESLint (it only lints .ts)
+                # v1.6 fix — added .html/.css/.md/.json (v0.5 web-demo found bad fallback)
                 continue
             elif p.endswith("/") or "*" not in p:
                 files.append(f"{p.rstrip('/')}/**/*.ts")
@@ -323,37 +324,65 @@ def build_eslint_flat_config(
                 "message": msg,
             })
 
-    # Layer 3 (F122 v1.5) — stable parent module internal-path block.
+    # Layer 3 (F122 v1.5 + F126 v1.7) — stable module internal-path block + named-import allowlist.
     #   locked-interface front-matter의 `consumed_stable_modules:` 명시 의무.
-    #   본 layer는 *internal path reach-around*만 차단:
-    #     - 명시된 module: ../catalog/service.js → ../catalog/* 다른 path 금지
-    #   *Named-import allowlist*는 ESLint `no-restricted-imports` 한계로 v1.6 후보
-    #   (custom @typescript-eslint rule 필요 — `restricted-imports` 단일 module에 allowlist 미지원).
-    #   현재 v1.5는 *partial mitigation* — internal repo/store 접근 차단만.
+    #   - internal path reach-around 차단 (../catalog/* deny except ../catalog/service.js 등)
+    #   - F126 (v1.7): allowed module path 위에서 `allowImportNames`로 named-import allowlist 강제.
+    #     ESLint v9 `no-restricted-imports` paths.allowImportNames는 v8.20+ 부터 지원 →
+    #     별도 custom rule 불필요. Same-dir (./shell.js) + cross-dir (../service.js) 모두 동일 처리.
     if stable_module_allowlist:
         for module_path, allowed_names in stable_module_allowlist.items():
-            # parent module의 디렉토리 추출 (예: ../catalog/service.js → catalog)
+            sorted_allowed = sorted(set(allowed_names))
+            # Cross-dir parent (../<dir>/...) → block internal paths via patterns rule.
             m_dir = re.match(r"\.\./([^/]+)/", module_path)
-            if not m_dir:
-                continue
-            parent_dir = m_dir.group(1)
-            patterns_rules.append({
-                "group": [f"../{parent_dir}/*", f"!{module_path}"],
-                "message": (
-                    f"Lock violation (Fleet F122 v1.5 — consumed_stable_modules): child '{child}' may not reach "
-                    f"into internal paths of stable parent '{parent_dir}' (only '{module_path}' permitted). "
-                    f"locked-interface §consumed_stable_modules allowlist: {sorted(allowed_names)}. "
-                    f"Named-import allowlist enforcement → codex review (v1.6 custom AST rule 후보)."
-                ),
-            })
+            if m_dir:
+                parent_dir = m_dir.group(1)
+                patterns_rules.append({
+                    "group": [f"../{parent_dir}/*", f"!{module_path}"],
+                    "message": (
+                        f"Lock violation (Fleet F122 v1.5 — consumed_stable_modules): child '{child}' "
+                        f"may not reach into internal paths of stable parent '{parent_dir}' "
+                        f"(only '{module_path}' permitted). "
+                        f"§consumed_stable_modules allowlist: {sorted_allowed}."
+                    ),
+                })
+            # Named-import enforcement (F126 v1.7): on the *allowed* path, only allowlist names.
+            #   Generate one paths rule per import-spelling variant the consumer may use
+            #   (`./shell.js` vs `./shell` etc.).
+            variants = {module_path}
+            if module_path.endswith(".js"):
+                variants.add(module_path[:-3])
+            allow_msg = (
+                f"Lock violation (Fleet F126 v1.7 — named-import allowlist): child '{child}' "
+                f"may import only {sorted_allowed} from '{module_path}'. "
+                f"See .harness/subtrees/{child}/locked-interface.md "
+                f"§consumed_stable_modules."
+            )
+            for v in sorted(variants):
+                paths_rules.append({
+                    "name": v,
+                    "allowImportNames": sorted_allowed,
+                    "message": allow_msg,
+                })
 
-    # Layer 4 (F123 v1.6 codex meta-review M5 closure) — same-directory sibling file deny
-    #   본 child의 public_module_path와 *같은 디렉토리에 있는 sibling children의 public file*들을
-    #   relative path (`./<sibling>.js`)로 deny. 같은 dir에 공존하는 OAuth providers 같은 케이스에서
-    #   `apple.ts`가 `./google.js` import를 차단.
+    # Layer 4 (F123 v1.6 + F125 v1.7 path-exempt + F126 v1.7 named-import enforce upstream) —
+    #   same-directory sibling file deny *with* allowlist exemption.
+    #   본 child의 public_module_path와 *같은 디렉토리에 있는 sibling children의 public file*을
+    #   relative path (`./<sibling>.js`)로 deny. 같은 dir에 공존하는 OAuth providers 같은 케이스.
+    #   consumed_stable_modules allowlist에 명시된 path는 *허용* (path exempt) — named-import allowlist는
+    #   Layer 3 (F126)에서 이미 paths rule + allowImportNames로 별도 강제.
     if public_module_path and sibling_public_paths:
         own_file = Path(public_module_path)
         own_dir = own_file.parent
+        # Build set of allowed sibling paths from consumed_stable_modules (relative + normalized)
+        allowed_sibling_paths: set[str] = set()
+        if stable_module_allowlist:
+            for module_path in stable_module_allowlist.keys():
+                # `./shell.js` 같은 path를 정규화
+                allowed_sibling_paths.add(module_path)
+                # `.js`-stripped variant도 (consumer가 그렇게 import 가능)
+                if module_path.endswith(".js"):
+                    allowed_sibling_paths.add(module_path[:-3])
         for sibling_path in sibling_public_paths:
             sibling = Path(sibling_path)
             if sibling == own_file:
@@ -363,12 +392,16 @@ def build_eslint_flat_config(
                 sibling_stem = sibling.stem
                 # Block both with-ext and without-ext + index variants
                 for rel in [f"./{sibling_stem}.js", f"./{sibling_stem}", f"./{sibling.name}"]:
+                    # F125 fix: skip if path is in allowed_sibling_paths
+                    if rel in allowed_sibling_paths:
+                        continue
                     patterns_rules.append({
                         "group": [rel],
                         "message": (
                             f"Lock violation (Fleet F123 v1.6 — same-dir sibling): child '{child}' "
                             f"may not import from sibling file '{rel}' (owned by another child). "
-                            f"Use external public module path or escalate as patch candidate."
+                            f"If this is a legitimate dependency, add to locked-interface "
+                            f"§consumed_stable_modules. Otherwise escalate as patch candidate."
                         ),
                     })
 

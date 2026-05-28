@@ -18,6 +18,54 @@
 
 ---
 
+## ADR-039 — Hara v2.5: PATTERNS §dom-mutation-order + §smoke-setup + SMOKE_FRESH_SIM env
+
+**Date**: 2026-05-29 · **Status**: accepted (autonomous overnight)
+
+**Context**: starpin v0.20 dogfood 2 lesson:
+1. subagent 가 today-widget mount 를 fetchNews 직전 → `while removeChild` 가 widget 제거 → coordinator post-hoc fix (DOM mutation order)
+2. iOS sim Siri 받아쓰기 prompt 가 다음 Maestro run 까지 system-level 잔존 → "starpin" assertion FAIL → sim restart workaround
+
+### A. PATTERNS §dom-mutation-order (NEW)
+
+- anti-pattern (pre-clear mount destroyed) vs correct pattern (mount AFTER clear) code 예시
+- subagent prompt imperative snippet
+- precedent: v0.20 newsletter.ts today-widget 위치 변경
+- v2.6 carry: check-subagent-prompt.sh grep enforcement ("removeChild" / "DOM mutation" 키워드)
+
+### B. PATTERNS §smoke-setup (NEW)
+
+- root causes 4 (iOS system dialogs / stale WebView / session token / clearState 한계)
+- v2.5 mitigation: `SMOKE_FRESH_SIM=1` env var trigger sim shutdown all → restart
+- Maestro flow level defensive `runFlow when visible 받아쓰기` snippet
+- precedent: v0.20 Siri prompt
+
+### C. `examples/starpin/scripts/run-mobile-smoke.sh`
+
+- `SMOKE_FRESH_SIM=1` env flag (default unset → backward compat)
+- `xcrun simctl shutdown all` + 2s sleep (모든 booted sim — multi-sim leak 방지)
+- iOS only (`$PLATFORM == "ios"` guard)
+
+### D. Codex r1+r2 (HC-11)
+
+- r1: 1 major (multi-sim shutdown — first-booted-only) + 2 minor (PATTERNS clearState misleading + path mismatch)
+- r1 patches:
+  * `xcrun simctl shutdown all` (vs python3-parse first-booted)
+  * clearState 표현 정확화 (Maestro docs)
+  * path 표기 `<project>/scripts/...` 일관 + v2.6 carry duplicate 제거
+- r2 (pending): verify
+
+### E. Approval
+
+자율 (사용자 overnight).
+
+### F. carry (v2.6+)
+
+- check-subagent-prompt.sh §dom-mutation-order grep enforcement
+- system overlay dismiss auto-handler in Maestro flow template
+
+---
+
 ## ADR-038 — starpin v0.20 today widget + sky search (Hara v2.4.2 dogfood)
 
 **Date**: 2026-05-29 · **Status**: accepted (autonomous overnight)

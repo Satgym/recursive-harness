@@ -313,6 +313,109 @@ ALL interactive `<input>`, `<button>`, clickable element MUST have explicit
 - v0.16 sensor scaffold (subagent 529) — coordinator 가 직접 6 file 작성 fallback
 - v0.17.0 wholesale (subagent socket close 80%) — CSS + Maestro flow 누락 → coordinator 보강
 - v0.17.3 detail-page (subagent v0.17.0 잔재) — CSS 완전 누락 → 시각 검증 실패 → coordinator race fix + CSS 추가
+- v0.20 today-widget (Hara v2.5 carry): subagent 가 `mountTodayWidget(host)` 을
+  fetchNews *직전* 에 mount → 후속 `while(host.firstChild) removeChild` 가 widget
+  제거 → "오늘의 하늘" 사라짐. coordinator 가 mount 위치 while-loop *뒤* 로 이동.
+  → **DOM mutation order imperative** (아래 §dom-mutation-order)
+
+---
+
+## §dom-mutation-order — Subagent DOM mount 순서 imperative (v2.5)
+
+starpin v0.20 dogfood lesson: subagent 가 *컨테이너 cleanup* (`while removeChild`)
+와 *child mount* 순서 헷갈리면 mount 한 element 가 다음 step 에 지워짐.
+
+### anti-pattern
+
+```ts
+const containerEl = document.createElement('section');
+host.appendChild(containerEl);
+void mountChildWidget(containerEl);   // ← appends to container
+
+// loading state
+const loading = document.createElement('p');
+containerEl.appendChild(loading);
+
+const data = await fetchData();
+while (containerEl.firstChild) containerEl.removeChild(containerEl.firstChild);
+// ↑ removes BOTH loading AND mountChildWidget's output. widget gone.
+```
+
+### correct pattern
+
+```ts
+const containerEl = document.createElement('section');
+host.appendChild(containerEl);
+
+const loading = document.createElement('p');
+containerEl.appendChild(loading);
+
+const data = await fetchData();
+while (containerEl.firstChild) containerEl.removeChild(containerEl.firstChild);
+
+// Mount AFTER clear — survives the cleanup
+void mountChildWidget(containerEl);
+
+// Then render data
+containerEl.appendChild(makeHero(data));
+```
+
+### subagent prompt imperative
+
+Subagent prompts that touch existing files with `while (host.firstChild) removeChild` cleanup blocks MUST include:
+
+> ⚠️ DOM mutation order: if mounting child widgets into a container that has
+> a `while (firstChild) removeChild` clear step (loading → data swap), mount
+> child AFTER the clear, not before. Pre-clear mounted children get destroyed.
+
+향후 v2.6 carry: check-subagent-prompt.sh 가 "DOM mutation" / "removeChild" 키워드 grep 으로 enforce.
+
+---
+
+## §smoke-setup — Mobile smoke test environment hygiene (v2.5)
+
+starpin v0.20 dogfood: iOS sim 에서 textarea 입력 시 Siri 받아쓰기 활성화 prompt 가 나타나면 *다음 Maestro run 까지 prompt 가 system level 로 남아* "starpin" assertion FAIL. workaround: `xcrun simctl shutdown all` (모든 booted sim — multi-sim leak 방지) + 다음 Maestro run 의 boot 단계 가 fresh sim 띄움.
+
+### root causes
+
+1. **iOS system dialogs** (Siri, location, push notification, share sheet) 가 WebView accessibility tree 를 가림 → Maestro 가 underlying 앱 elements 못 찾음
+2. **Stale WebView state** — 이전 run 의 hash route / scroll position / focused input
+3. **Capacitor session token** — backend restart 시 redis 비어 있으면 client token 401 → app-shell redirect /login.html
+4. **Maestro `clearState`** — iOS 에서 app data 폴더 reinstall 수행 (localStorage 포함 reset) 하지만 simulator-level system overlay (Siri dictation, share sheet, notification permission) dismiss 는 *보장 안 함* (Maestro 공식 docs)
+
+### v2.5 mitigation
+
+`<project>/scripts/run-mobile-smoke.sh` (예: starpin 의 `examples/starpin/scripts/run-mobile-smoke.sh`) 가 `SMOKE_FRESH_SIM=1` env var 지원 — 모든 booted iOS sim 을 shutdown 후 boot 재시작:
+
+```bash
+# v2.5 — at top of script (before boot detection)
+if [[ "${SMOKE_FRESH_SIM:-0}" == "1" && "$PLATFORM" == "ios" ]]; then
+  xcrun simctl shutdown all 2>/dev/null || true
+  sleep 2
+fi
+```
+
+호출: `SMOKE_FRESH_SIM=1 bash examples/<proj>/scripts/run-mobile-smoke.sh ios <slug>`
+
+(v2.6 carry — DOM mutation grep enforcement — §dom-mutation-order 안 표시; 본 §smoke-setup 에는 미반복.)
+
+### Maestro flow level (immediate)
+
+iOS Siri / dictation prompt 가 자주 발생하면 flow 시작에 `- clearState` + system alert handler:
+
+```yaml
+- launchApp
+# Defensive: dismiss any system alert (Siri / push / share)
+- runFlow:
+    when:
+      visible: ".*받아쓰기.*"
+    commands:
+      - tapOn: "지금 안 함"
+```
+
+### precedent
+
+- v0.20 today-search-smoke: Siri 받아쓰기 prompt → "starpin" 안 보임 → sim restart 로 회복
 
 ---
 

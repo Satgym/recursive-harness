@@ -1,4 +1,4 @@
-# HARNESS.md — Hara 헌법 (v2.4.2)
+# HARNESS.md — Hara 헌법 (v2.5)
 
 > Claude+Codex 협업의 **절대 규칙**과 **워크플로우 정의**.
 > 변경은 §10 절차. 버전 이력은 §11.
@@ -176,6 +176,7 @@ stranger (다음 세션 / 다른 사람)가 STATUS.md만 보고 "지금 무엇�
 
 | 버전 | 변경 | ADR |
 |---|---|---|
+| v2.5 | PATTERNS §dom-mutation-order (subagent DOM mount 순서 imperative — v0.20 today-widget 누락 case) + §smoke-setup (iOS sim Siri / share / push dialog 차단 mitigations) + `SMOKE_FRESH_SIM=1` env flag in run-mobile-smoke.sh | ADR-039 |
 | v2.4.2 | ARIA imperative grep (`--strict` 시 "aria-label" 단어 의무) + ui-visual-review.sh race retry (5×1s). v0.17.2 + v0.19 의 aria-label 누락 패턴 반복 → prompt-side 차단 | ADR-037 |
 | v2.4.1 | `--mode=auto|impl|review` flag 추가 — filename suffix (`-impl.md` / `-impl-r<N>.md`) 기반 graceful skip 으로 review/legacy prompt 가 false negative 안 나도록. bare `--mode` 무한루프 + docstring drift 닫음 | ADR-035 |
 | v2.4 | `scripts/check-subagent-prompt.sh` lint — v2.3.2 의 5-카테고리 deliverables template 을 *enforceable gate* 로 격상. `--strict` mode 가 impl-review path 의무. starpin v0.18 의 30x speedup 결과 → 의무화 합리 | ADR-034 |

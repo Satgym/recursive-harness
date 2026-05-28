@@ -7,8 +7,8 @@
 | 항목 | 값 |
 |---|---|
 | Project | Hara 메타 부트스트랩 (이 레포) + starpin dogfood (`examples/starpin/`) |
-| Harness version | **v2.4.2** SHIPPED (`5b8d00b`) — ARIA grep + race retry. v0.20 첫 dogfood — subagent ARIA 누락 0회 검증. |
-| Last ship | (pending) `note(starpin-v0.20.0)` — today widget + sky search (ADR-038). 직전: `5b8d00b` harness(v2.4.2). |
+| Harness version | **v2.5** (pending) — PATTERNS §dom-mutation-order + §smoke-setup + SMOKE_FRESH_SIM env (ADR-039). v0.20 dogfood 의 2 lesson codification. |
+| Last ship | (pending) `harness(v2.5)` — DOM mutation order + smoke setup (ADR-039). 직전: `2ba7b8f` note(starpin-v0.20.0). |
 | Strictness | autonomous (overnight session 누적 — Hara v2.3.2 + starpin v0.18 모두 ship 완료) |
 | Last updated | 2026-05-28 11pm + late round by Claude (Hara v2.3.2 + starpin v0.18 모두 SHIPPED — 5-카테고리 template 첫 production dogfood 성공) |
 
@@ -34,7 +34,8 @@
 
 | commit | scope | 내용 |
 |---|---|---|
-| (pending) | note(starpin-v0.20.0) | today widget (월령 + 일몰 + 행성) + 천체 검색 (Connect 축 보강, ADR-038). astronomy-engine VSOP87. Hara v2.4.2 첫 dogfood |
+| (pending) | harness(v2.5) | PATTERNS §dom-mutation-order + §smoke-setup + SMOKE_FRESH_SIM env (ADR-039) — v0.20 2 lesson codify |
+| 2ba7b8f | note(starpin-v0.20.0) | today widget (월령 + 일몰 + 행성) + 천체 검색 (Connect 축 보강, ADR-038). astronomy-engine VSOP87. Hara v2.4.2 첫 dogfood |
 | 5b8d00b | harness(v2.4.2) | ARIA grep + race retry (ADR-037) — v0.17.2 + v0.19 aria-label 누락 반복 prevent |
 | 8517c7a | note(starpin-v0.19.0) | friends + sky tag share Connect 축 실구현 (ADR-036). Hara v2.4 5-카테고리 두 번째 dogfood VALIDATED |
 | 1f9eb22 | harness(v2.4.1) | check-subagent-prompt.sh `--mode=auto|impl|review` (ADR-035) |

@@ -18,6 +18,70 @@
 
 ---
 
+## ADR-033 — starpin v0.18 content enrichment (Hara v2.3.2 첫 production dogfood)
+
+**Date**: 2026-05-28 (밤 11pm 추가 round) · **Status**: accepted
+
+**Context**: starpin UI.md scope 완료 (v0.17.3). v0.13~v0.17 동안 누적된 image quality gap (CSP `img-src 'self' data:` + 외부 NASA APOD URL 차단 → 🌌 emoji placeholder 만) 일괄 해결 + messaging full conversation real backend POST 도입. Hara v2.3.2 PATTERNS §deliverable-categories 의 5-카테고리 template 첫 production 적용.
+
+### A. v0.18 deliverable (5-카테고리 subagent dispatch)
+
+NEW:
+- `backend/public/img/cosmos/` (6 SVG files, ~10.9KB total): orion-nebula / sirius / jwst-exoplanet / iss-orbit / saturn-rings / vega-debris
+
+MODIFY:
+- `lib/newsletter.ts` + `lib/news-modal.ts` — symmetric pattern: `safeImageUrl` 가 `/img/cosmos/*.svg` 와 `data:image/` 허용 (외부 URL 여전히 거부 — I-UI-19 enforce). v0.15 codex symmetric-pair lesson 그대로 유지
+- `lib/sky-detail-page.ts` — `lookupCosmosImage(objectId)` helper (5 fixture star → SVG mapping). hero 영역에 img 또는 fallback gradient
+- `lib/messaging-full.ts` — compose form 추가 + reply form 가 실제 `POST /v1/messages` 호출. 성공/실패 toast
+- `data/news-sample.json` — 8 entries 의 image_url 을 로컬 SVG path 로 교체
+- `style.css` — sky-detail-page-hero img 처리 + form-status + reply-submit min-height
+- `tests/mobile/flows/telescope-features-smoke.yaml` — 14 → 17 step, 11 → 12 PNG (compose form input + submit + `11-messaging-after-send` 캡쳐)
+- impl review: `.harness/reviews/04-20260528-v018-content-impl.md`
+
+### B. 신규 invariant I-UI-19
+
+모든 `<img>` src 는 `/img/...` (same-origin static) 또는 `data:` URI 만 허용. CSP `img-src 'self' data:` 와 정합 + frontend `safeImageUrl` (newsletter+news-modal) + `lookupCosmosImage` (sky-detail-page) 가 enforce.
+
+### C. ★ Hara v2.3.2 5-카테고리 template 첫 production dogfood — VALIDATED
+
+| 카테고리 | subagent delivered | coordinator 추가 |
+|---|---|---|
+| Code | 4 MODIFY | 0 |
+| Styling | sky-detail-page-hero img + form-status | 0 |
+| Tests | Maestro flow +5 steps, +1 PNG | Maestro selector 1줄 (`id:` → `text:`) |
+| Fixture | 6 SVG + JSON migrate | 0 |
+| impl review | NEW 04-20260528-v018-content-impl.md | 0 |
+
+**Metric** (ADR-032 codex r2 권고 측정):
+- 5-category delivered: **5/5 (100%)** — v0.16/v0.17 의 누락 패턴 발생 0
+- Coordinator 후처리 LOC: ~5 lines (Maestro selector + ship docs)
+- 재작업 시간: ~10초 (selector tweak only)
+- vs v0.16 ship 의 coordinator 직접 작성 ~400 LOC / 30+ 분 → **30x speedup**
+
+### D. Hara v2.3.1 pipeline 3rd round dogfood
+
+- `bash ui-visual-review.sh --review-round r3` → `ui-codex-...-r3.md` round-suffixed
+- v0.17.1 r1 + v0.17.2 r2 + v0.18 r3 3개 codex file 모두 coexist (overwrite 0)
+- canonical FM auto-merged (codex 가 strict YAML emit + postprocess merge)
+- evidence ui_review auto-patched
+
+### E. HC-13 검증 결과
+
+```
+claude_pass: true, codex_pass: true,
+blocker: 0, major: 0, minor: 3 (toast capture timing / profile-stars row cramped — v0.19 carry)
+findings_count: 3
+rounds: r1 (v0.17.1) → r2 (v0.17.2) → r3 (v0.18)
+```
+
+HC-7 / HC-8 / HC-9 trigger 0. npm test 297 pass / 0 regression. Maestro 45s pass.
+
+### F. Approval
+
+자율 (사용자 11pm directive). Hara v2.3.2 첫 production dogfood 성공 — template 가 누락 패턴을 *실제로* 제거.
+
+---
+
 ## ADR-032 — Hara v2.3.2: subagent deliverable category template + modal race pattern
 
 **Date**: 2026-05-28 (밤 11pm 추가 autonomous round) · **Status**: accepted

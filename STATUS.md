@@ -8,9 +8,9 @@
 |---|---|
 | Project | Hara 메타 부트스트랩 (이 레포) + starpin dogfood (`examples/starpin/`) |
 | Harness version | **v2.3.2** (pending) — v2.3.1 + PATTERNS §deliverable-categories (subagent 5-카테고리 책임 template) + §modal-overlay-race (DOM cleanup vs nav 분리) + ARIA imperative for Maestro. v2.3.1 의 4-ship dogfood 자체로 발견된 lesson 의 codification. v2.3.2 직후 starpin v0.18 wholesale 으로 dogfood validation. |
-| Last ship | (pending) `harness(v2.3.2)` — subagent deliverable template + modal race pattern + ARIA imperative (ADR-032). 직전: `cb59b6d` note(starpin-v0.17.3). |
-| Strictness | autonomous (overnight session continues — Hara v2.3.2 r1 PASS 후 ship 대기, starpin v0.18 wholesale 다음 round) |
-| Last updated | 2026-05-28 11pm round by Claude (Hara v2.3.2 ship 준비 — codex r1 PASS 2 minor) |
+| Last ship | (pending) `note(starpin-v0.18.0)` — content enrichment wholesale (cosmos SVG + messaging real POST + I-UI-19; Hara v2.3.2 5-카테고리 첫 dogfood VALIDATED 5/5 delivered, 30x speedup). 직전: `c2a1726` harness(v2.3.2). |
+| Strictness | autonomous (overnight session 누적 — Hara v2.3.2 + starpin v0.18 모두 ship 완료) |
+| Last updated | 2026-05-28 11pm + late round by Claude (Hara v2.3.2 + starpin v0.18 모두 SHIPPED — 5-카테고리 template 첫 production dogfood 성공) |
 
 ## Active gate
 
@@ -47,7 +47,8 @@
 
 | commit | scope | 내용 |
 |---|---|---|
-| (pending) | harness(v2.3.2) | subagent 5-카테고리 deliverable template + modal-overlay-race 패턴 + ARIA imperative (ADR-032). v2.3.1 dogfood lesson 추가 codification |
+| (pending) | note(starpin-v0.18.0) | content enrichment — 6 cosmos SVG + messaging real POST + I-UI-19 (ADR-033). Hara v2.3.2 첫 dogfood VALIDATED |
+| c2a1726 | harness(v2.3.2) | subagent 5-카테고리 deliverable template + modal-overlay-race 패턴 + ARIA imperative (ADR-032). v2.3.1 dogfood lesson 추가 codification |
 | cb59b6d | note(starpin-v0.17.3) | V-CX-TEL-01 FULL close — detail-page race fix (_removeOverlayDom split) + missing CSS + friendly-name title (V-CX-TEL-02 in detail-page surface). 12 PNG |
 | 78e7b52 | note(starpin-v0.17.2) | profile-stars aria-label a11y win (Maestro WKWebView nested span 한계 우회) + V-CX-TEL-01 partial close + Hara v2.3.1 round-suffix r2 dogfood |
 | ba4360e | note(starpin-v0.17.1) | v0.17.0 codex carry close (V-CX-TEL-03/05) + Hara v2.3.1 첫 dogfood validation PASS (ADR-031). 0 manual canonical patch |

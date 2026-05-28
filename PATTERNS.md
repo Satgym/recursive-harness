@@ -288,9 +288,26 @@ Mandatory short doc summarizing files / decisions / known limitations / HC trigg
 >
 > **Inline `Agent()` prompts**: lint 가 파일 경로만 받으므로, inline string prompt 도 dispatch 직전 `.harness/prompts/<slug>-impl.md` 로 먼저 persist 후 wrapper 실행. stdin / inline lint + pre-Agent auto-hook 은 v2.4.2+ carry.
 
-### ARIA label imperative for Maestro
+### ARIA label imperative for Maestro (v2.4.2 enforced)
 
-Capacitor WKWebView 의 accessibility tree 가 nested `<span>` 내 textContent 를 button name 으로 indexing 안 함. button/clickable 요소에 *명시적 aria-label* 추가가 Maestro `tapOn: text:` 매칭의 prerequisite. starpin v0.17.2 profile-stars 사례 (V-CX-TEL-01 part).
+Capacitor WKWebView 의 accessibility tree 가 nested `<span>` 내 textContent 를 button name 으로 indexing 안 함. button/input/clickable 요소에 *명시적 aria-label* 추가가 Maestro `tapOn: text:` 매칭의 prerequisite.
+
+**precedent (dogfood)**:
+- v0.17.2 profile-stars button (V-CX-TEL-01 part)
+- v0.19 friends-modal search input (post-hoc patch + Maestro rerun)
+
+**v2.4.2 enforcement**: `bash scripts/check-subagent-prompt.sh --strict` 가 prompt body 에 `aria-label` 또는 `aria label` 단어 존재 여부 grep. 누락 시 exit 1 — coordinator 가 prompt 작성 시 ARIA imperative 명시 의무.
+
+**recommended prompt snippet** (subagent dispatch 시 copy-paste):
+
+```markdown
+## ARIA imperative (PATTERNS §deliverable-categories)
+
+ALL interactive `<input>`, `<button>`, clickable element MUST have explicit
+`aria-label` attribute. Capacitor WKWebView accessibility tree 가 nested
+`<span>` textContent 를 button name 으로 indexing 안 함 → Maestro tap
+실패. Korean label OK (e.g. `aria-label="닉네임으로 검색"`).
+```
 
 ### precedent
 - v0.16 sensor scaffold (subagent 529) — coordinator 가 직접 6 file 작성 fallback

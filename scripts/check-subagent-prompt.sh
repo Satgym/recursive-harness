@@ -118,6 +118,16 @@ if [[ $STRICT -eq 1 ]]; then
     echo "[check-subagent-prompt]   subagent needs explicit destination for impl-review doc" >&2
     exit 1
   fi
+  # v2.4.2 ARIA imperative enforcement — v0.17.2 + v0.19 dogfood: subagent 가
+  # interactive input/button 에 aria-label 누락 → Maestro WKWebView tap 실패
+  # → coordinator post-hoc patch. prompt 에 "aria-label" 단어 의무.
+  if ! grep -qiE '\baria[- ]?label\b' "$PROMPT"; then
+    echo "[check-subagent-prompt] FAIL (--strict): no 'aria-label' imperative in prompt" >&2
+    echo "[check-subagent-prompt]   PATTERNS §deliverable-categories ARIA imperative —" >&2
+    echo "[check-subagent-prompt]   all interactive button/input MUST have aria-label." >&2
+    echo "[check-subagent-prompt]   add an ARIA imperative section to your subagent prompt." >&2
+    exit 1
+  fi
 fi
 
 echo "[check-subagent-prompt] PASS — 5/5 deliverable categories present"

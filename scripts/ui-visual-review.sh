@@ -187,11 +187,22 @@ fi
   exit 2
 }
 
-# Find the codex output file (codex-exec-review now suffixes with REVIEW_ROUND)
-CODEX_GENERATED=$(ls -t "$PROJ_ROOT/.harness/reviews"/*"ui-visual-${DATE}-${SLUG}-codex-${REVIEW_ROUND}"*.md 2>/dev/null | head -1)
-# Backward compat: pre-v2.3.1 callers may have written without suffix
-[[ -z "$CODEX_GENERATED" || ! -f "$CODEX_GENERATED" ]] && \
-  CODEX_GENERATED=$(ls -t "$PROJ_ROOT/.harness/reviews"/*"ui-visual-${DATE}-${SLUG}-codex"*.md 2>/dev/null | head -1)
+# Find the codex output file (codex-exec-review now suffixes with REVIEW_ROUND).
+# v2.4.2: race-condition retry — postprocess file write may lag the wrapper's
+# glob by O(100ms) in some filesystem/python conditions (v0.19 dogfood failure).
+# Retry up to 5 times with 1s spacing.
+CODEX_GENERATED=""
+# v2.4.2 r1 minor fix: probe at t=0,1,2,3,4,5s (6 attempts), don't sleep after
+# last so the 5s window is *fully* covered. Prior `for 1..5; do ...; sleep; done`
+# missed files created at t=4.1~5.0s.
+for _try in 1 2 3 4 5 6; do
+  CODEX_GENERATED=$(ls -t "$PROJ_ROOT/.harness/reviews"/*"ui-visual-${DATE}-${SLUG}-codex-${REVIEW_ROUND}"*.md 2>/dev/null | head -1)
+  # Backward compat: pre-v2.3.1 callers wrote without suffix
+  [[ -z "$CODEX_GENERATED" || ! -f "$CODEX_GENERATED" ]] && \
+    CODEX_GENERATED=$(ls -t "$PROJ_ROOT/.harness/reviews"/*"ui-visual-${DATE}-${SLUG}-codex"*.md 2>/dev/null | head -1)
+  [[ -n "$CODEX_GENERATED" && -f "$CODEX_GENERATED" ]] && break
+  [[ $_try -lt 6 ]] && sleep 1
+done
 [[ -z "$CODEX_GENERATED" || ! -f "$CODEX_GENERATED" ]] && {
   echo "[ui-visual-review] FAIL: codex review output not found" >&2
   exit 2

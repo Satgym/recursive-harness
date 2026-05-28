@@ -18,6 +18,48 @@
 
 ---
 
+## ADR-037 — Hara v2.4.2: ARIA imperative enforcement + ui-visual-review race retry
+
+**Date**: 2026-05-29 · **Status**: accepted (autonomous overnight)
+
+**Context**: v0.17.2 + v0.19 starpin dogfood 모두 subagent 가 *interactive input/button 에 aria-label 누락* → Maestro WKWebView tap 실패 → coordinator post-hoc patch + Maestro rerun → time 낭비. PATTERNS §deliverable-categories 가 ARIA imperative 를 *언급* 하지만 *enforce* 안 함. v2.4.2 = prompt-side 에서 enforce.
+
+또한 v0.19 dogfood 에서 ui-visual-review.sh 가 "codex review output not found" → race condition (codex postprocess file write lag).
+
+### A. `scripts/check-subagent-prompt.sh` `--strict` 추가 검사
+
+`grep -qiE '\baria[- ]?label\b' "$PROMPT"` — prompt body 에 "aria-label" / "aria label" 단어 누락 시 exit 1. impl mode + strict 일 때만 활성.
+
+### B. `scripts/ui-visual-review.sh` race retry
+
+기존 single glob → 5 iteration × 1s sleep retry. codex postprocess write 가 wrapper glob 보다 약 O(100ms) lag 라도 1st retry 에서 잡힘. 최대 5s budget — CI 부담 최소.
+
+### C. `PATTERNS.md` § ARIA section promotion
+
+`### ARIA label imperative for Maestro` 가 v2.4.2 "enforced" tag + precedent (v0.17.2 + v0.19) + **recommended prompt snippet** (copy-paste form). coordinator 가 future subagent prompt 에 그대로 포함하면 lint 통과.
+
+### D. Codex r1+r2 review (HC-11)
+
+(pending)
+
+### E. self-test
+
+- v0.19 friends-share prompt (no aria) → --strict FAIL ✓ (would have caught v0.19 issue *before* dispatch)
+- v0.20 today-search prompt (has aria section) → --strict PASS ✓
+- race retry: race 100ms 시 1st iteration 에서 잡힘 (정상 path 영향 0)
+
+### F. Approval
+
+자율 (사용자 overnight).
+
+### G. carry (v2.5+)
+
+- pre-Agent auto hook (현재는 coordinator manual `bash check-subagent-prompt.sh`)
+- ARIA grep 가 `aria-labelledby` 같은 다른 ARIA pattern 도 enforce?
+- visual regression baseline (VRT)
+
+---
+
 ## ADR-036 — starpin v0.19 friends + sky tag share (Connect axis 실구현)
 
 **Date**: 2026-05-29 · **Status**: accepted (autonomous overnight)

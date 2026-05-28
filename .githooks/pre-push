@@ -198,6 +198,31 @@ PYEOF
 
 runs_dir="$REPO_ROOT/.harness/runs"
 
+# HC-13 visual review validator (v2.3) — shared between web + mobile lanes.
+# Validates evidence JSON's `ui_review` field with canonical schema:
+#   {claude_pass: true, codex_pass: true, blocker_count: 0, claude_review: <path>, codex_review: <path>}
+validate_ui_review() {
+  local evidence_file="$1"
+  python3 - "$evidence_file" <<'PYEOF' 2>/dev/null
+import sys, json, os
+try:
+    d = json.load(open(sys.argv[1]))
+    ur = d.get('ui_review')
+    if not isinstance(ur, dict): sys.exit(1)
+    # canonical schema strict checks
+    if ur.get('claude_pass') is not True: sys.exit(1)
+    if ur.get('codex_pass') is not True: sys.exit(1)
+    if int(ur.get('blocker_count', -1)) != 0: sys.exit(1)
+    # review file paths must exist (hand-written `{"claude_pass": true}` 우회 차단)
+    for k in ('claude_review', 'codex_review'):
+        p = ur.get(k, '')
+        if not p or not os.path.isfile(p): sys.exit(1)
+    sys.exit(0)
+except Exception:
+    sys.exit(1)
+PYEOF
+}
+
 if [[ $has_web_surface -eq 1 ]]; then
   if [[ ! -d "$runs_dir" ]]; then
     echo "[pre-push] FAIL: HC-12 — web UI surface present but no $runs_dir/." >&2
@@ -218,6 +243,24 @@ if [[ $has_web_surface -eq 1 ]]; then
     exit 1
   fi
   echo "[pre-push] OK — HC-12 (web) smoke evidence: $(basename "$recent_pass")" >&2
+
+  # HC-13 (web lane) — opt-in via ui-spec.md
+  ui_spec_web=0
+  while IFS= read -r path; do
+    case "$path" in
+      .harness/docs/ui-spec.md|*/.harness/docs/ui-spec.md) ui_spec_web=1; break;;
+    esac
+  done < <(git ls-tree -r --name-only HEAD 2>/dev/null)
+
+  if [[ $ui_spec_web -eq 1 ]]; then
+    if ! validate_ui_review "$recent_pass"; then
+      echo "[pre-push] FAIL: HC-13 (web visual) — ui-spec.md present but evidence lacks valid ui_review." >&2
+      echo "[pre-push]   Required: ui_review.{claude_pass:true, codex_pass:true, blocker_count:0, claude_review path exists, codex_review path exists}" >&2
+      echo "[pre-push]   Run: bash scripts/ui-visual-review.sh (after coordinator writes Claude review)" >&2
+      exit 1
+    fi
+    echo "[pre-push] OK — HC-13 (web visual) review: claude_pass + codex_pass + 0 blocker" >&2
+  fi
 fi
 
 if [[ $has_mobile_surface -eq 1 ]]; then
@@ -240,6 +283,24 @@ if [[ $has_mobile_surface -eq 1 ]]; then
     exit 1
   fi
   echo "[pre-push] OK — HC-12 (mobile) smoke evidence: $(basename "$recent_mobile_pass")" >&2
+
+  # HC-13 (mobile lane) — opt-in via ui-spec.md, shared validate_ui_review
+  ui_spec_mobile=0
+  while IFS= read -r path; do
+    case "$path" in
+      .harness/docs/ui-spec.md|*/.harness/docs/ui-spec.md) ui_spec_mobile=1; break;;
+    esac
+  done < <(git ls-tree -r --name-only HEAD 2>/dev/null)
+
+  if [[ $ui_spec_mobile -eq 1 ]]; then
+    if ! validate_ui_review "$recent_mobile_pass"; then
+      echo "[pre-push] FAIL: HC-13 (mobile visual) — ui-spec.md present but evidence lacks valid ui_review." >&2
+      echo "[pre-push]   Required: ui_review.{claude_pass:true, codex_pass:true, blocker_count:0, claude_review path exists, codex_review path exists}" >&2
+      echo "[pre-push]   Run: bash scripts/ui-visual-review.sh (after coordinator writes Claude review)" >&2
+      exit 1
+    fi
+    echo "[pre-push] OK — HC-13 (mobile visual) review: claude_pass + codex_pass + 0 blocker" >&2
+  fi
 fi
 
 echo "[pre-push] OK — HC-11 r1+r2 evidence found for every ship in push" >&2

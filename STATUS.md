@@ -7,24 +7,17 @@
 | 항목 | 값 |
 |---|---|
 | Project | Hara 메타 부트스트랩 (이 레포) + starpin dogfood (`examples/starpin/`) |
-| Harness version | **v2.2** (HC-12 mobile equivalent; ADR-023) — surface 감지 web+mobile dual-lane, evidence 파일명 분리, validator helper 공유 |
-| Last ship | (pending) `note(starpin-v0.13.0)` — Capacitor iOS wrap. 직전: `bde2b47` harness(v2.2.0). |
-| Strictness | autonomous (mobile expansion phase 종료 단계) |
-| Last updated | 2026-05-28 by Claude (Phase 05 iOS smoke PASS, ADR-024) |
+| Harness version | **v2.3** (HC-13 Visual-Review; ADR-025) — Claude(multimodal) + Codex visual independent review + base skill ui-visual-review |
+| Last ship | (pending) `harness(v2.3.0)` — visual review infrastructure. 직전: `1751c28` note(starpin-v0.13.0). |
+| Strictness | autonomous (UI verification + UI improvement phase) |
+| Last updated | 2026-05-28 by Claude (Hara v2.3 design + starpin v0.14 paired plan) |
 
 ## Active gate
 
-- starpin v0.13 Capacitor iOS wrap **ship 준비**:
-  - Phase 00 Intake amendment v0.2 ✓ user approved
-  - Hara v2.2 ✓ shipped + pushed (`bde2b47`)
-  - Phase 01 Blueprint amendment v0.4 ✓ (fps deferred to v0.14+)
-  - Phase 02 Module Plan v0.3 ✓ accepted
-  - Phase 03 Capacitor 통합 ✓ background subagent 완료
-  - Phase 04 codex review ✓ r1→r2→r3 ship-ready
-  - **Phase 05 iOS smoke PASS** ✓ — `examples/starpin/.harness/runs/mobile-e2e-20260528-ios-login-smoke.json` (status=pass, exit=0, platform=ios, 20s flow duration)
-  - ship → `note(starpin-v0.13.0)` ← 현재
+- starpin v0.13 ✓ shipped (`1751c28` Capacitor iOS wrap).
+- **Hara v2.3 base ship 진행 중** — HC-13 Visual-Review + ui-visual-review base skill + hook 확장.
+- **starpin v0.14 paired**: v2.3 dogfood — mobile UI 개선 (mobile-first layout, tap target ≥44pt, 사용자 친화 star info) + visual review 첫 발동.
 - Open findings: 0. INBOX: 0 unread.
-- Android emulator + iPhone 실 기기: v0.14+ carry (사용자 결정 "android 나중에").
 
 ## Required reads (세션 시작 시)
 
@@ -42,7 +35,8 @@
 
 | commit | scope | 내용 |
 |---|---|---|
-| (pending) | note(starpin-v0.13.0) | Capacitor iOS wrap (ADR-024) — iPhone simulator first-flow PASS |
+| (pending) | harness(v2.3.0) | HC-13 Visual-Review (ADR-025) — starpin v0.14 prerequisite |
+| 1751c28 | note(starpin-v0.13.0) | Capacitor iOS wrap (ADR-024) — iPhone simulator first-flow PASS |
 | bde2b47 | harness(v2.2.0) | HC-12 mobile equivalent extension (ADR-023) |
 | ee5cd0d | harness(v2.1.0) | enforcement gap pass (ADR-022) |
 | 4e0c71d | note(starpin-v0.12.0) | planet interactivity (ADR-021) |

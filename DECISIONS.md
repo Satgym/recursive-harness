@@ -18,6 +18,83 @@
 
 ---
 
+## ADR-025 — Hara v2.3 HC-13 Visual-Review (Claude multimodal + Codex independent visual)
+
+**Date**: 2026-05-28 · **Status**: accepted (user-directed UI verification path)
+
+**Context**: starpin v0.13 ship 후 사용자 audit 요청 — "기능적 구현 완성도는 잘 높이는데 UI/UX 차원 검증 mechanism 0". 현재 HC-12 (functional smoke) 는 *내부 contract* (assertVisible "text", id 검사) 만 검증. UX 차원 (mobile-first layout, tap target ≥ 44pt, 사용자 친화 정보 노출, accessibility 색 대비, design intent 일치) 은 코드/text 로 catch 불가. 사용자 직접 결정: "Claude multimodal + Codex visual (Recommended)" + "Hara v2.3 base 변경 + starpin v0.14 함께 (Recommended)".
+
+**Decision**: Hara v2.3 에 **HC-13 Visual-Review** 신설 + base skill `ui-visual-review` 추가.
+
+### A. 신규 HC-13 (HARNESS.md §1)
+- trigger: HC-12 가 검증한 UI surface + project 의 `<proj>/.harness/docs/ui-spec.md` (design intent doc) 존재
+- mechanism: Maestro flow 의 `takeScreenshot` 산출물 → Claude (coordinator, multi-modal) + Codex visual 가 *독립* review (r1/r2 pattern) → evidence JSON 의 `ui_review.{claude_pass, codex_pass}` 둘 다 true 의무
+- enforcement: pre-push hook (mobile lane) 에 추가
+- opt-in: ui-spec.md 미존재 시 skip (사용자 가 design intent 명시 안 한 project 는 무의미)
+
+### B. 신규 base skill `skills/ui-visual-review.md`
+- inputs: screenshots dir + ui-spec.md + review prompt template
+- outputs: Claude review file + Codex review file + evidence JSON 의 `ui_review` field
+- 4-phase procedure: Maestro takeScreenshot → Claude review → Codex r2 verify → evidence 통합
+- cost guardrails: screenshot 4~8 권장, MAX 10
+
+### C. pre-push hook 확장 (web + mobile 양 lane — codex r1 #2 close)
+- web lane: web evidence (`e2e-*.json`) valid + `ui-spec.md` tracked → `validate_ui_review` 호출
+- mobile lane: mobile evidence valid + `ui-spec.md` tracked → 동일 검증
+- `validate_ui_review` (shared): canonical schema `claude_pass==true && codex_pass==true && blocker_count==0 && claude_review path exists && codex_review path exists`
+- review path 존재 의무로 hand-written `{claude_pass:true, codex_pass:true}` 우회 차단
+- `note()` carveout 그대로 — gitignored sub-project (starpin) 의 ui-spec.md 는 root 에서 안 보임 → opt-in 자동 skip. **starpin v0.14 의 visual review 는 manual gate** (coordinator + codex 수동 검증, ADR-024 의 I-CAP-4 패턴).
+
+### D. Runner script `scripts/ui-visual-review.sh` (codex r1 #1 close)
+- Phase 4 evidence emit + codex 호출 orchestration helper
+- Inputs: --slug --platform --screenshots <dir> --ui-spec <path> --claude-review <path> --evidence <path>
+- 동작:
+  1. inputs 검증 (ui-spec 있음 + screenshot ≥ 1 + claude-review 존재)
+  2. Claude review front-matter parse (claude_pass, severity counts)
+  3. codex-exec-review.sh 호출 (independent r2 visual verify)
+  4. Codex review front-matter parse
+  5. combined blocker_count > 0 → exit 1
+  6. evidence JSON 의 `ui_review` field canonical schema 으로 patch
+- Exit codes: 0 (pass) / 1 (Claude or combined blocker) / 2 (codex error or codex_pass false) / 3 (input invalid) / 4 (evidence patch failed)
+
+### D. starpin v0.14 가 첫 dogfood
+- starpin v0.13 의 UI 가 mobile-first 가 아님 (sky.html 폼이 fold 점유, login 정보 노출, star detail raw field)
+- starpin v0.14 = mobile UI 개선 + 본 skill 첫 invocation
+- 효과: 새 base capability 가 production 도입 즉시 dogfood, regression catch
+
+### E. 향후 carry (skill v0.2+)
+- 자동 a11y audit (Maestro inspector + axe-core)
+- VRT (visual regression test) — baseline 안정화 시
+- design system 일치 검증 (style guide doc + PNG 의 색/font 추출 비교)
+
+**Validation**:
+- `skills/ui-visual-review.md` 작성 (base_skill artifact, v0.1)
+- HARNESS HC-13 row 추가 + §1 last line "HC-13 은 ui-spec.md 존재 시에만 발동" 표기
+- `.githooks/pre-push` HC-13 block 추가 (mobile lane 안, opt-in via `git ls-tree | grep ui-spec.md`)
+- `bash -n .githooks/pre-push` PASS
+- recursive self-validation: v2.3 자체 push 는 ui-spec.md 미존재 → HC-13 skip → PASS
+
+**Consequences**:
+
+positive:
+- 사용자 시각 (visual layer) 가 처음으로 harness gate 차원에서 강제됨
+- Claude (multi-modal) 와 Codex 의 *독립* visual review = HC-11 의 multi-round 패턴이 visual 영역으로 자연 확장
+- UI 개선 round (starpin v0.14) 가 즉시 dogfood 가능 — base capability promotion 의 정상 path
+- ui-spec.md 가 *design intent SoT* — 미래 design system 갖춘 project 에 재사용 가능
+
+negative:
+- hook 본문 +~30 라인 (HC-13 block + ui-spec.md detection)
+- Claude + Codex visual review 의 token cost (1 ship 당 40K~110K 추가)
+- subjective finding 위험 — ui-spec.md 명시 의무화로 완화 (가이드라인 명확)
+
+guardrail:
+- v2.0 trim discipline 유지: HC-13 row 도 1 줄 inline + 상세는 ADR-025 + skill 본문 cross-link
+- 새 skill 본문 (~150 라인) 은 framework / procedure 만; 도구별 구현은 wrapper script 책임
+
+**Approval**: user · 2026-05-28 · autonomous (user-directed UI verification harness + Hara v2.3 + starpin v0.14 paired)
+
+---
+
 ## ADR-024 — starpin v0.13 Capacitor mobile wrap (iOS smoke verified)
 
 **Date**: 2026-05-28 · **Status**: accepted (user-directed mobile expansion; Phase 05 iOS evidence PASS)

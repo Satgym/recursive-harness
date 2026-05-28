@@ -18,6 +18,63 @@
 
 ---
 
+## ADR-036 — starpin v0.19 friends + sky tag share (Connect axis 실구현)
+
+**Date**: 2026-05-29 · **Status**: accepted (autonomous overnight)
+
+**Context**: PRODUCT-SPEC §1 의 3 축 (Explore/Claim/Connect) 중 *Connect* 가 가장 미구현. 메시징은 있으나 target user 모름. 리서치 (Strava/Letterboxd "tight-knit social refuge" + Night Sky "Connected stargazing" Sky Tag + Picastro follow) → 친구 layer + 공유 layer 가 starpin 의 *intimate community* 정체성에 가장 정합.
+
+### A. v0.19 deliverable (Hara v2.4 5-카테고리 두 번째 dogfood — VALIDATED)
+
+Backend NEW (4 files):
+- `friends/{service,repository}.ts` — 2-way mutual consent state machine (NONE → pending → accepted | rejected). 5 routes (POST request, POST accept, POST reject, GET list, GET requests).
+- `routes/friends-routes.ts` + `routes/users-search-route.ts` — `GET /v1/users/search?q=` (min 2자, max 10 results, exclude self + already-friend).
+- `migrations/0033_create_user_friends.sql` — postgres table + UNIQUE(requester, receiver) + indexes + CHECK (requester ≠ receiver).
+
+Backend MODIFY (2 files):
+- `routes/highlights-routes.ts` — `type=friend` entries 추가 (claims join friends). optional friendsService dep 으로 기존 10 tests 안 깨짐.
+- `server.ts` — friends-routes + users-search-route register + DI.
+
+Frontend NEW (2 files):
+- `lib/friends-modal.ts` — profile dropdown "친구" trigger → modal (list + 받은 신청 + 검색 form + empty state).
+- `lib/sky-tag-share.ts` — `shareSkytag(item)` Capacitor Share fallback to clipboard + toast.
+
+Frontend MODIFY (3 files):
+- `profile-dropdown.ts` — "친구" menu (between 닉네임 변경 and 내 별).
+- `sky-detail-page.ts` — "공유" 버튼 (header 우측).
+- `style.css` — `.friends-modal-*` + `.sky-detail-page-share` + friend-color override (옅은 보라 vs 본인 노란).
+
+Tests:
+- `backend/tests/unit/friends/service.test.ts` + `routes/friends-routes.test.ts` + `routes/users-search-route.test.ts` — 32 new tests.
+- `tests/mobile/flows/friends-share-smoke.yaml` — 4 takeScreenshot Maestro flow.
+
+### B. 신규 invariants
+
+- **I-UI-20** (friend mutual consent — 2-way only, no unilateral follow)
+- **I-UI-21** (share whitelist — same-origin `#detail/<catalog_id>` only)
+- **I-CAP-5** (friend privacy — own list visible only; 친구의 친구 list 노출 X)
+
+### C. Hara v2.4 5-카테고리 template — 두 번째 dogfood VALIDATED
+
+5/5 categories delivered. Coordinator 후처리 = ~2 lines (input aria-label patch + Maestro selector tweak — v0.17.2 ARIA-imperative repeat 발견 → v2.5 carry: subagent template 에 "interactive input/button MUST have aria-label" 명시).
+
+|metric| v0.18 (첫) | v0.19 (두 번째) |
+|---|---|---|
+|5/5 delivered|✓|✓|
+|Coordinator LOC|~5|~2|
+|Backend route 추가|0|2|
+|새 invariants|1 (I-UI-19)|3 (I-UI-20/21, I-CAP-5)|
+
+### D. HC-13 결과
+
+claude_pass=true, codex_pass=[pending], blocker_count=0, severity_counts={blocker:0, major:0, minor:2}. minor 2: pink/red bleed-through (V-VR-FRI-01 — messaging-icon-glyph saturation) + share toast timing (V-VR-FRI-02 — extendedWaitUntil missing).
+
+### E. Approval
+
+자율 (사용자 overnight directive).
+
+---
+
 ## ADR-035 — Hara v2.4.1: `--mode=auto|impl|review` flag (false-negative skip + safety)
 
 **Date**: 2026-05-29 · **Status**: accepted

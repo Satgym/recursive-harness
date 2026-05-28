@@ -7,8 +7,8 @@
 | 항목 | 값 |
 |---|---|
 | Project | Hara 메타 부트스트랩 (이 레포) + starpin dogfood (`examples/starpin/`) |
-| Harness version | **v2.4.1** (pending) — `--mode=auto|impl|review` flag 추가, filename suffix heuristic 으로 review/legacy prompt graceful skip + bare `--mode` 무한루프 fix. mass-lint dogfood 시 false negative 제거. |
-| Last ship | (pending) `harness(v2.4.1)` — `--mode` flag (ADR-035). 직전: `e4ba304` harness(v2.4). |
+| Harness version | **v2.4.1** SHIPPED (`1f9eb22`) — `--mode=auto|impl|review` flag. mass-lint dogfood 시 false negative 제거. |
+| Last ship | (pending) `note(starpin-v0.19.0)` — friends + sky tag share (ADR-036). 직전: `1f9eb22` harness(v2.4.1). |
 | Strictness | autonomous (overnight session 누적 — Hara v2.3.2 + starpin v0.18 모두 ship 완료) |
 | Last updated | 2026-05-28 11pm + late round by Claude (Hara v2.3.2 + starpin v0.18 모두 SHIPPED — 5-카테고리 template 첫 production dogfood 성공) |
 
@@ -34,7 +34,8 @@
 
 | commit | scope | 내용 |
 |---|---|---|
-| (pending) | harness(v2.4.1) | check-subagent-prompt.sh `--mode=auto|impl|review` flag (ADR-035) — review/legacy prompt graceful skip + bare --mode infinite loop fix |
+| (pending) | note(starpin-v0.19.0) | friends + sky tag share Connect 축 실구현 (ADR-036). Hara v2.4 5-카테고리 두 번째 dogfood VALIDATED |
+| 1f9eb22 | harness(v2.4.1) | check-subagent-prompt.sh `--mode=auto|impl|review` (ADR-035) |
 | e4ba304 | harness(v2.4) | scripts/check-subagent-prompt.sh 5-카테고리 enforceable lint (ADR-034). v2.3.2 의 self-checklist → enforced gate |
 | dc97fb7 | note(starpin-v0.18.0) | content enrichment — 6 cosmos SVG + messaging real POST + I-UI-19 (ADR-033). Hara v2.3.2 첫 dogfood VALIDATED 5/5 delivered |
 | c2a1726 | harness(v2.3.2) | subagent 5-카테고리 deliverable template + modal-overlay-race 패턴 + ARIA imperative (ADR-032). v2.3.1 dogfood lesson 추가 codification |

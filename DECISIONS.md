@@ -18,6 +18,56 @@
 
 ---
 
+## ADR-034 — Hara v2.4: subagent prompt 5-카테고리 lint enforcement
+
+**Date**: 2026-05-28 late · **Status**: accepted
+
+**Context**: ADR-032 (Hara v2.3.2) 의 §deliverable-categories 가 *self-checklist* (hook 강제 아님) 로 도입됐고, v0.18 wholesale ship 에서 *처음 production 적용* 결과 5/5 카테고리 모두 delivered + 30x speedup. coordinator 의 prompt 작성 시 5 카테고리 모두 채웠는지 자동 검증할 *enforceable* gate 가 필요.
+
+### A. `scripts/check-subagent-prompt.sh` (NEW)
+
+기능:
+- input: subagent prompt markdown file path
+- check: 5 categories (Code / Styling / Tests / Fixture / impl-review) 가 markdown heading (`#{1,6}` level) 으로 존재하는지
+- `--strict` mode: 추가로 `.harness/reviews/...-impl.md` path 명시 의무
+- exit: 0 PASS / 1 missing / 2 file not found
+
+regex pattern: `^#{1,6}[[:space:]]+([0-9]+\.[[:space:]]*)?<cat>` — `### 1. Code` / `## Code` / `### Code (NEW)` 모두 매칭. case-insensitive.
+
+### B. 사용 패턴
+
+```bash
+# Coordinator 가 Agent() 호출 직전 self-check
+bash scripts/check-subagent-prompt.sh .harness/prompts/<prompt>.md
+# 또는 strict (impl-review path 의무)
+bash scripts/check-subagent-prompt.sh --strict .harness/prompts/<prompt>.md
+```
+
+향후 carry (v2.4.1+):
+- Agent() invocation 직전 pre-launch hook (사용자 manual 호출 → 자동 호출)
+- subagent prompt 의 "Deliverables" 섹션 *위치* (top-level vs nested) standardize
+
+### C. self-test (이미 실행)
+
+- 좋은 prompt (5 categories present + N/A 표기) → PASS ✓
+- `--strict` + impl-review path 명시 → PASS ✓
+- v0.16 sensor prompt (v2.3.2 이전 작성) → FAIL (5/5 missing) ✓ — correct detection
+
+### D. PATTERNS + HARNESS update
+
+- `PATTERNS.md` §deliverable-categories: "v2.4 carry: wrapper lint" → "v2.4 enforced: scripts/check-subagent-prompt.sh" 로 promotion 표현
+- `HARNESS.md` §11 version history row 추가
+
+### E. Approval
+
+자율 (사용자 11pm directive — *더 많이 진행*).
+
+### F. dogfood validation
+
+v0.19 starpin ship (또는 future Hara) 의 subagent dispatch 직전 wrapper 호출 → 빠지는 항목 있으면 prompt 수정 후 재호출. PATTERNS §deliverable-categories 가 *enforced* discipline 로 격상.
+
+---
+
 ## ADR-033 — starpin v0.18 content enrichment (Hara v2.3.2 첫 production dogfood)
 
 **Date**: 2026-05-28 (밤 11pm 추가 round) · **Status**: accepted

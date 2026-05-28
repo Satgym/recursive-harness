@@ -278,7 +278,9 @@ Mandatory short doc summarizing files / decisions / known limitations / HC trigg
 
 이 template 을 subagent prompt 에 hard-code 하면 누락 위험 ↓. coordinator 가 prompt 작성 시 5 카테고리 모두 채우는 *self-checklist* (hook 강제 아님 — v2.3.2 시점 discipline). 5 카테고리 중 비어 있는 카테고리는 *명시적으로 "N/A — <reason>"* 로 표기.
 
-> 향후 v2.4 carry: subagent prompt wrapper 가 5 heading 존재 여부 lint (실 강제 gate).
+> v2.4 enforced: subagent prompt 작성 후 `bash scripts/check-subagent-prompt.sh <prompt.md>` 로 5 heading 자가 lint. `--strict` 추가하면 impl-review path 명시 의무. exit 1 = 누락 있음.
+>
+> **Inline `Agent()` prompts**: lint 가 파일 경로만 받으므로, inline string prompt 도 dispatch 직전 `.harness/prompts/<slug>.md` 로 먼저 persist 후 wrapper 실행. stdin / inline lint 는 v2.4.1+ pre-Agent hook carry.
 
 ### ARIA label imperative for Maestro
 

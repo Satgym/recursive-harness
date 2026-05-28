@@ -7,29 +7,16 @@
 | 항목 | 값 |
 |---|---|
 | Project | Hara 메타 부트스트랩 (이 레포) + starpin dogfood (`examples/starpin/`) |
-| Harness version | **v2.3.2** (pending) — v2.3.1 + PATTERNS §deliverable-categories (subagent 5-카테고리 책임 template) + §modal-overlay-race (DOM cleanup vs nav 분리) + ARIA imperative for Maestro. v2.3.1 의 4-ship dogfood 자체로 발견된 lesson 의 codification. v2.3.2 직후 starpin v0.18 wholesale 으로 dogfood validation. |
-| Last ship | (pending) `note(starpin-v0.18.0)` — content enrichment wholesale (cosmos SVG + messaging real POST + I-UI-19; Hara v2.3.2 5-카테고리 첫 dogfood VALIDATED 5/5 delivered, 30x speedup). 직전: `c2a1726` harness(v2.3.2). |
+| Harness version | **v2.4** (pending) — v2.3.2 의 §deliverable-categories 가 `scripts/check-subagent-prompt.sh` lint 로 *enforceable gate* 격상. v0.18 wholesale 의 30x speedup 결과로 의무화 합리. |
+| Last ship | (pending) `harness(v2.4)` — subagent prompt 5-카테고리 lint enforcement (ADR-034). 직전: `dc97fb7` note(starpin-v0.18.0). |
 | Strictness | autonomous (overnight session 누적 — Hara v2.3.2 + starpin v0.18 모두 ship 완료) |
 | Last updated | 2026-05-28 11pm + late round by Claude (Hara v2.3.2 + starpin v0.18 모두 SHIPPED — 5-카테고리 template 첫 production dogfood 성공) |
 
 ## Active gate
 
-- starpin v0.14 / v0.15 / v0.16 / v0.17 ✓ shipped — UI.md 전체 scope 완료.
-- starpin v0.17.1 / v0.17.2 / v0.17.3 ✓ shipped — codex carry close + Hara v2.3.1 dogfood validation (manual canonical patch 0회).
-- Hara v2.3.1 ✓ shipped (`c4200ca`) — HC-13 dogfood carry consolidation.
-- **Hara v2.3.2 ship 준비 (ADR-032)** — 4-ship dogfood 추가 codification. PATTERNS §deliverable-categories (subagent 5-카테고리 책임 *prompt checklist* — hook 강제 아님) + §modal-overlay-race (DOM cleanup vs nav 분리) + ARIA imperative for Maestro. codex r1 PASS (0 blocker / 0 major / 2 minor — minor patch 적용 후 ship).
-- **starpin v0.18 wholesale 준비 (intake-content-enrichment.md)** — image proxy (local SVG cosmos illustrations) + messaging full real POST + Maestro flow 확장. v2.3.2 의 5-카테고리 deliverables template 첫 dogfood.
-  - functional smoke pass + 6 screenshots + Claude/Codex visual review = canonical `ui_review` evidence
-  - r1: 1 blocker (telescope blank CSP frame-ancestors) + 2 major (news image broken) → patched
-  - r2: codex disputed Claude r2 close on V-VR-03 (news-modal symmetric pattern broken) → reopened major → r3 patched (news-modal.ts now mirrors newsletter.ts)
-  - r3: claude_pass=true + codex_pass=true. 1 minor (hero glyph 비중) carry to v0.16
-- **Autonomous multi-ship 진행 중**: v0.16 sensor (gyro/GPS/compass) → v0.17 filter/zoom/lock/highlight → v0.18 자세히보기 + claim flow → v0.19 profile + messaging full
-- Hara v2.3.1 carry 누적:
-  - codex narrative-only output robustness (v0.14 + v0.15 둘 다 manual canonical front-matter patch 발생)
-  - `ui-codex-<slug>.md` round suffix 누락 (r1 = r2 = r3 overwrite — round-tracking 단절)
-  - symmetric-component pair 대칭성 검사 (codex r2 가 잡았지만 자동화 가능)
-  - Phase 02 blueprint 의 CSP/cross-platform constraint 자동 checklist
-- Open findings: 0 blocker. INBOX: 0 unread.
+- **Hara v2.4 r2 verify 단계** — `scripts/check-subagent-prompt.sh` lint enforcement. r1 PASS (3 minor patched). r2 PASS (2 minor patched in r3 patch). ship 임박.
+- Open findings: 0 blocker / 0 major. INBOX: 0 unread.
+- Hara cumulative carry (v2.4.1+ pre-Agent hook automation, v2.5+ design system 일치 검증).
 
 ## Required reads (세션 시작 시)
 
@@ -47,7 +34,8 @@
 
 | commit | scope | 내용 |
 |---|---|---|
-| (pending) | note(starpin-v0.18.0) | content enrichment — 6 cosmos SVG + messaging real POST + I-UI-19 (ADR-033). Hara v2.3.2 첫 dogfood VALIDATED |
+| (pending) | harness(v2.4) | scripts/check-subagent-prompt.sh 5-카테고리 enforceable lint (ADR-034). v2.3.2 의 self-checklist → enforced gate |
+| dc97fb7 | note(starpin-v0.18.0) | content enrichment — 6 cosmos SVG + messaging real POST + I-UI-19 (ADR-033). Hara v2.3.2 첫 dogfood VALIDATED 5/5 delivered |
 | c2a1726 | harness(v2.3.2) | subagent 5-카테고리 deliverable template + modal-overlay-race 패턴 + ARIA imperative (ADR-032). v2.3.1 dogfood lesson 추가 codification |
 | cb59b6d | note(starpin-v0.17.3) | V-CX-TEL-01 FULL close — detail-page race fix (_removeOverlayDom split) + missing CSS + friendly-name title (V-CX-TEL-02 in detail-page surface). 12 PNG |
 | 78e7b52 | note(starpin-v0.17.2) | profile-stars aria-label a11y win (Maestro WKWebView nested span 한계 우회) + V-CX-TEL-01 partial close + Hara v2.3.1 round-suffix r2 dogfood |

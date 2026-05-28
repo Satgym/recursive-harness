@@ -1,4 +1,4 @@
-# HARNESS.md — Hara 헌법 (v2.3.2)
+# HARNESS.md — Hara 헌법 (v2.4)
 
 > Claude+Codex 협업의 **절대 규칙**과 **워크플로우 정의**.
 > 변경은 §10 절차. 버전 이력은 §11.
@@ -176,6 +176,7 @@ stranger (다음 세션 / 다른 사람)가 STATUS.md만 보고 "지금 무엇�
 
 | 버전 | 변경 | ADR |
 |---|---|---|
+| v2.4 | `scripts/check-subagent-prompt.sh` lint — v2.3.2 의 5-카테고리 deliverables template 을 *enforceable gate* 로 격상. `--strict` mode 가 impl-review path 의무. starpin v0.18 의 30x speedup 결과 → 의무화 합리 | ADR-034 |
 | v2.3.2 | 4-ship dogfood carry 추가 — PATTERNS §deliverable-categories (subagent 5-카테고리 책임 template: code/style/test/fixture/impl-review) + §modal-overlay-race (DOM cleanup vs navigation 분리 패턴) + ARIA imperative for Maestro WKWebView | ADR-032 |
 | v2.3.1 | HC-13 dogfood carry 정리 — codex narrative-only output parser robustness + ui-codex round suffix + skill ui-visual-review v0.3 (sim orientation matrix + chunking self-diagnostic + symmetric-pair check) + PATTERNS §subagent-recovery + §scope-chunking + chunking discipline 헌법 추가 | ADR-030 |
 | v2.3 | HC-13 Visual-Review 신설 — `ui-spec.md` design intent + Maestro takeScreenshot + Claude(coordinator multi-modal) + Codex visual independent review. base skill `ui-visual-review`. ship gate 의 functional + visual 분리 | ADR-025 |

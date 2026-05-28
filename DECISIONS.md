@@ -18,6 +18,54 @@
 
 ---
 
+## ADR-035 — Hara v2.4.1: `--mode=auto|impl|review` flag (false-negative skip + safety)
+
+**Date**: 2026-05-29 · **Status**: accepted
+
+**Context**: v2.4 ship 후 dogfood (`for f in .harness/prompts/*.md; do bash scripts/check-subagent-prompt.sh "$f"; done`) 결과:
+- harness root 의 30+ prompt 중 모두 5/5 FAIL
+- starpin 의 25+ prompt 중 모두 5/5 FAIL
+- 이유: 거의 모두 *review prompts* (codex 호출용) 또는 v2.4 이전 *legacy impl prompts*
+
+v2.4 의 strict-only 정책이 review prompts 에 false negative 를 잔뜩 일으킴. mass-lint (`find | xargs`) 가 의미 있는 신호 못 줌.
+
+### A. `scripts/check-subagent-prompt.sh` 변경
+
+새 `--mode=auto|impl|review` flag (default `auto`):
+- **auto**: filename suffix `-impl.md` 또는 `-impl-r<N>.md` → impl mode, else review mode
+- **impl**: 강제 enforce (override; 어떤 filename 이든 5/5 의무)
+- **review**: 강제 skip (override; impl filename 이든 skip)
+
+substring (`*impl*`) 대신 *strict suffix* — `-implementation.md` / `-impl-notes.md` 등이 silent drift 되지 않게.
+
+### B. Codex r1+r2 review (HC-11)
+
+- **r1**: 0 blocker / 1 major / 1 minor
+  - Major: bare `--mode` (값 누락) → `shift 2` silent fail → infinite loop. exit 142 (timeout) 으로 재현.
+  - Minor: docstring 의 `*-impl*.md` 표기 vs 실제 regex `-impl(-r<N>)?\.md$` suffix mismatch.
+- **r1 patches**:
+  - `--mode` branch 에 validation: `$# -ge 2 && ${2:-} non-empty && ${2:0:1} != "-"`. 아니면 exit 3 immediate.
+  - docstring + inline comment 가 "suffix only, substring 거부" 명시.
+- **r2** (pending): verify
+
+### C. PATTERNS.md
+
+§deliverable-categories 의 "v2.4 enforced" line 갱신:
+- v2.4.1 mode flag 안내
+- **Filename convention**: implementer prompts MUST end in `-impl.md` / `-impl-r<N>.md` (auto detect 가 작동하려면)
+- review prompts 는 어떤 이름이든 OK (auto skip)
+
+### D. Approval
+
+자율 (사용자 overnight directive).
+
+### E. carry (v2.4.2+)
+
+- pre-Agent automatic hook (현재는 coordinator manual)
+- stdin / inline prompt lint (현재는 파일 path 만)
+
+---
+
 ## ADR-034 — Hara v2.4: subagent prompt 5-카테고리 lint enforcement
 
 **Date**: 2026-05-28 late · **Status**: accepted

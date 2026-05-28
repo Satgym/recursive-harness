@@ -280,7 +280,13 @@ Mandatory short doc summarizing files / decisions / known limitations / HC trigg
 
 > v2.4 enforced: subagent prompt 작성 후 `bash scripts/check-subagent-prompt.sh <prompt.md>` 로 5 heading 자가 lint. `--strict` 추가하면 impl-review path 명시 의무. exit 1 = 누락 있음.
 >
-> **Inline `Agent()` prompts**: lint 가 파일 경로만 받으므로, inline string prompt 도 dispatch 직전 `.harness/prompts/<slug>.md` 로 먼저 persist 후 wrapper 실행. stdin / inline lint 는 v2.4.1+ pre-Agent hook carry.
+> v2.4.1: `--mode=auto|impl|review` flag 추가. `auto` (default) = filename heuristic (`*-impl.md` or `*-impl-r<N>.md` → impl mode, else review mode). 30+ legacy review prompts 가 false negative 안 나도록 graceful skip.
+>
+> **Filename convention** (v2.4.1):
+> - 실제 dispatch 되는 implementer prompts: `<phase>-<date>-<slug>-impl.md` 또는 `<phase>-<date>-<slug>-impl-r<N>.md`
+> - codex/peer review prompts: 그 외 어떤 이름이든 OK (예: `harness-v24-r1.md`, `04-cross-review-*.md`) → auto detect 가 review mode
+>
+> **Inline `Agent()` prompts**: lint 가 파일 경로만 받으므로, inline string prompt 도 dispatch 직전 `.harness/prompts/<slug>-impl.md` 로 먼저 persist 후 wrapper 실행. stdin / inline lint + pre-Agent auto-hook 은 v2.4.2+ carry.
 
 ### ARIA label imperative for Maestro
 

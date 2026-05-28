@@ -1,11 +1,10 @@
 #!/usr/bin/env bash
-# check-subagent-prompt.sh — Hara v2.4 helper.
+# check-subagent-prompt.sh — Hara v2.4 helper (v2.4.1: --mode flag added).
 #
 # SCOPE: This lint is for *implementer* subagent prompts (Phase 03 work). It is
 # NOT meant for codex *review* prompts — reviewers don't produce deliverables,
-# they evaluate them. Reviewer prompts will (correctly) fail 5/5 if run through
-# this wrapper. If unsure: only run on prompts that dispatch background work
-# expected to write code/styling/tests/fixtures.
+# they evaluate them. Reviewer prompts will (correctly) fail 5/5 if forced
+# through impl mode.
 #
 # Lints a subagent prompt file for PATTERNS §deliverable-categories 5 headings:
 #   1. Code
@@ -14,29 +13,76 @@
 #   4. Fixture
 #   5. impl review (or "impl-review")
 #
-# Each heading must appear as a markdown subsection under "## Deliverables" or
-# at the top level. Missing headings → fail with the list. Headings present but
-# explicitly "N/A — <reason>" → pass (per v2.3.2 discipline).
+# Each heading must appear as a markdown subsection. Missing headings → fail
+# with the list. Headings present but explicitly "N/A — <reason>" → pass.
 #
 # Usage:
-#   scripts/check-subagent-prompt.sh <prompt-file.md>
-#   scripts/check-subagent-prompt.sh --strict <prompt-file.md>   # also require an impl-review path
+#   scripts/check-subagent-prompt.sh [--mode=auto|impl|review] [--strict] <file.md>
+#
+# Modes (v2.4.1):
+#   auto   (default) — filename heuristic: suffix `-impl.md` or `-impl-r<N>.md`
+#                      → impl mode, else review mode (graceful skip).
+#                      Substring like `*impl*.md` is NOT matched — convention is
+#                      strict suffix to prevent drift (e.g. `-implementation.md`
+#                      stays review-mode by default).
+#   impl              — enforce 5/5 (use for any new implementer prompt)
+#   review            — skip lint, exit 0 (for codex/peer review prompts)
 #
 # Exit codes:
-#   0  all 5 headings present (or explicit N/A)
-#   1  one or more headings missing
+#   0  all 5 headings present (or explicit N/A), OR mode=review
+#   1  one or more headings missing (impl mode only)
 #   2  prompt file not found
+#   3  invalid mode
 
 set -uo pipefail
 
+MODE="auto"
 STRICT=0
-if [[ "${1:-}" == "--strict" ]]; then
-  STRICT=1
-  shift
-fi
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --strict)            STRICT=1; shift;;
+    --mode=*)            MODE="${1#--mode=}"; shift;;
+    --mode)
+      # v2.4.1 r1 codex major: bare `--mode` without value previously caused
+      # an infinite loop (shift 2 silently failed under `set -uo pipefail`).
+      # Require a value that doesn't look like another flag.
+      if [[ $# -lt 2 || -z "${2:-}" || "${2:0:1}" == "-" ]]; then
+        echo "[check-subagent-prompt] --mode requires a value (auto|impl|review)" >&2
+        exit 3
+      fi
+      MODE="$2"; shift 2;;
+    -h|--help)
+      sed -n '2,/^set -uo/p' "$0" | sed '$d' | sed 's/^# //'
+      exit 0;;
+    --) shift; break;;
+    -*) echo "Unknown flag: $1" >&2; exit 3;;
+    *) break;;
+  esac
+done
 
-PROMPT="${1:?usage: scripts/check-subagent-prompt.sh [--strict] <prompt-file.md>}"
+PROMPT="${1:?usage: scripts/check-subagent-prompt.sh [--mode=auto|impl|review] [--strict] <file.md>}"
 [[ ! -f "$PROMPT" ]] && { echo "[check-subagent-prompt] file not found: $PROMPT" >&2; exit 2; }
+
+# v2.4.1 mode resolution
+case "$MODE" in
+  auto)
+    # Heuristic: filename suffix `-impl.md` or `-impl-r<N>.md` → impl mode.
+    # Strict suffix only — `*impl*` substring would silently match
+    # `*-implementation.md` / `*-impl-notes.md` etc. and is rejected here.
+    if [[ "$(basename "$PROMPT")" =~ -impl(-r[0-9]+)?\.md$ ]]; then
+      MODE="impl"
+    else
+      MODE="review"
+    fi
+    ;;
+  impl|review) ;;
+  *) echo "[check-subagent-prompt] invalid --mode: $MODE (expected auto|impl|review)" >&2; exit 3;;
+esac
+
+if [[ "$MODE" == "review" ]]; then
+  echo "[check-subagent-prompt] SKIP — review-mode prompt (no deliverables lint)"
+  exit 0
+fi
 
 # Heading patterns — line starting with '#' (any level), followed by a category
 # keyword. Case-insensitive. Matches `### 1. Code`, `## Code`, `### Code (NEW)`,

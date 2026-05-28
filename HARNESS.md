@@ -1,4 +1,4 @@
-# HARNESS.md — Hara 헌법 (v2.3)
+# HARNESS.md — Hara 헌법 (v2.3.1)
 
 > Claude+Codex 협업의 **절대 규칙**과 **워크플로우 정의**.
 > 변경은 §10 절차. 버전 이력은 §11.
@@ -34,6 +34,8 @@
 | HC-13 | **Visual-Review** | HC-12 가 검증한 UI surface 에 *design intent doc* (`<proj>/.harness/docs/ui-spec.md`) 가 존재하는 프로젝트는 ship 전 **visual UX review** 추가 필수. Claude (coordinator, multi-modal) + Codex 가 Maestro `takeScreenshot` 산출물을 *독립* review (r1/r2 pattern) → evidence `ui_review.{claude_pass, codex_pass}` 둘 다 true. 의도: 내부 contract (HC-12) 와 *사용자가 보는 화면* (HC-13) 의 분리. ui-spec.md 미존재 시 opt-in skip (`HC-13 N/A`). base skill: [skills/ui-visual-review.md](skills/ui-visual-review.md). 상세: ADR-025. |
 
 HC-7/HC-8/HC-9는 strictness 모드 무관 항상 적용. HC-6/HC-11/HC-12/HC-13은 hook으로 자동 enforce — 잊어버려도 못 빠져나감. HC-13 은 `ui-spec.md` 존재 시에만 발동 (opt-in).
+
+**Chunking discipline** (v2.3.1 — 사용자 directive 2026-05-28): ship 단위는 *검증 가능한 수준의 적당히 많은 코드* 묶음. 잘게 쪼개기 reflexive 금지. 분할은 *필요할 때만* (depth / cross-module 정합성 / 한 세션 context 한계). 진단 기준 — HC-12 step ≤5 + HC-13 PNG ≤3 = *과한 분할* 신호 (다음 ship 합치는 후보). 4-ship dogfood (starpin v0.13~v0.16) 의 *과한 분할* 인정 → v0.17 wholesale 회수. 상세: [PATTERNS.md §scope-chunking](PATTERNS.md), memory [[feedback-ship-chunking]].
 
 ## 2. Strictness 모드
 
@@ -174,6 +176,7 @@ stranger (다음 세션 / 다른 사람)가 STATUS.md만 보고 "지금 무엇�
 
 | 버전 | 변경 | ADR |
 |---|---|---|
+| v2.3.1 | HC-13 dogfood carry 정리 — codex narrative-only output parser robustness + ui-codex round suffix + skill ui-visual-review v0.3 (sim orientation matrix + chunking self-diagnostic + symmetric-pair check) + PATTERNS §subagent-recovery + §scope-chunking + chunking discipline 헌법 추가 | ADR-030 |
 | v2.3 | HC-13 Visual-Review 신설 — `ui-spec.md` design intent + Maestro takeScreenshot + Claude(coordinator multi-modal) + Codex visual independent review. base skill `ui-visual-review`. ship gate 의 functional + visual 분리 | ADR-025 |
 | v2.2 | HC-12 mobile equivalent extension — surface 감지에 `capacitor.config.*` / `ios/App/` / `android/app/build.gradle` 추가, mobile evidence lane `mobile-e2e-*.json` (`platform: ios` 의무, `android` best-effort), validator helper 공유 | ADR-023 |
 | v2.1 | enforcement gap 메우기 — pre-push slug-matching 완화 (scope/version 독립 + r1 default-round 인정), pre-review-gate monorepo subdir 인식 (F42 close), HC-6 carveout 명시 (root vs project-local), §6 3-질문 documentation theater 삭제 | ADR-022 |

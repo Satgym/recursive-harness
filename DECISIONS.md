@@ -18,6 +18,70 @@
 
 ---
 
+## ADR-030 — Hara v2.3.1: HC-13 dogfood carry 정리 (4-ship lessons)
+
+**Date**: 2026-05-28 · **Status**: accepted (자율 진행 — Hara dogfood feedback consolidation)
+
+**Context**: starpin v0.13~v0.17 4 ship 동안 HC-13 (v2.3 신설) 의 실제 사용에서 발견된 carry 패턴들을 한 round 로 처리. 메타 부트스트랩: Hara 가 Hara dogfood 결과로 자기 개선.
+
+### A. v2.3.1 changes (6 surface)
+
+1. **`scripts/ui-visual-review.sh` parser robustness** — 4-ship 동안 *codex 가 canonical front-matter 대신 narrative body 에 `codex_pass: true.` 같은 line emit* 패턴 반복 → 3회 manual canonical patch 발생. parser 보강:
+   - front-matter (`--- ... ---` 블록) 우선
+   - body fallback 은 strict `(true|false)` / `(\d+)` 만 capture (long narrative trailing 거부)
+   - parse_review_field 가 type hint (`bool` / `int` / default string) 받아 적절히 dispatch
+
+2. **`scripts/codex-exec-review.sh` round suffix** — r1/r2/r3 같은 slug 면 같은 DEST 에 overwrite. REVIEW_ROUND 인자 있을 때 DEST 에 `-r<N>` 자동 suffix. r1 review 보존.
+
+3. **`scripts/ui-visual-review.sh` default codex prompt 강화** — 명시적 strict YAML example + "body narrative 의 `codex_pass: true.` 류 prose 거부" 안내. dogfood 결과 codex 가 prompt 따르기 향상 (v0.16 r2 와 v0.17 r1 비교).
+
+4. **`skills/ui-visual-review.md` v0.3 promotion** — v0.2 → v0.3 (proposed → accepted). 신규 섹션:
+   - *Known platform limitations* (iOS sim setOrientation noop, sim DeviceOrientation 부재, Maestro takeScreenshot region 부재, Maestro openLink WKWebView hash route 신뢰성)
+   - *Self-diagnostic — chunking discipline* (PNG/step 양 자가 점검)
+   - *Codex prompt addendum* (strict YAML + symmetric-pair check)
+   - *v0.3 carry resolved* (7 carry id ↔ resolution 표)
+
+5. **`PATTERNS.md` §subagent-recovery** (NEW) — 3 mode (529 / socket-close / spec-incomplete) 대응 절차 + precedent (v0.16 직접 작성 fallback, v0.17 partial-completion recovery) + prevention.
+
+6. **`PATTERNS.md` §scope-chunking** (NEW) + **HARNESS.md HC 표 아래 chunking 안내** — 사용자 directive "ship 단위 너무 잘게 쪼개지 말기" 의 *기준 명문화*. 분할 신호 vs 과한 신호 vs 진단 표.
+
+### B. Why this is single ship (자가 진단 적용)
+
+- 6 surface 가 모두 *HC-13 dogfood carry 처리* 의 한 묶음 → 분할 안 함
+- HC-13 base skill 변경 + 그것 호출하는 helper script 보강 + patterns 문서 = 정합성 강함
+
+### C. dogfood validation 계획
+
+- 본 Hara v2.3.1 ship 직후 starpin v0.17.1 ship 진행 — v2.3.1 의 parser robustness / round suffix / strict prompt 효과 측정
+- 측정 지표: manual canonical patch 발생 여부 / r1 = r2 file overwrite 발생 여부 / codex narrative-only 발생 여부
+
+### D. Codex r1 + r2 outcomes (self-dogfood — Hara reviewing Hara)
+
+**r1** (codex): 2 blocker + 1 major
+- Blocker #1 (postprocess strips inner FM verdict keys without merging)
+- Blocker #2 (body fallback `\b` accepts trailing prose)
+- Major #3 (canonical copy path + codex round hardcoded `r2`)
+
+**r1 patches**:
+- `_codex_postprocess.py` `extract_canonical_verdict(body_region)` + `build_front_matter` merge into wrapper FM
+- `ui-visual-review.sh` body fallback `^...\s*$` end-anchored (rejects trailing prose)
+- `ui-visual-review.sh` `--review-round` flag + round-suffixed `CODEX_REVIEW_OUT`
+
+**r2** (codex): 0 blocker + 1 major + 1 minor (carry — handled in r3 patch)
+- Major: FM regex doesn't allow inline YAML comments (`codex_pass: true # ok` fails)
+  → r3 patch: comment-aware regex `(?:#[^\n]*)?` after value capture, both in
+    `_codex_postprocess.py` and `ui-visual-review.sh` parser (FM + body fallback)
+  → prompt template updated to *not* show inline comments in example
+- Minor: `body_region` silent failure when codex CLI markers change shape
+  → r3 patch: fallback scan of full raw for any FM block containing canonical
+    keys (restricted to FM blocks, avoids `---` separator false-positives)
+
+### E. Approval
+
+자율 (사용자 directive 2026-05-28 night-autonomous mode + 하니스 발전 우선 명시). r1+r2 codex review 완료 + 모든 finding 처리됨 → HC-11 충족.
+
+---
+
 ## ADR-029 — starpin v0.17 wholesale ship (chunking memory 적용 + subagent partial-completion recovery)
 
 **Date**: 2026-05-28 · **Status**: accepted (사용자 directive — "ship 단위 너무 잘게 쪼개지 말기")

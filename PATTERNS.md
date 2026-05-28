@@ -174,6 +174,103 @@ Codex finding에 Claude가 `disputed`로 응답하는 경우:
 
 ---
 
+## §subagent-recovery — Background subagent partial-completion / 529 / socket close
+
+Phase 03 background subagent 가 작업 중 실패하는 3 가지 모드 + 대응:
+
+### Mode 1: API 529 Overloaded (Anthropic API capacity)
+- **신호**: subagent completion notification result = `API Error: 529 Overloaded`, `total_tokens=0`, `tool_uses=0`
+- **현상**: subagent 가 한 번도 tool call 못 함. 결과물 0.
+- **대응**:
+  1. 재시도 1회 (transient overload)
+  2. 재시도도 fail 시 coordinator 가 직접 작성 (scope trimmed 버전)
+  3. *작업 시각* 고려 — Anthropic 의 peak hour (UTC 14-22) 회피 가능 시 새벽으로 미루기
+- **precedent**: starpin v0.16 sensor scaffold — 2회 연속 529 → coordinator 직접 6 file 작성 (ADR-028)
+
+### Mode 2: Socket close mid-work (network/runtime drop)
+- **신호**: completion notification result = `socket connection was closed unexpectedly`, `total_tokens > 0`, `tool_uses > 0`
+- **현상**: subagent 가 partial 결과물 생성. 마지막 deliverable 가 incomplete.
+- **대응**:
+  1. *어디까지 완료됐는지* 자동 진단:
+     - `find <project> -newer <reference-mtime-file>` 로 modified files 목록
+     - `npm run build` / `npm test` 로 syntactic / structural integrity check
+     - prompt 의 deliverable list 와 actual file list cross-check
+  2. *남은 deliverable* 만 coordinator 직접 작성 (full rerun 금지 — duplicate work)
+  3. impl review doc 은 coordinator 가 직접 작성 (subagent 가 보통 안 함)
+- **precedent**: starpin v0.17 wholesale ship — 19 min / 79 tool_uses 후 socket close. Coordinator 가 TS error fix + CSS 보강 + Maestro flow + impl review 로 마무리 (ADR-029)
+
+### Mode 3: Spec-incomplete (subagent did work but missed key responsibility)
+- **신호**: build/test 통과 but visual / functional verification 시 명세 누락 발견
+- **흔한 누락 카테고리** (3-ship dogfood 기반):
+  - **CSS responsibility**: subagent 가 lib code 만 작성, style.css 누락 → 시각적 검증 0
+  - **Test fixture / sample data**: 새 backend route 추가했지만 fixture seed 없어서 e2e 가 empty path 만 검증
+  - **Maestro flow yaml**: code 만 작성, 검증 path 누락
+- **대응**: coordinator 가 *prompt 강화* (다음 round 부터):
+  - "implementation = code + styling + tests + fixture data — 4가지 모두 책임"
+  - deliverable list 에 각 카테고리 explicit hard-coded
+
+### 회복 절차 (recovery)
+
+```bash
+# 1. 진단 — subagent 가 손댄 file 목록
+find <project>/backend/public <project>/backend/src -name '*.ts' -newer <reference-mtime-file> 2>/dev/null
+find <project>/tests -newer <reference-mtime-file> 2>/dev/null
+
+# 2. 구조적 integrity
+npm --prefix backend run build 2>&1 | grep error
+npm --prefix backend test 2>&1 | tail -5
+
+# 3. 명세 vs 실 파일 diff
+cat <subagent-prompt-deliverable-list> | grep -oE '`[^`]+`'  # 약속한 파일 list
+ls <expected-files>                                            # 실제 파일 확인
+
+# 4. coordinator 가 남은 deliverable 만 작성 — full rerun 금지
+```
+
+### prevention
+
+- Subagent prompt 의 "Deliverables" 섹션이 *모듈 type 별 분리* (code / styling / test / fixture / impl-review). 각 카테고리에서 누락 시 *partial* 상태로 명시.
+- High-risk slot (Anthropic API peak hour: UTC 14-22) 회피 — 새벽 동작 권장.
+- Subagent 1회 launch 의 scope 가 *너무 클 때* socket close 위험 ↑ — chunking (PATTERNS §scope-chunking) 참조.
+
+---
+
+## §scope-chunking — Ship 단위 chunking discipline (v2.3.1)
+
+사용자 directive 2026-05-28: "ship 단위 너무 잘게 쪼개지 말기. base 하니스의 분할 원칙은 *필요할 때만*". feedback memory: [[feedback-ship-chunking]].
+
+### 분할이 필요한 신호 (분할 OK)
+
+- 단일 ship 의 추정 작업량 > 한 세션 context 한계
+- cross-module 정합성 충돌 위험 큼 (예: backend schema 변경 + frontend major rework 동시)
+- 한 모듈만 자율 진행, 다른 모듈은 사용자 선호 결정 필요
+
+### 분할이 *과한* 신호 (잘게 쪼개진 신호)
+
+- ship 마다 review cycle 의 *cost overhead* > impl cost (예: 1 round 2-3 PNG 검증 + codex 호출 2회)
+- 다음 ship 이 현 ship 의 *얇은 후속* (예: scaffold + 진짜 기능 분리)
+- *layered dependency* 가 명확한데도 분할 (예: sensor → filter → highlight 가 서로 build on each other)
+
+### 자가 진단 기준 (chunking 적정성)
+
+| 지표 | 잘게 쪼개진 신호 | 적정 |
+|---|---|---|
+| HC-12 Maestro step | ≤ 5 | 8-15 |
+| HC-13 PNG | ≤ 3 | 6-12 |
+| 새 lib / module 파일 | 0-2 | 5-10 |
+| 새 invariant | 0-2 | 3-5 |
+| review round (반복) | 2-3 | 1 |
+| 신규 backend route / schema | 0 | 1-2 |
+
+`스카이 진단` — 위 6 지표 중 4+ 가 *잘게 쪼개진 신호* 영역이면 다음 ship 합치는 후보.
+
+### precedent
+
+- v0.13 ~ v0.16 starpin 의 4 ship 분할이 *과한 분할* 로 판명 → v0.17 wholesale ship 으로 회수 (ADR-029).
+- chunking memory 적용 후 1 ship 의 PNG/step 가 약 2 배 증가 + review round 가 3 → 1 로 감소.
+
+---
+
 ## §history — Version archive (v1.2~v1.7)
 
 | 버전 | 핵심 변경 | ADR / finding |

@@ -108,7 +108,11 @@ CMD+=(-)
 DATE="$(date +%Y%m%d)"
 DEST_DIR=".harness/reviews"
 mkdir -p "$DEST_DIR"
-DEST="$DEST_DIR/${PHASE:+${PHASE}-}${DATE}-${SLUG}.md"
+# Hara v2.3.1: when REVIEW_ROUND is set, suffix DEST so r1/r2/r3 don't overwrite.
+# Pattern: <phase>-<date>-<slug>-<round>.md (e.g. 04-20260528-v015-shell-impl-r2.md).
+ROUND_SUFFIX=""
+[[ -n "$REVIEW_ROUND" ]] && ROUND_SUFFIX="-${REVIEW_ROUND}"
+DEST="$DEST_DIR/${PHASE:+${PHASE}-}${DATE}-${SLUG}${ROUND_SUFFIX}.md"
 
 RAW="$(mktemp -t codex-exec-review.XXXXXX)"
 trap 'rm -f "$RAW"' EXIT

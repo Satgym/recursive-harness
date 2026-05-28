@@ -69,6 +69,45 @@ def _strip_leading_frontmatter(body: str) -> str:
     return leading_space + stripped[inner_end:].lstrip("\n")
 
 
+# v2.3.1 (Hara HC-13 dogfood lesson — harness-v231-r1 codex blocker #1):
+# When codex emits canonical verdict keys in its inner front-matter,
+# _strip_leading_frontmatter discards them. The wrapper FM did not preserve
+# those values, so ui-visual-review.sh had to fall back to body parsing —
+# which was the exact failure mode v2.3.1 set out to fix. This helper pulls
+# the canonical verdict keys out of the inner FM before stripping so
+# build_front_matter can merge them into the wrapper.
+_CANONICAL_VERDICT_KEYS = ("codex_pass", "blocker_count", "major_count", "minor_count")
+
+
+def extract_canonical_verdict(raw_or_body: str) -> dict:
+    """Pull canonical verdict keys (codex_pass, *_count) from any leading YAML
+    front-matter block found in the codex output. Works on both the raw codex
+    stdout and the already-stripped body (since _strip_leading_frontmatter is
+    called inside extract_review_body before build_front_matter sees it). We
+    scan the entire input for the first `---\\n ... \\n---\\n` block."""
+    m_open = re.search(r"(?m)^---\s*$", raw_or_body)
+    if m_open is None:
+        return {}
+    rest = raw_or_body[m_open.end():]
+    m_close = re.search(r"(?m)^---\s*$", rest)
+    if m_close is None:
+        return {}
+    inner = rest[: m_close.start()]
+    fields: dict = {}
+    for key in _CANONICAL_VERDICT_KEYS:
+        # v2.3.1 r2 — allow optional inline YAML comment after the value
+        # (e.g. "codex_pass: true   # or: false"). Without the comment-aware
+        # alternative the `\s*$` anchor refused such lines silently.
+        m = re.search(
+            r"(?m)^\s*" + re.escape(key) + r"\s*:\s*([^\n#]+?)\s*(?:#[^\n]*)?\s*$",
+            inner,
+        )
+        if m:
+            v = m.group(1).strip().rstrip(".,;")
+            fields[key] = v
+    return fields
+
+
 def extract_tokens(raw: str) -> str:
     m = re.search(r"\ntokens used\n([\d,]+)", raw)
     return m.group(1).replace(",", "") if m else "unknown"
@@ -113,6 +152,33 @@ def build_front_matter(args: argparse.Namespace, meta: dict, body: str, raw: str
         fm_lines.append(f"review_round: {args.review_round}")
     if args.prior_review:
         fm_lines.append(f"prior_review: {args.prior_review}")
+    # v2.3.1: merge canonical verdict keys from codex's inner FM (codex_pass,
+    # blocker_count, major_count, minor_count). v2.3.1 r2 minor fix — when
+    # the codex CLI markers (`\ncodex\n` / `\ntokens used\n`) change shape
+    # the body_region was empty and merge silently disabled. Fall back to the
+    # already-stripped body parameter, which still contains the original FM
+    # block (extract_review_body strips it but we get a copy of the inner
+    # content via the `body` argument before strip happened — except it's
+    # already stripped). So as a final fallback scan the raw output but
+    # restrict to FM blocks that contain at least one canonical verdict key.
+    end = raw.find("\ntokens used\n")
+    codex_marks = list(re.finditer(r"\ncodex\n", raw))
+    body_region = ""
+    if codex_marks and end > 0:
+        body_region = raw[codex_marks[-1].end():end]
+    canonical_verdict = extract_canonical_verdict(body_region)
+    if not canonical_verdict:
+        # Fallback: scan raw for any FM block that mentions any verdict key.
+        for fm_match in re.finditer(r"(?ms)^---\s*$(.+?)^---\s*$", raw):
+            candidate = extract_canonical_verdict(
+                "---\n" + fm_match.group(1) + "\n---\n"
+            )
+            if candidate:
+                canonical_verdict = candidate
+                break
+    for key in _CANONICAL_VERDICT_KEYS:
+        if key in canonical_verdict:
+            fm_lines.append(f"{key}: {canonical_verdict[key]}")
     fm_lines += [
         "codex_meta:",
         f"  codex_version: {codex_version}",

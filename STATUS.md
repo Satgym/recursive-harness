@@ -7,15 +7,17 @@
 | 항목 | 값 |
 |---|---|
 | Project | Hara 메타 부트스트랩 (이 레포) + starpin dogfood (`examples/starpin/`) |
-| Harness version | **v2.3** (HC-13 Visual-Review) — shipped at `f79b643`. v2.3.1 carry 확장: codex narrative-only output robustness + ui-codex round suffix + symmetric-component pair check |
-| Last ship | (pending) `note(starpin-v0.15.0)` — UI shell rework + HC-13 second dogfood with 3-round adaptive cycle (ADR-027). 직전: `f44ddbd` note(starpin-v0.14.0). |
-| Strictness | autonomous (UI multi-ship: v0.15 → v0.16 → v0.17 → v0.18 → v0.19 per user UI.md directive) |
-| Last updated | 2026-05-28 by Claude (v0.15 ship 준비; HC-13 두 번째 dogfood 완료 — 3-round adaptive) |
+| Harness version | **v2.3** (HC-13 Visual-Review) — shipped at `f79b643`. v2.3.1 carry 확장: codex narrative-only output robustness + ui-codex round suffix + symmetric-component pair check + subagent 529 fallback path + iOS sim orientation limitation |
+| Last ship | (pending) `note(starpin-v0.16.0)` — sensor scaffold (ADR-028; subagent 529 fallback to direct impl). 직전: `7402140` note(starpin-v0.15.0). |
+| Strictness | autonomous (UI multi-ship 진행 중: v0.15 ✓ → v0.16 (ship 준비) → v0.17 → v0.18 → v0.19) |
+| Last updated | 2026-05-28 by Claude (v0.16 ship 준비; subagent 529 direct-impl fallback 성공) |
 
 ## Active gate
 
 - starpin v0.14 ✓ shipped (`f44ddbd`).
-- **starpin v0.15 ship 준비 (ADR-027)** — UI shell rework (G1 SPA-ish 2-tab ✓, G2 glassmorphism+무채색 ✓, G3 auto-login localStorage migration ✓, G4 HC-13 second dogfood 3-round ✓).
+- starpin v0.15 ✓ shipped (`7402140`).
+- **starpin v0.16 ship 준비 (ADR-028)** — sensor scaffold. fake-mode sensor pose + permission UI + iframe postMessage bridge + sky-canvas viewport center prop + landscape CSS. **Subagent 529 → coordinator direct-impl fallback** (Phase 03 background subagent 2회 launch 모두 API 529 fail; coordinator 가 직접 6 file 작성). Real Capacitor plugin + native plist/manifest carry to v0.16.1 (real device 필요).
+- **starpin v0.15 ship complete (ADR-027)** — UI shell rework (G1 SPA-ish 2-tab ✓, G2 glassmorphism+무채색 ✓, G3 auto-login localStorage migration ✓, G4 HC-13 second dogfood 3-round ✓).
   - functional smoke pass + 6 screenshots + Claude/Codex visual review = canonical `ui_review` evidence
   - r1: 1 blocker (telescope blank CSP frame-ancestors) + 2 major (news image broken) → patched
   - r2: codex disputed Claude r2 close on V-VR-03 (news-modal symmetric pattern broken) → reopened major → r3 patched (news-modal.ts now mirrors newsletter.ts)
@@ -44,7 +46,8 @@
 
 | commit | scope | 내용 |
 |---|---|---|
-| (pending) | note(starpin-v0.15.0) | UI shell rework + HC-13 두 번째 dogfood, 3-round adaptive (ADR-027). codex r2 dispute → news-modal symmetric pattern 정정 → r3 closed |
+| (pending) | note(starpin-v0.16.0) | sensor scaffold (ADR-028) — fake mode + permission UI + iframe postMessage + landscape CSS. Subagent 529 → coordinator direct-impl |
+| 7402140 | note(starpin-v0.15.0) | UI shell rework + HC-13 두 번째 dogfood, 3-round adaptive (ADR-027) |
 | f44ddbd | note(starpin-v0.14.0) | mobile UI 개선 + HC-13 첫 dogfood (ADR-026) |
 | f79b643 | harness(v2.3.0) | HC-13 Visual-Review (ADR-025) — base skill + runner + dual-lane hook |
 | 1751c28 | note(starpin-v0.13.0) | Capacitor iOS wrap (ADR-024) |

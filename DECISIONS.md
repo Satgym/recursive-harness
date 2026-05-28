@@ -18,6 +18,57 @@
 
 ---
 
+## ADR-028 — starpin v0.16 sensor scaffold (subagent 529 fallback to direct impl)
+
+**Date**: 2026-05-28 · **Status**: accepted (autonomous multi-ship)
+
+**Context**: UI.md §4 의 telescope sensor 통합 — gyro/GPS/compass 로 휴대폰이 바라보는 방향의 하늘 표시. v0.16 = scaffold (fake mode + permission UI + iframe postMessage bridge + landscape CSS + sky-canvas viewport center prop). 실 Capacitor plugin install + native plist/manifest 변경 carry to v0.16.1 (real device 필요 — iPhone simulator 가 DeviceOrientation event 못 생성).
+
+### A. Subagent 529 → direct impl fallback
+
+- Phase 03 background subagent 2 회 launch 모두 `API Error: 529 Overloaded` 로 0 token / 0 tool_uses fail
+- Coordinator 가 직접 6 file 작성 (2 NEW + 4 MODIFY): sensor-pose.ts + permission-ui.ts + sensor-smoke.yaml + sky-canvas.ts amend + telescope-iframe.ts amend + style.css + run-mobile-smoke.sh
+- Build clean, 288 tests pass, Maestro 20s pass with 4 PNG
+- **Harness improvement**: subagent failure 시 coordinator 직접 작성 path 가 *빠르게 동원 가능* (시스템 robustness). Hara v2.3.1 carry 후보: subagent 529 자동 fallback skill
+
+### B. v0.16 deliverable (6 files)
+
+NEW (3):
+- `backend/public/lib/sensor-pose.ts` — DeviceOrientation + fake-mode (URL `?simulate=sensor`) → 30Hz throttle pose emit. HC-7: no raw GPS log. iOS 13+ DeviceOrientationEvent.requestPermission supported.
+- `backend/public/lib/permission-ui.ts` — glass overlay modal + 3s manual-mode banner toast. INV-XSS textContent only.
+- `tests/mobile/flows/sensor-smoke.yaml` — 4 takeScreenshot Maestro flow
+
+MODIFY (3):
+- `backend/public/lib/sky-canvas.ts` — bootstrapSkyPage 가 window 'message' listener (origin-guarded) 추가, sensor-ready 발신, 1.5s throttle refresh
+- `backend/public/lib/telescope-iframe.ts` — iframe load 후 parent message bridge attach, sensor-ready ack 받으면 permission modal 또는 simulate mode 진입
+- `backend/public/style.css` — `.permission-modal-*`, `.manual-mode-banner` keyframe fade, `.sensor-status-indicator`, `@media (orientation: landscape)`
+- `scripts/run-mobile-smoke.sh` — SLUG positional arg (sensor-smoke default, shell-smoke regression option)
+
+### C. New invariants (I-UI-11 ~ I-UI-14)
+
+- I-UI-11 (sensor optional): 권한 거절 → manual mode, no hang
+- I-UI-12 (orientation aware): portrait + landscape 레이아웃 둘 다 깨짐 0 (CSS spec; sim 한계로 실 회전 검증 X)
+- I-UI-13 (location privacy): raw GPS console/log/evidence 평문 저장 금지
+- I-UI-14 (sensor rate budget): 30Hz pose emit cap + 1.5s backend refresh budget
+
+### D. HC-13 r1 (Claude visual)
+
+claude_pass=true, 0 blocker, 0 major, 2 minor (sim setOrientation noop + modal timing). 1 round 만 — codex r2 visual independent verify 추가.
+
+### E. Known limitations (v0.16.1 carry)
+
+- Capacitor `@capacitor/geolocation` + `@capacitor/motion` install — real device required to validate
+- iOS Info.plist NSLocationWhenInUseUsageDescription + NSMotionUsageDescription — same
+- Android Manifest ACCESS_FINE_LOCATION — same
+- Maestro setOrientation 이 iOS sim 에서 noop — base skill v0.3 carry
+- v0.17 의 IAU 2006 alt/az ↔ ICRS equatorial transform 정확화 — v0.16 의 alpha-as-RA proxy 는 scaffold
+
+### F. Approval
+
+자동 수락 (사용자 UI.md directive + autonomous multi-ship 명령).
+
+---
+
 ## ADR-027 — starpin v0.15 UI shell rework + HC-13 second dogfood (3-round adaptive)
 
 **Date**: 2026-05-28 · **Status**: accepted (user UI.md directive + multi-ship 자율 명령)

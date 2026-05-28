@@ -7,20 +7,25 @@
 | 항목 | 값 |
 |---|---|
 | Project | Hara 메타 부트스트랩 (이 레포) + starpin dogfood (`examples/starpin/`) |
-| Harness version | **v2.3** (HC-13 Visual-Review) — shipped at `f79b643`. v2.3.1 carry: codex narrative-only output robustness |
-| Last ship | (pending) `note(starpin-v0.14.0)` — mobile UI improvement + HC-13 first dogfood (ADR-026). 직전: `f79b643` harness(v2.3.0). |
-| Strictness | autonomous (UI improvement phase) |
-| Last updated | 2026-05-28 by Claude (v0.14 ship 준비; HC-13 첫 dogfood 완료) |
+| Harness version | **v2.3** (HC-13 Visual-Review) — shipped at `f79b643`. v2.3.1 carry 확장: codex narrative-only output robustness + ui-codex round suffix + symmetric-component pair check |
+| Last ship | (pending) `note(starpin-v0.15.0)` — UI shell rework + HC-13 second dogfood with 3-round adaptive cycle (ADR-027). 직전: `f44ddbd` note(starpin-v0.14.0). |
+| Strictness | autonomous (UI multi-ship: v0.15 → v0.16 → v0.17 → v0.18 → v0.19 per user UI.md directive) |
+| Last updated | 2026-05-28 by Claude (v0.15 ship 준비; HC-13 두 번째 dogfood 완료 — 3-round adaptive) |
 
 ## Active gate
 
-- starpin v0.13 ✓ shipped (`1751c28`).
-- Hara v2.3 ✓ shipped (`f79b643`) — HC-13 Visual-Review.
-- **starpin v0.14 ship 준비 (ADR-026)** — mobile UI 개선 (G1 sky-first ✓, G2 login 한국어 ✓, G3 사용자 친화 star info ✓, G4 HC-13 dogfood ✓). 
-  - functional smoke pass + 4 screenshots + Claude/Codex visual review = canonical `ui_review` evidence
-  - mid-round 1 major patched (Star list 영어 → 한국어)
-  - 3 major + 2 minor → v0.15+ carry (bare nav adopt, mobile nav compact, h2 size, fallback format polish)
-- Hara v2.3.1 carry: codex narrative-only output robustness (manual patch 우회 발생).
+- starpin v0.14 ✓ shipped (`f44ddbd`).
+- **starpin v0.15 ship 준비 (ADR-027)** — UI shell rework (G1 SPA-ish 2-tab ✓, G2 glassmorphism+무채색 ✓, G3 auto-login localStorage migration ✓, G4 HC-13 second dogfood 3-round ✓).
+  - functional smoke pass + 6 screenshots + Claude/Codex visual review = canonical `ui_review` evidence
+  - r1: 1 blocker (telescope blank CSP frame-ancestors) + 2 major (news image broken) → patched
+  - r2: codex disputed Claude r2 close on V-VR-03 (news-modal symmetric pattern broken) → reopened major → r3 patched (news-modal.ts now mirrors newsletter.ts)
+  - r3: claude_pass=true + codex_pass=true. 1 minor (hero glyph 비중) carry to v0.16
+- **Autonomous multi-ship 진행 중**: v0.16 sensor (gyro/GPS/compass) → v0.17 filter/zoom/lock/highlight → v0.18 자세히보기 + claim flow → v0.19 profile + messaging full
+- Hara v2.3.1 carry 누적:
+  - codex narrative-only output robustness (v0.14 + v0.15 둘 다 manual canonical front-matter patch 발생)
+  - `ui-codex-<slug>.md` round suffix 누락 (r1 = r2 = r3 overwrite — round-tracking 단절)
+  - symmetric-component pair 대칭성 검사 (codex r2 가 잡았지만 자동화 가능)
+  - Phase 02 blueprint 의 CSP/cross-platform constraint 자동 checklist
 - Open findings: 0 blocker. INBOX: 0 unread.
 
 ## Required reads (세션 시작 시)
@@ -39,7 +44,8 @@
 
 | commit | scope | 내용 |
 |---|---|---|
-| (pending) | note(starpin-v0.14.0) | mobile UI 개선 + HC-13 첫 dogfood (ADR-026) — G1/2/3/4 PASS, 3 major + 2 minor v0.15+ carry |
+| (pending) | note(starpin-v0.15.0) | UI shell rework + HC-13 두 번째 dogfood, 3-round adaptive (ADR-027). codex r2 dispute → news-modal symmetric pattern 정정 → r3 closed |
+| f44ddbd | note(starpin-v0.14.0) | mobile UI 개선 + HC-13 첫 dogfood (ADR-026) |
 | f79b643 | harness(v2.3.0) | HC-13 Visual-Review (ADR-025) — base skill + runner + dual-lane hook |
 | 1751c28 | note(starpin-v0.13.0) | Capacitor iOS wrap (ADR-024) |
 | bde2b47 | harness(v2.2.0) | HC-12 mobile equivalent extension (ADR-023) |

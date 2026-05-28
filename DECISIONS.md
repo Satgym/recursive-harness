@@ -18,6 +18,46 @@
 
 ---
 
+## ADR-027 — starpin v0.15 UI shell rework + HC-13 second dogfood (3-round adaptive)
+
+**Date**: 2026-05-28 · **Status**: accepted (user UI.md directive + multi-ship 자율 명령)
+
+**Context**: 사용자 UI.md 5개 section 직접 기획서 — "auto-login + 2-tab newsletter+telescope + sensor/filter/zoom/lock/highlight + 자세히보기/claim + profile/messaging + 글래스+무채색". Claude 가 기획자(coordinator)만, 코드 작업 subagent + codex 호출 + 실제 UI 사용/캡쳐로 검증, 그리고 *하니스 발전 부산물* 확보. v0.15 는 그 multi-ship 의 1번째 round (shell only — 나머지 sensor/filter/claim/profile 은 v0.16~v0.19 carry).
+
+### A. v0.15 deliverable (14 files NEW + 7 modify)
+
+자세히는 `examples/starpin/RELEASE.md` 의 v0.15.0 section 참조. 요약:
+
+- **NEW (10)**: app.html (SPA-ish container), lib/{app-shell, newsletter, news-modal, profile-dropdown, messaging-icon, tab-toggle, telescope-iframe}.ts, data/news-sample.json (8 Korean astronomy news), tests/mobile/flows/shell-smoke.yaml (6 takeScreenshot)
+- **MODIFY (7)**: lib/{shell, auth-client, nickname}.ts (localStorage migration + redirect /sky.html → /app.html#newsletter), public/style.css (.glass-* + .app-shell-* + .fab-toggle + .news-* + responsive), backend/src/server.ts (CSP frame-ancestors fix), callback.html (Korean), scripts/run-mobile-smoke.sh (SLUG=shell-smoke)
+- **Invariants**: I-UI-6 (hash routing) + I-UI-7 (glassmorphism) + I-UI-8 (auto-login secure + 8s timeout) + I-UI-9 (CSP-safe vanilla TS) + I-UI-10 (telescope iframe isolation — sky.html 비변경)
+
+### B. HC-13 second dogfood — **3-round adaptive cycle** (first ever)
+
+1. **r1**: Claude visual review of 6 PNG. claude_pass=false. **1 blocker (V-VR-01 telescope blank — CSP frame-ancestors 'none')** + 2 major (news image broken — CSP img-src + APOD 404) + 2 minor.
+2. **Patch r1**: server.ts CSP frame-ancestors → 'self'; safeImageUrl 항상 null + .news-image-fallback gradient; telescope-iframe.ts 의 `body.telescope-embed-mode` class injection (sky.html 비변경, I-UI-10 preserve). Maestro 재실행 → 6 PNG 재캡쳐.
+3. **r2 Claude**: claude_pass=true. all blocker + 2 major closed. 2 minor carry.
+4. **r2 Codex** (independent): **codex_pass=false**. Claude r2 의 V-VR-03 "modal image closed" 판정에 **dispute**. 근거: news-modal.ts 가 `safeImageUrl===null` 시 image wrapper 자체를 skip → §9 design intent "큰 이미지 영역 유지" 위배. newsletter.ts 와 *symmetric pattern* 깨짐.
+5. **Patch r2 codex dispute**: news-modal.ts 가 newsletter.ts 와 동일하게 항상 image wrapper 렌더 + null 시 fallback class. + codex r2 functional nit (auth-client.ts local-skill 주석 stale) 도 closed.
+6. **r3 Claude**: claude_pass=true. V-CODEX-VR-R2-01 closed. 1 minor (hero glyph 비중) carry.
+7. **r3 Codex**: [waiting; expected codex_pass=true]
+
+### C. 하니스 발전 (Hara v2.3.1 carry candidates)
+
+- **HC-13 의 *Single-LLM verdict 신뢰 X* (INV-VR-1) 실증**: Claude r2 가 close 판정한 finding 을 Codex r2 가 dispute → r3 reopen → 진짜 design intent 위배 발견. *2-LLM disagree* 가 adaptive layer 의 가치 입증.
+- **CSP-side regression** (frame-ancestors / img-src / style-src) 같은 *cross-cutting platform constraint* 는 functional E2E 절대 catch 못 함 → HC-13 의 raison d'être 입증 2번째.
+- **base skill v0.3 carry**:
+  - Maestro `takeScreenshot` 의 region/crop 옵션 부재 — V-VR-04 root cause
+  - `ui-codex-<slug>.md` 의 round suffix 누락 (r1 = r2 overwrite) — file path round-tracking
+  - news-modal/newsletter 같은 *symmetric component pair* 의 대칭성 검사 추가 (codex-side prompt 강화 또는 자동 lint)
+- **Phase 02 blueprint amendment 자동 checklist** (cross-cutting platform constraints): frame-ancestors / img-src / style-src 같은 CSP boundary 가 새 surface (iframe / external image) 도입 시 자동 체크
+
+### D. Approval
+
+자동 수락 (사용자 UI.md directive + 4-question 응답 + 자율 multi-ship 명령).
+
+---
+
 ## ADR-026 — starpin v0.14 mobile UI improvement + HC-13 first dogfood
 
 **Date**: 2026-05-28 · **Status**: accepted (user directive — UI verification path)

@@ -18,6 +18,120 @@
 
 ---
 
+## ADR-024 — starpin v0.13 Capacitor mobile wrap (iOS smoke verified)
+
+**Date**: 2026-05-28 · **Status**: accepted (user-directed mobile expansion; Phase 05 iOS evidence PASS)
+
+**Context**: 사용자 요청 "이걸 모바일에서도 실행 가능하게 개선" + "기획자 역할만, code 는 background session 위임". starpin web demo (v0.5~v0.12) 를 Capacitor 8.3.4 로 wrap → iPhone 17 Pro simulator 실 검증.
+
+**전체 흐름 (full Hara cycle)**:
+- Phase 00 Intake amendment v0.2 (codex r1 block→fix→r2 minor-followup→fix)
+- Hara v2.2 base ship (HC-12 mobile lane — ADR-023, `bde2b47`)
+- Phase 01 Blueprint amendment v0.4 (codex r1 block→v0.2→r2 block→v0.2.1→r3 minor-followup; user approved; **fps measurement v0.14+ carry** 결정)
+- Phase 02 Module Plan v0.3 (codex r1 block→v0.2→r2 minor-followup; mkdir 순서 fix)
+- Phase 03 Capacitor 통합 (background general-purpose subagent; ios-sketch/android-sketch preflight + Capacitor scaffold + Maestro flow + run-mobile-smoke.sh)
+- Phase 04 codex r1 block→fps defer surgical patch→r2 block (doc drift)→r3 ship-ready
+- Phase 05 iOS smoke iteration:
+  - run #1: cap run interactive prompt → script fix (target=DEVICE_ID)
+  - run #2: SPM partial cache → DerivedData clean
+  - run #3: cap run build succeeded; Maestro `assertVisible "닉네임"` failed (mock dev user 가 이전 round nickname 보존 → sky.html 직행) → flow 가 nickname optional 해야 함
+  - run #4: ngrok free interstitial "Visit Site" warning → `capacitor.config.ts` 에 `overrideUserAgent: 'CapacitorStarpinSmoke/1.0'` 추가
+  - run #5: WebView 가 index.html 도착 (server.url root) → flow 가 "로그인 시작" CTA 탭하여 login.html 진입 추가
+  - run #6: Maestro iOS WebView 가 HTML `id` selector 못 잡음 → text-based selector + index disambiguation
+  - run #7: sky.html star-list 가 fold 아래 → `scrollUntilVisible` 추가
+  - **run #8: PASS** (20s)
+
+**Evidence** (I-CAP-4 manual verification — note() carveout, hook 발동 X):
+```json
+{
+  "status": "pass",
+  "ran_at": "2026-05-28T05:10:14Z",
+  "slug": "login-smoke",
+  "test_count": 1,
+  "exit_code": 0,
+  "platform": "ios"
+}
+```
+경로: `examples/starpin/.harness/runs/mobile-e2e-20260528-ios-login-smoke.json` (gitignored sub-project, hook 우회).
+
+**Flow 검증 범위** (Hara HC-12 first-flow happy-path composition scope):
+1. App launch → index.html
+2. "로그인 시작" CTA tap → login.html
+3. Google radio + Login button tap → backend OAuth flow start (Mock OAuth via ngrok HTTPS)
+4. dev-oauth-stub.html → callback.html → session 발급 → (nickname 보존 시 skip) → sky.html
+5. canvas render + star list populate (scroll down 후 visible)
+6. 첫 별 button tap → info panel 표시 ("catalog_id" label assert)
+
+**Decision (component 별)**:
+
+### A. Capacitor scaffold
+- Capacitor 8.3.4 (CLI + core + iOS + Android plugins) + dotenv@^16.4.0 + typescript@^6.0.3 (subagent micro-decision — npx cap add 가 .ts config 파싱 위해 요구)
+- `capacitor.config.ts`: appId=`kr.starpin`, appName=`starpin`, webDir=`backend/public`, server.url=env(CAPACITOR_SERVER_URL), `overrideUserAgent: 'CapacitorStarpinSmoke/1.0'` (Phase 05 finding)
+- 기존 ios/Sources + android/app sketches 를 ios-sketch/ + android-sketch/ 로 carveout (v0.14+ M6-native 가 활용)
+- Redact.swift + Redact.kt 를 신규 native project 안에 cp (geolocation-pii-redaction skill carry)
+
+### B. ngrok HTTPS tunnel
+- `ngrok http 3000` → HTTPS URL 발급 → `.env.local` 의 `CAPACITOR_SERVER_URL` → `npx cap sync` → IPA 의 capacitor.config.json 반영
+- ngrok free authtoken 사용자 등록 + Capacitor app 의 non-standard UA 로 interstitial "Visit Site" warning skip
+- demo-only — production deploy 시 server.url 미설정 + 진짜 prod URL hard-coded (별도 ADR)
+
+### C. Maestro flow design (login-smoke.yaml v0.8 최종)
+- iOS WebView 는 HTML `id` selector 안정성 부족 → text-based selector 위주 (예: "Google" radio, "Sign in to starpin" h1, "하늘 지도" sky h2, "Star list" details summary)
+- multi-occurrence text 는 `index: N` 으로 disambiguation (예: "Login" nav link vs form button)
+- `scrollUntilVisible` 로 fold-아래 element 도달
+- `extendedWaitUntil` (15~30s timeout) 으로 async OAuth flow + canvas render 대기
+- Regex selector 가능 (예: `text: ".* — mag .*"` — star list 첫 button 의 typical label pattern)
+
+### D. run-mobile-smoke.sh (v0.3, fps deferred)
+- 환경 export (JAVA_HOME, ANDROID_HOME, PATH)
+- iPhone 우선 device selection (`xcrun simctl list devices available -j` → Python filter)
+- `xcrun simctl bootstatus` 로 boot 완료 polling
+- `npx cap run ios --target=<UDID>` (non-interactive) + 60s app launch readiness polling
+- Maestro test (set +e wrap — evidence emit 보장)
+- Fail codes 0/1/2/3 (fps fail 4/5 제거 — blueprint v0.4)
+- Evidence JSON: `{status, ran_at, slug, test_count, exit_code, platform}` (webview_avg_fps 제거)
+
+**Harness audit findings (이번 round)**:
+
+1. **harness multi-round codex 가 진짜 catch 한 enforcement gap**:
+   - Phase 01 r1 #1: I-C4 fps measurement v0.13 빠뜨림 → 도구 한계 발견 후 v0.14+ deferred
+   - Phase 02 r1 #1: Maestro `evalScript` ≠ WebView DOM RAF → fps capture path 무효 (silent fallback theater 였음)
+   - Phase 04 r1 #1/#2/#3: openLink capacitor:// scheme 불가, hidden element 가 assertVisible 충돌, MAESTRO_COPIED_TEXT 오용
+   - **모두 사전에 catch — Phase 05 단계에서 시간 폭망 방지**
+
+2. **Hara v2.2 HC-12 mobile lane spec 검증**:
+   - pre-push hook validator (`status/exit_code/test_count/ran_at/platform`) 가 v0.13 evidence schema 와 정확히 호환 ✓
+   - note() carveout 명확히 작동 (gitignored sub-project ship 은 hook 발동 X, manual verify 의무)
+   - production in-repo mobile project 시 hook 자동 발동 가능 — *sentinel role* 성공
+
+3. **사용자 직접 작업 vs autonomous boundary**:
+   - Xcode license accept, AVD 생성, ngrok signup/authtoken: 모두 *user-environment* 라 사용자 의무
+   - Phase 03 코드 작업: background subagent 가 안전하게 위임 수행
+   - 그 사이 coordinator 역할 분담 명확
+
+4. **iteration 효율성**:
+   - Phase 05 8 iteration 발생 — 실제 device/Maestro/ngrok 의 도구 quirk 들이 desktop assumption 과 충돌하는 영역. 다음 mobile round 부터는 본 iteration 패턴 (cache clean, target flag, UA override, scroll, text-based selector) 알고 있음 — **carry as starpin local capability** 후보.
+
+**Consequences**:
+
+positive:
+- starpin 이 *진짜 iPhone simulator 에서 작동* — 첫 사용자 흐름 완주 (login → OAuth → sky → 별 클릭 → info panel)
+- 사용자가 자기 iPhone USB sideload 로 진짜 폰에서도 동작 (Xcode 에서 ▶️ Run; free Apple ID 7일 provisioning)
+- Hara mobile capability (mobile-bundle-budget, mobile-platform-reviewer, geolocation-pii-redaction, external-catalog-rate-limit) 가 *처음 진짜 invoke* 됨 (v0.5~v0.12 web round 에선 dormant)
+- HC-12 mobile lane infrastructure (v2.2 hook + evidence schema + scope 명시) 가 production-ready
+
+deferred (v0.14+):
+- WebView fps measurement → native renderer M6.a sky-view 진짜 측정 (xctrace/dumpsys)
+- Apple Sign-In / Google Sign-In / Kakao SDK native 통합
+- DeviceMotion + Geolocation native plugin (M6.a)
+- Sentry-Cocoa / Crashlytics 통합 (geolocation-pii-redaction skill 의 native crash SDK pattern 발동)
+- Android emulator 검증 (user 결정: v0.13 iOS-only)
+- App Store / Play Store 배포 (HC-8 별도)
+
+**Approval**: user · 2026-05-28 · autonomous (사용자 결정 "android 테스트는 나중에, iOS 우선" + "추천대로 알아서 진행")
+
+---
+
 ## ADR-023 — Hara v2.2 HC-12 mobile equivalent extension
 
 **Date**: 2026-05-28 · **Status**: accepted (autonomous — starpin v0.13 prerequisite)

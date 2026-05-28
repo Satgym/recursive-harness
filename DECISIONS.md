@@ -18,6 +18,51 @@
 
 ---
 
+## ADR-031 — starpin v0.17.1 carry close + Hara v2.3.1 first dogfood validation
+
+**Date**: 2026-05-28 · **Status**: accepted (autonomous overnight)
+
+**Context**: starpin v0.17.0 codex r1 의 5 finding 중 actionable 2개 처리 + 갓 ship 한 Hara v2.3.1 pipeline 의 첫 dogfood.
+
+### A. v0.17.1 closes (2)
+
+- V-CX-TEL-05 (minor) — filter checkbox 4개 한 줄 밀집. **fix**: style.css `.sky-filter-kinds { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2) var(--space-3); border: 1px rgba; }` + `.sky-filter-kind { min-height: 44px }` + 18px checkbox. fieldset 시각적 분리 명확.
+- V-CX-TEL-03 (minor) — filter 효과 시각화 약함. **fix**: tests/mobile/flows/telescope-features-smoke.yaml 에 "행성만" preset tap step 추가 → `06-filter-planets-only.png` 캡쳐. 04-filter-panel (모두 선택, 점 많음) vs 06 (행성만, canvas 거의 빈 + highlight 만) 극단 비교 evidence.
+
+### B. v0.17.1 carry (carry to v0.18 또는 별도)
+
+- V-CX-TEL-01 (major) — detail/claim screenshot. Maestro openLink for Capacitor WKWebView 한계 (skill v0.3 §Known platform limitations).
+- V-CX-TEL-04 (minor) — "내꺼" fixture seed message. postgres data cleanup 별도 backend task.
+
+### C. Hara v2.3.1 pipeline first dogfood **validation PASS**
+
+v2.3.1 changes 가 end-to-end 작동 확인:
+
+| 검증 항목 | v2.3.0 이전 | v2.3.1 적용 후 |
+|---|---|---|
+| Codex review file path | `ui-codex-<slug>.md` (r1=r2 collision) | `ui-codex-<slug>-r1.md` (round suffix) ✓ |
+| Canonical verdict FM | manual python script (4 ship 연속) | postprocess 자동 merge ✓ |
+| Evidence ui_review patch | manual python script | ui-visual-review.sh 자동 patch ✓ |
+| Body fallback strictness | `(true|false)\b` (narrative pass) | end-anchored (narrative reject) ✓ |
+
+`[ui-visual-review] PASS — claude_pass + codex_pass + blocker_count=0` — zero manual intervention.
+
+### D. 측정 결과 (chunking memory + Hara v2.3.1 효과 누적)
+
+| 지표 | v0.16 | v0.17.0 | v0.17.1 |
+|---|---|---|---|
+| PNG | 4 | 9 | 10 (regression 후 11→10 clean) |
+| Maestro step | 6 | 14 | 16 (+2 filter preset 비교) |
+| Manual canonical patch | 1회 | 1회 | **0회** ✓ |
+| review round (Claude+Codex) | 2 | 1 | 1 |
+| ship 결정 → push 시간 | ~30 min | ~20 min | ~10 min |
+
+### E. Approval
+
+자율 (사용자 overnight directive + Hara dogfood validation 의 가치 명확).
+
+---
+
 ## ADR-030 — Hara v2.3.1: HC-13 dogfood carry 정리 (4-ship lessons)
 
 **Date**: 2026-05-28 · **Status**: accepted (자율 진행 — Hara dogfood feedback consolidation)

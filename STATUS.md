@@ -7,10 +7,10 @@
 | 항목 | 값 |
 |---|---|
 | Project | Hara 메타 부트스트랩 (이 레포) + starpin dogfood (`examples/starpin/`) |
-| Harness version | **v2.3.1** (HC-13 dogfood carry consolidation) — 4-ship lessons. parser robustness + round suffix + skill v0.3 + PATTERNS §subagent-recovery + §scope-chunking + chunking discipline 헌법 |
-| Last ship | (pending) `harness(v2.3.1)` — Hara dogfood carry 정리 (ADR-030). 직전: `af9118f` note(starpin-v0.17.0). |
-| Strictness | autonomous (overnight session — Hara 발전 + starpin v0.17.1 dogfood validation 예정) |
-| Last updated | 2026-05-28 by Claude (Hara v2.3.1 ship 준비) |
+| Harness version | **v2.3.1** SHIPPED (`c4200ca`) — HC-13 dogfood carry consolidation. parser robustness + round suffix + skill v0.3 + PATTERNS §subagent-recovery + §scope-chunking + chunking discipline 헌법. **First dogfood VALIDATION via starpin v0.17.1 PASS — zero manual canonical patch** |
+| Last ship | (pending) `note(starpin-v0.17.1)` — v0.17.0 codex carry close (V-CX-TEL-03/05) + Hara v2.3.1 첫 dogfood (ADR-031). 직전: `c4200ca` harness(v2.3.1). |
+| Strictness | autonomous (overnight session continues — Hara v2.3.1 self-validated, starpin v0.18 optional next) |
+| Last updated | 2026-05-28 by Claude (starpin v0.17.1 ship 준비; Hara v2.3.1 pipeline validation 성공) |
 
 ## Active gate
 
@@ -44,7 +44,8 @@
 
 | commit | scope | 내용 |
 |---|---|---|
-| (pending) | harness(v2.3.1) | HC-13 dogfood carry 정리 (ADR-030) — parser robustness + round suffix + skill v0.3 + PATTERNS §subagent-recovery + §scope-chunking + chunking 헌법 |
+| (pending) | note(starpin-v0.17.1) | v0.17.0 codex carry close (V-CX-TEL-03/05) + Hara v2.3.1 첫 dogfood validation PASS (ADR-031). 0 manual canonical patch |
+| c4200ca | harness(v2.3.1) | HC-13 dogfood carry 정리 (ADR-030) — parser robustness + round suffix + skill v0.3 + PATTERNS §subagent-recovery + §scope-chunking + chunking 헌법 |
 | af9118f | note(starpin-v0.17.0) | wholesale ship (ADR-029) — UI.md 잔여 통합 (filter + variable visual + highlight + lag-camera + zoom-lock + 자세히보기 + claim + profile-stars + messaging-full). chunking memory 적용 |
 | a5a4afe | note(starpin-v0.16.0) | sensor scaffold (ADR-028) — fake mode + permission UI + iframe postMessage + landscape CSS. Subagent 529 → coordinator direct-impl |
 | 7402140 | note(starpin-v0.15.0) | UI shell rework + HC-13 두 번째 dogfood, 3-round adaptive (ADR-027) |

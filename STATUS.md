@@ -7,17 +7,21 @@
 | 항목 | 값 |
 |---|---|
 | Project | Hara 메타 부트스트랩 (이 레포) + starpin dogfood (`examples/starpin/`) |
-| Harness version | **v2.3** (HC-13 Visual-Review; ADR-025) — Claude(multimodal) + Codex visual independent review + base skill ui-visual-review |
-| Last ship | (pending) `harness(v2.3.0)` — visual review infrastructure. 직전: `1751c28` note(starpin-v0.13.0). |
-| Strictness | autonomous (UI verification + UI improvement phase) |
-| Last updated | 2026-05-28 by Claude (Hara v2.3 design + starpin v0.14 paired plan) |
+| Harness version | **v2.3** (HC-13 Visual-Review) — shipped at `f79b643`. v2.3.1 carry: codex narrative-only output robustness |
+| Last ship | (pending) `note(starpin-v0.14.0)` — mobile UI improvement + HC-13 first dogfood (ADR-026). 직전: `f79b643` harness(v2.3.0). |
+| Strictness | autonomous (UI improvement phase) |
+| Last updated | 2026-05-28 by Claude (v0.14 ship 준비; HC-13 첫 dogfood 완료) |
 
 ## Active gate
 
-- starpin v0.13 ✓ shipped (`1751c28` Capacitor iOS wrap).
-- **Hara v2.3 base ship 진행 중** — HC-13 Visual-Review + ui-visual-review base skill + hook 확장.
-- **starpin v0.14 paired**: v2.3 dogfood — mobile UI 개선 (mobile-first layout, tap target ≥44pt, 사용자 친화 star info) + visual review 첫 발동.
-- Open findings: 0. INBOX: 0 unread.
+- starpin v0.13 ✓ shipped (`1751c28`).
+- Hara v2.3 ✓ shipped (`f79b643`) — HC-13 Visual-Review.
+- **starpin v0.14 ship 준비 (ADR-026)** — mobile UI 개선 (G1 sky-first ✓, G2 login 한국어 ✓, G3 사용자 친화 star info ✓, G4 HC-13 dogfood ✓). 
+  - functional smoke pass + 4 screenshots + Claude/Codex visual review = canonical `ui_review` evidence
+  - mid-round 1 major patched (Star list 영어 → 한국어)
+  - 3 major + 2 minor → v0.15+ carry (bare nav adopt, mobile nav compact, h2 size, fallback format polish)
+- Hara v2.3.1 carry: codex narrative-only output robustness (manual patch 우회 발생).
+- Open findings: 0 blocker. INBOX: 0 unread.
 
 ## Required reads (세션 시작 시)
 
@@ -35,8 +39,9 @@
 
 | commit | scope | 내용 |
 |---|---|---|
-| (pending) | harness(v2.3.0) | HC-13 Visual-Review (ADR-025) — starpin v0.14 prerequisite |
-| 1751c28 | note(starpin-v0.13.0) | Capacitor iOS wrap (ADR-024) — iPhone simulator first-flow PASS |
+| (pending) | note(starpin-v0.14.0) | mobile UI 개선 + HC-13 첫 dogfood (ADR-026) — G1/2/3/4 PASS, 3 major + 2 minor v0.15+ carry |
+| f79b643 | harness(v2.3.0) | HC-13 Visual-Review (ADR-025) — base skill + runner + dual-lane hook |
+| 1751c28 | note(starpin-v0.13.0) | Capacitor iOS wrap (ADR-024) |
 | bde2b47 | harness(v2.2.0) | HC-12 mobile equivalent extension (ADR-023) |
 | ee5cd0d | harness(v2.1.0) | enforcement gap pass (ADR-022) |
 | 4e0c71d | note(starpin-v0.12.0) | planet interactivity (ADR-021) |

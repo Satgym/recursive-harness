@@ -18,6 +18,102 @@
 
 ---
 
+## ADR-026 — starpin v0.14 mobile UI improvement + HC-13 first dogfood
+
+**Date**: 2026-05-28 · **Status**: accepted (user directive — UI verification path)
+
+**Context**: starpin v0.13 Capacitor iOS wrap shipped (functional smoke PASS) — screenshot 분석 결과 *real UX issues* 발견 (sky.html 폼이 fold 점유 → mobile-first 아님, login 영어 라벨, raw catalog_id 사용자 노출). 사용자 요청 "기능적 구현 완성도는 잘 높이는데 UI/UX 차원 검증 0" + "Hara v2.3 + starpin v0.14 paired (Claude multimodal + Codex visual review)".
+
+**Hara v2.3 (ADR-025) shipped 이후 v0.14 가 첫 production dogfood**.
+
+### A. v0.14 UI 개선 (4 + 3 files)
+
+1. **`backend/public/sky.html`** — mobile-first refactor (G1):
+   - canvas section 상단 (form 위로 reorder)
+   - 폼 `<details>` 접힘 (mobile default collapsed)
+   - `aside#info` 분리 (canvas 아래 별도 section)
+   - h3 "별 목록 (접근성)" 한국어 통일 (mid-round patch — Claude r1 major #2 close)
+
+2. **`backend/public/login.html`** — 한국어 + cleanup (G2):
+   - "Sign in to starpin" → "starpin 시작하기"
+   - "Choose a sign-in provider" → "로그인 방법을 골라주세요"
+   - "Login" → "로그인"
+   - Callback redirect → `<details><summary>개발자 정보</summary>` 접힘
+
+3. **`backend/public/lib/sky-canvas.ts`** — 사용자 친화 prepend (G3):
+   - `KNOWN_STAR_NAMES` const (15 entries: 북극성/시리우스/베가/베텔게우스/안타레스/스피카/리겔/프로키온/알타이르/알데바란/아케르나르/리길켄트/아크룩스/포말하우트 + hd:48915 alias)
+   - `lookupStarName(catalogId)` — exact + substring 매칭
+   - `magToFriendly(mag)` — "매우 밝은 별 / 맨눈으로 잘 보임 / 맨눈 한계 / 쌍안경 필요"
+   - `parsecToLightYears(parsec)` — `parsec * 3.26156` → "지구에서 약 N 광년"
+   - `shortCatalogId` — fallback "ICRS 천체 #prefix-suffix"
+   - `renderSelectedStar` overhaul: 사용자 친화 prepend (별 이름/밝기/거리/소유) + raw fields `<details><summary>천문 정보</summary>` 안
+   - `StarPoint.parsec_distance` + `ViewportObjectRow.parsec_distance` (backend 이미 존재 → frontend type thread)
+
+4. **`backend/public/style.css`** — mobile-first:
+   - `.visually-hidden`, `.sky-canvas-section`, `.sky-info-section`, `.sky-form-details`, `.dev-info`, `.provider-option`
+   - `@media (max-width: 480px)` — canvas `min(70vh, calc(100vh - 200px))`, button full-width, touch target padding
+   - `@media (min-width: 481px|768px)` — desktop preserved
+
+5. **`tests/mobile/flows/login-smoke.yaml`** — 5 takeScreenshot insert (timing fix: page-loaded 후 capture)
+6. **`tests/mobile/audits/touch-target-audit.js`** (NEW) — DOM `getBoundingClientRect().height ≥ 44` audit (Maestro runScript 발동은 v0.15+ carry)
+7. **`scripts/run-mobile-smoke.sh`** — Maestro PNG 가 CWD 에 저장됨 (not ~/.maestro/tests/) → 정확한 cp + manifest.json + HC-13 prereq warning
+
+### B. HC-13 첫 dogfood (Hara v2.3 ui-visual-review.sh runner)
+
+- Maestro flow 4 screenshots captured: `01-index`, `02-login`, `04-sky-initial`, `05-star-detail` (03-nickname conditional skip — mock user 보존 nickname)
+- **Claude (coordinator, multimodal) r1**: claude_pass=true, blocker=0, major=2, minor=3
+  - mid-round patch: major #2 (Star list 영어) — sky.html 1-line fix + Maestro re-run + 05-star-detail.png 재캡쳐
+- **Codex visual r2**: codex_pass=true (verdict "PASS with findings, No blocker found"), 3 major + 2 minor (refined)
+  - Codex dispute/closed major #2 (한국어 fix 확인)
+  - Codex refine: Claude r1 minor #1 (login title clipping) → **major** (screenshot 에서 실 잘림 + bare nav 무 styling)
+  - Codex refine: Claude r1 minor #3 (nav tap target) → login bare nav 한정 major
+- Evidence canonical schema: `ui_review.{claude_pass:true, codex_pass:true, findings_count:5, blocker_count:0, severity_counts.{blocker:0,major:3,minor:2}, claude_review path, codex_review path}`
+- I-CAP-4 manual gate (note() carveout — hook 자동 발동 X) — coordinator + codex 수동 verify ✓
+
+### C. Carry to v0.15+
+
+(blocker=0 라 v0.14 ship 차단 안 함; 다음 round 처리):
+- **login.html 의 bare `<header>/<nav>` → `.site-header`/`.site-nav-list` adopt** (Codex major #1 refined — login title 잘림 + nav tap target 누락 의 공통 원인)
+- **mobile sky nav compact** — 4 button wrap → ≤100px header (Codex major #2)
+- **sky h2 "하늘 지도" font-size reduce** (Codex minor)
+- **KNOWN_STAR_NAMES fallback format polish** ("ICRS 천체 #gaia-...0272" → "ICRS 천체 #...0272" 처럼 namespace 숨김; Codex minor)
+- **touch-target-audit.js Maestro runScript 발동** (v0.14 에 file 만 존재; Maestro 실 실행 v0.15+ skill carry)
+
+### D. Hara v2.3.1 carry (skill v0.3)
+
+HC-13 첫 dogfood 발견: **codex r2 visual 가 prompt schema (`codex_pass`/`blocker_count` front-matter) 따라 emit 안 함** — runner script `parse_review_field` 가 empty 받아 fail. coordinator 가 manual canonical patch + direct evidence write 으로 우회. Hara v2.3.1 후속 fix:
+- Option 1: skill prompt template 더 strict (codex 가 정확히 emit 의무)
+- Option 2: runner 가 codex 본문 "Verdict: PASS" / "No blocker found" inline text 도 detect fallback
+- Option 3: runner 에 `--emit-evidence-only` flag — codex 호출 skip + coordinator 가 review 작성 후 evidence patch 만
+- 결정: v2.3.1 prefer Option 2 (robust fallback) + Option 3 (manual override path). v0.15+ 동반 ship.
+
+### E. Validation
+
+- functional smoke evidence: `.harness/runs/mobile-e2e-20260528-ios-login-smoke.json` status=pass, exit=0, platform=ios, ran_at 2026-05-28T06:23:38Z (24h 안)
+- 4 PNG screenshots in `.harness/runs/ui-screenshots-20260528-login-smoke/` + manifest.json (count=4)
+- Claude review + Codex review files canonical
+- evidence JSON `ui_review` canonical schema 완전 (v2.3 ui-visual-review.md v0.2 spec 준수)
+- 288 unit tests pass / 3 skipped — 회귀 0
+
+**Consequences**:
+
+positive:
+- G1 (mobile-first sky canvas ≥ 50%) ✓ — 별이 첫 진입 즉시 visible (이전 v0.13 폼 점유 fold 문제 해결)
+- G2 (login 한국어 통일 + dev-only hidden) ✓ — 1 major carry (bare nav)
+- G3 (사용자 친화 star info) ✓ — "맨눈으로 잘 보임 (등급 2.08) / 주인 없음 — 등록 가능" + raw fields 토글 안
+- **G4 (HC-13 dogfood) ✓** — visual review evidence 생성, Hara v2.3 mechanism 실제 invoke + bug catch (login bare nav, sky nav wrap — 둘 다 functional review 로는 catch 불가 한 visual issue)
+- KNOWN_STAR_NAMES 15 starter — 다음 fixture-matching round 의 base
+
+deferred:
+- 3 major + 2 minor → v0.15+
+- Hara v2.3.1 (codex front-matter robustness)
+- touch-target-audit.js Maestro runScript 발동
+- VRT baseline, design system, i18n (이미 v0.15+ deferred 명시)
+
+**Approval**: user · 2026-05-28 · autonomous (UI verification harness directive)
+
+---
+
 ## ADR-025 — Hara v2.3 HC-13 Visual-Review (Claude multimodal + Codex independent visual)
 
 **Date**: 2026-05-28 · **Status**: accepted (user-directed UI verification path)

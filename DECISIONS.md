@@ -18,6 +18,61 @@
 
 ---
 
+## ADR-038 — starpin v0.20 today widget + sky search (Hara v2.4.2 dogfood)
+
+**Date**: 2026-05-29 · **Status**: accepted (autonomous overnight)
+
+**Context**: PRODUCT-SPEC §9 carry + UI.md §3/§4 widget/menu spec 실구현. Research-informed (timeanddate.com / theskylive.com "Tonight in Seoul" + Stellarium search-and-center). 일상 retention 강화 + 천체 직접 navigation.
+
+### A. v0.20 deliverable
+
+Backend NEW (5 files):
+- `today/service.ts` — astronomy-engine VSOP87 (월령, sun position, planet visibility, Seoul lat/lon 고정)
+- `routes/today-route.ts` — `GET /v1/today` (no auth, 1h cache)
+- `catalog/known-names.ts` — backend mirror of frontend KNOWN_STAR_NAMES (14 stars)
+- `catalog/search-service.ts` — prefix + substring + Korean alias match
+- `routes/catalog-search-route.ts` — `GET /v1/catalog/search?q=` (min 1, max 20 results)
+
+Frontend NEW (2 files):
+- `lib/today-widget.ts` — newsletter top 4-line panel (🌔 phase + sunset/rise + planets + event), 1h client cache, role=region
+- `lib/sky-search.ts` — telescope 좌상단 toggle → glass modal, 300ms debounce, search-jump postMessage to sky-canvas
+
+Frontend MODIFY:
+- `newsletter.ts` — today-widget mount AFTER while-clear (subagent 가 mount 순서 잘못 — coordinator fix)
+- `sky-canvas.ts` — search-jump postMessage listener (immediate redraw + refetch)
+- `style.css` — 190 lines (today-widget-panel + sky-search-toggle/modal/results)
+
+Tests:
+- 37 new jest (today.service + catalog.search-service + routes) — 329 → 369 pass / 0 regression
+- today-search-smoke.yaml Maestro flow 4 PNG
+
+### B. 신규 invariants
+
+- I-UI-22 (today widget 1h cache — client + server)
+- I-UI-23 (search debounce 300ms — network politeness)
+
+### C. ★ Hara v2.4.2 첫 production dogfood
+
+- ARIA grep enforcement → prompt 통과 (subagent 가 모든 interactive 에 aria-label 명시)
+- v0.19 의 aria-label 누락 패턴 v0.20 에서 0회 (효과 검증)
+- race retry not triggered (codex output 즉시 detect; backward compat OK)
+- coordinator 후처리: 2줄 (newsletter mount 순서 + Maestro selector)
+- ★ subagent autonomous decision: astronomy-engine library 사용 (VSOP87 정확도 ±1 day, today phase = "상현망간달 93%" matches timeanddate.com Flower Moon to minute)
+
+### D. HC-13 결과
+
+claude_pass=true, codex_pass=[pending], blocker=0, severity={blocker:0, major:0, minor:3}.
+3 minor (V-VR-V020-01 ~ 03):
+- subagent 가 DOM mount 순서 오해 → coordinator post-hoc fix (Hara v2.5 carry)
+- post-search FAB navigation 문제 (telescope-iframe cleanup 부족 — v0.21 carry)
+- iOS Siri dictation prompt 시스템 차단 → sim restart workaround (smoke setup pattern carry)
+
+### E. Approval
+
+자율 (사용자 overnight directive).
+
+---
+
 ## ADR-037 — Hara v2.4.2: ARIA imperative enforcement + ui-visual-review race retry
 
 **Date**: 2026-05-29 · **Status**: accepted (autonomous overnight)

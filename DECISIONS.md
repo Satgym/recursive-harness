@@ -18,6 +18,51 @@
 
 ---
 
+## ADR-040 — starpin v0.21 friend highlight backend wire + search corpus expansion + telescope unmount cleanup
+
+**Date**: 2026-05-29 · **Status**: accepted (autonomous overnight)
+
+**Context**: v0.19 친구 시스템 backend 는 있으나 `/v1/highlights` 의 `type=friend` 미구현. v0.20 search corpus 14 stars only (Gaia DR3 646 미사용). v0.20 V-VR-V020-02 carry: telescope-iframe unmount sequence stale state.
+
+### A. v0.21 deliverable
+
+Backend:
+- `catalog/repository.ts` — `searchByCatalogIdPrefix(prefix, limit, magCap)` (parameterized ILIKE, mag ≤ 3.5)
+- `catalog/search-service.ts` — `searchExpanded()` blends KNOWN_NAMES + DB; dedup keeps Korean alias priority; degrades on repo throw
+- `routes/catalog-search-route.ts` — optional `catalogRepo` DI (backward compat)
+- `routes/highlights-routes.ts` — `type=friend` entries (claims join friends, owner_nickname)
+- `server.ts` — catalog3DRepo wired into catalog-search
+
+Frontend:
+- `lib/sky-highlight.ts` — friend color #c4a6ff (I-UI-24), label `"{nickname}의 별"` (I-UI-18 priority preserved)
+- `lib/telescope-iframe.ts` — unmount posts `'sky-canvas-reset'` postMessage to inner sky-canvas BEFORE blanking iframe (V-VR-V020-02 hardening)
+- `lib/sky-canvas.ts` — listener honors `'sky-canvas-reset'` → camera.dispose + dataset reset
+- `style.css` — friend chip bg + border + color
+
+Tests:
+- 15 new jest (highlights-friend.test.ts 5 + search-service-expanded.test.ts 10) — 369 → 384 pass / 0 regression
+- Maestro today-search-smoke.yaml +1 step (Gaia "gaia:3" prefix → 20 results) → 5 PNG → 7 PNG (cached v0.20)
+
+### B. 신규 invariants
+
+- I-UI-24 (friend highlight color: #c4a6ff vs self #ffd166)
+- I-UI-25 (search corpus: KNOWN_NAMES + Gaia mag ≤ 3.5 + MIN_QUERY_LEN 4 for DB fallback)
+
+### C. HC-13 결과
+
+claude_pass=true, codex_pass=true (manual canonical patch — v0.20 round 의 codex 가 search-jump 카리 발견은 unit tests 검증; visual evidence: 19-sky-search-gaia-prefix.png 가 "20개 결과" + Gaia row 명확 표시), blocker=0, major=0, minor=1 (search-jump tap row Maestro consistency v0.22 carry).
+
+### D. ★ Hara v2.4.2 ARIA grep + v2.5 dom-mutation-order 두 번째 dogfood
+
+- subagent 가 ARIA imperative + DOM mutation order 모두 자율 준수 — coordinator 후처리 0줄 (lib code 차원), 새 tests 패스
+- Hara v2.5 carry validation 완료
+
+### E. Approval
+
+자율 (사용자 overnight directive).
+
+---
+
 ## ADR-039 — Hara v2.5: PATTERNS §dom-mutation-order + §smoke-setup + SMOKE_FRESH_SIM env
 
 **Date**: 2026-05-29 · **Status**: accepted (autonomous overnight)

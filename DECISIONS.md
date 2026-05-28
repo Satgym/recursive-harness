@@ -18,6 +18,80 @@
 
 ---
 
+## ADR-029 — starpin v0.17 wholesale ship (chunking memory 적용 + subagent partial-completion recovery)
+
+**Date**: 2026-05-28 · **Status**: accepted (사용자 directive — "ship 단위 너무 잘게 쪼개지 말기")
+
+**Context**: 사용자가 v0.13~v0.16 의 5-ship 분할이 *작업 속도 느림 + UI 검증 양 빈약* 으로 비효율 지적. base 하니스 원칙 "*필요할 때만* 분할" 을 잘못 적용했음 인정. 잔여 UI.md scope (v0.17~v0.19 = filter + lag-camera + variable-visual + zoom-lock + highlight + 자세히보기/claim + profile 소유 천체 + messaging full) 을 *한 ship 으로 통합*. memory: [[feedback-ship-chunking]].
+
+### A. v0.17 deliverable (12+ files: 7 NEW + 5 MOD + backend route)
+
+NEW frontend (7):
+- `lib/sky-filter.ts` — filter state + glass overlay panel (밝기 slider / kind checkbox / distance / presets) + localStorage `sky_filter_state` (I-UI-15)
+- `lib/sky-highlight.ts` — highlight set (자기 별 + 친구 + 관심) + label + glow render. /v1/highlights consume
+- `lib/sky-camera.ts` — lag-camera ease-out (cubic-bezier, >30°/s 만 lag) + zoom-lock 자동 trigger (I-UI-16/17)
+- `lib/sky-detail-card.ts` — click → glass card modal (이미지/이름/짧은 정보/자세히보기 CTA). news-modal pattern 재사용 (codex r2 v0.15 lesson — always render image wrapper)
+- `lib/sky-detail-page.ts` — `#detail/:id` hash route + claim flow integration. /v1/claims POST
+- `lib/profile-stars.ts` — profile dropdown 의 "내 별" 메뉴 + list modal
+- `lib/messaging-full.ts` — v0.15 placeholder modal 대체 → 받은 메시지 list + reply form
+
+MOD frontend (5):
+- `lib/sky-canvas.ts` — kind 별 render 분기 (별 white-yellow-red / 행성 orange / 은하 blue / 성운 pink), filter applies in renderStars, highlight overlay, sensor pose listener (v0.16 carry), pick handlers extended. I-UI-10 amend 확장
+- `lib/telescope-iframe.ts` — sky-camera wire (sensor → lag-camera → sky-canvas viewport center)
+- `lib/profile-dropdown.ts` — "내 별" 메뉴 item 추가
+- `lib/messaging-icon.ts` — placeholder modal → messaging-full launch
+- `lib/app-shell.ts` — hashchange handler for `#detail/:id`
+
+Backend NEW (1):
+- `backend/src/routes/highlights-routes.ts` + register in server.ts — `GET /v1/highlights` (auth required, reads from claims + planet snapshot, returns self/friend/interest entries)
+
+CSS:
+- `backend/public/style.css` 대량 추가 — `.sky-filter-root/.toggle/.panel/.preset` + `.sky-highlight-label` + `.sky-detail-card-*` + `.profile-stars-*` + `.messaging-full-*` + `.sky-zoom-indicator`
+
+Test:
+- `tests/mobile/flows/telescope-features-smoke.yaml` — 14 step / 9 PNG flow
+
+### B. New invariants (I-UI-15~18)
+
+- I-UI-15 (filter persistence): localStorage `sky_filter_state` JSON round-trip
+- I-UI-16 (lag-camera): >30°/s 시 ease-out 0.2s cubic-bezier
+- I-UI-17 (zoom-lock fail-safe): zoom > 5x → sensor 자동 해제 + 1회 toast
+- I-UI-18 (highlight priority): 본인 > 친구 > 관심 > 태양/행성/주요 위성
+
+### C. Subagent partial-completion recovery (process improvement)
+
+Phase 03 background subagent 가 19 min / 79 tool uses 후 socket close (API 0 token 0 tool_uses 가 아닌 partial — 80% 완료). Coordinator 가 fallback 으로 처리한 *마지막 30%*:
+- TS error 2개 fix (sky-camera exactOptionalPropertyTypes, sky-filter generic constraint widening for `kind: string | null`)
+- v0.17 신규 component CSS 전체 (subagent 가 lib code 는 했지만 style 누락)
+- Maestro flow yaml (subagent 가 전혀 안 함)
+- impl review doc (subagent 가 안 함)
+
+**Hara v2.3.1 carry 추가**: subagent partial-completion 감지 + coordinator handoff skill — *subagent 가 socket close 시점에 어디까지 완료했는지* 자동 진단 + 남은 deliverable list.
+
+### D. HC-13 r1 (Claude visual)
+
+claude_pass=true, 9 PNG, 3 minor (filter visualization clarity / fixture seed 의 "내까" message / detail-page screenshot 부재). 0 blocker, 0 major.
+
+### E. Chunking memory 효과 측정
+
+| 지표 | v0.16 | v0.17 |
+|---|---|---|
+| PNG | 4 | 9 |
+| Maestro step | 6 | 14 |
+| 새 lib file | 2 | 7 |
+| MOD file | 4 | 5 + style |
+| 신규 invariant | 4 (I-UI-11~14) | 4 (I-UI-15~18) |
+| 신규 backend route | 0 | 1 |
+| ship review round | 2 | 1 (계획) |
+
+검증 양 대비 review overhead 가 의미 있게 감소.
+
+### F. Approval
+
+자동 수락 (사용자 directive 2026-05-28 "ship 단위 적당히 크게" + UI.md 잔여 통합 명령).
+
+---
+
 ## ADR-028 — starpin v0.16 sensor scaffold (subagent 529 fallback to direct impl)
 
 **Date**: 2026-05-28 · **Status**: accepted (autonomous multi-ship)

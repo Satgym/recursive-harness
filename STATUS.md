@@ -7,17 +7,15 @@
 | 항목 | 값 |
 |---|---|
 | Project | Hara 메타 부트스트랩 (이 레포) + starpin dogfood (`examples/starpin/`) |
-| Harness version | **v2.3** (HC-13 Visual-Review) — shipped at `f79b643`. v2.3.1 carry 확장: codex narrative-only output robustness + ui-codex round suffix + symmetric-component pair check + subagent 529 fallback path + iOS sim orientation limitation |
-| Last ship | (pending) `note(starpin-v0.16.0)` — sensor scaffold (ADR-028; subagent 529 fallback to direct impl). 직전: `7402140` note(starpin-v0.15.0). |
-| Strictness | autonomous (UI multi-ship 진행 중: v0.15 ✓ → v0.16 (ship 준비) → v0.17 → v0.18 → v0.19) |
-| Last updated | 2026-05-28 by Claude (v0.16 ship 준비; subagent 529 direct-impl fallback 성공) |
+| Harness version | **v2.3** (HC-13 Visual-Review) — shipped at `f79b643`. v2.3.1 carry 누적: codex narrative-only output + ui-codex round suffix + symmetric-component pair check + subagent 529 fallback + iOS sim orientation limitation + **subagent partial-completion recovery (v0.17 신규)** + **chunking discipline 자가 진단 (v0.17 신규 feedback memory)** |
+| Last ship | (pending) `note(starpin-v0.17.0)` — wholesale ship (ADR-029; chunking memory 적용으로 v0.17/v0.18/v0.19 통합). 직전: `a5a4afe` note(starpin-v0.16.0). |
+| Strictness | autonomous (UI.md 잔여 통합 진행 — chunking memory 적용 후 단일 ship 으로 마무리) |
+| Last updated | 2026-05-28 by Claude (v0.17 wholesale ship 준비; subagent partial-recover 성공) |
 
 ## Active gate
 
-- starpin v0.14 ✓ shipped (`f44ddbd`).
-- starpin v0.15 ✓ shipped (`7402140`).
-- **starpin v0.16 ship 준비 (ADR-028)** — sensor scaffold. fake-mode sensor pose + permission UI + iframe postMessage bridge + sky-canvas viewport center prop + landscape CSS. **Subagent 529 → coordinator direct-impl fallback** (Phase 03 background subagent 2회 launch 모두 API 529 fail; coordinator 가 직접 6 file 작성). Real Capacitor plugin + native plist/manifest carry to v0.16.1 (real device 필요).
-- **starpin v0.15 ship complete (ADR-027)** — UI shell rework (G1 SPA-ish 2-tab ✓, G2 glassmorphism+무채색 ✓, G3 auto-login localStorage migration ✓, G4 HC-13 second dogfood 3-round ✓).
+- starpin v0.14 / v0.15 / v0.16 ✓ shipped.
+- **starpin v0.17 wholesale ship 준비 (ADR-029)** — UI.md 잔여 (filter / variable visual / highlight / lag-camera / zoom-lock / 자세히보기 / claim / profile 소유 천체 / messaging full) **한 ship 통합**. 사용자 directive 2026-05-28: "ship 단위 너무 잘게 쪼개지 말기" memory [[feedback-ship-chunking]] 적용 결과. 7 NEW + 5 MOD + backend route + 9 PNG Maestro coverage. **Subagent socket-close partial-completion recovery** — 80% 까지 작성 후 socket close → coordinator 가 TS fix + CSS 보강 + Maestro flow + impl review 완수.
   - functional smoke pass + 6 screenshots + Claude/Codex visual review = canonical `ui_review` evidence
   - r1: 1 blocker (telescope blank CSP frame-ancestors) + 2 major (news image broken) → patched
   - r2: codex disputed Claude r2 close on V-VR-03 (news-modal symmetric pattern broken) → reopened major → r3 patched (news-modal.ts now mirrors newsletter.ts)
@@ -46,7 +44,8 @@
 
 | commit | scope | 내용 |
 |---|---|---|
-| (pending) | note(starpin-v0.16.0) | sensor scaffold (ADR-028) — fake mode + permission UI + iframe postMessage + landscape CSS. Subagent 529 → coordinator direct-impl |
+| (pending) | note(starpin-v0.17.0) | wholesale ship (ADR-029) — UI.md 잔여 통합 (filter + variable visual + highlight + lag-camera + zoom-lock + 자세히보기 + claim + profile-stars + messaging-full). chunking memory 적용 |
+| a5a4afe | note(starpin-v0.16.0) | sensor scaffold (ADR-028) — fake mode + permission UI + iframe postMessage + landscape CSS. Subagent 529 → coordinator direct-impl |
 | 7402140 | note(starpin-v0.15.0) | UI shell rework + HC-13 두 번째 dogfood, 3-round adaptive (ADR-027) |
 | f44ddbd | note(starpin-v0.14.0) | mobile UI 개선 + HC-13 첫 dogfood (ADR-026) |
 | f79b643 | harness(v2.3.0) | HC-13 Visual-Review (ADR-025) — base skill + runner + dual-lane hook |

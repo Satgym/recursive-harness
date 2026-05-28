@@ -235,6 +235,115 @@ ls <expected-files>                                            # 실제 파일 �
 
 ---
 
+## §deliverable-categories — Subagent prompt category template (v2.3.2)
+
+4-ship dogfood (starpin v0.14~v0.17) 동안 background subagent 가 *lib code 는 잘 쓰지만 부수 deliverable 을 누락* 하는 패턴이 반복. 발견된 누락 카테고리:
+
+| 카테고리 | 누락 발생 ship | 결과 |
+|---|---|---|
+| `style.css` 신규 component CSS | v0.17.0 (filter), v0.17.3 (sky-detail-page) | 시각 검증 0 — 코드는 작동, UI 안 보임 |
+| `tests/mobile/flows/*.yaml` Maestro flow | v0.16, v0.17.0 | coordinator 가 직접 작성 |
+| `impl review` markdown (subagent 의 작업 보고) | 거의 매번 | coordinator 가 후처리 |
+| Fixture / seed data | v0.17 backend route 새로 추가 시 | empty path 만 e2e 검증 |
+| ARIA labels for Maestro compatibility | v0.17.2 (profile-stars button) | tap 실패 |
+
+### Subagent prompt template — Deliverables 섹션 표준
+
+Subagent 호출 prompt 의 "Deliverables" 섹션은 *반드시* 다음 5 카테고리로 분리해서 explicit list:
+
+```
+## Deliverables (BLOCKING — implementation = code + styling + tests + fixture + impl-review)
+
+### 1. Code (NEW + MODIFY .ts files)
+- <path>: <description>
+- ...
+
+### 2. Styling (`style.css` additions)
+For EACH new component class in §1, add positioning + responsive CSS.
+Missing CSS = invisible UI even if code works. Examples to mirror: .sky-filter-*,
+.sky-detail-page-*, .profile-stars-* (all in style.css). Z-index: modal 1000,
+overlay 1010 (above modal), banner 950, FAB 50.
+
+### 3. Tests (`tests/` Maestro yaml or unit ts)
+- `tests/mobile/flows/<slug>.yaml`: 8+ takeScreenshot, 12+ steps
+- For new backend route: minimal jest test in `backend/tests/`
+
+### 4. Fixture / seed (when adding backend route OR new UI requiring sample data)
+- backend/fixtures/<slug>.ndjson or backend/migrations/seed.sql
+- Or document explicit "no fixture needed because <reason>"
+
+### 5. impl review (`.harness/reviews/04-<date>-<slug>-impl.md`)
+Mandatory short doc summarizing files / decisions / known limitations / HC trigger count.
+```
+
+이 template 을 subagent prompt 에 hard-code 하면 누락 위험 ↓. coordinator 가 prompt 작성 시 5 카테고리 모두 채우는 *self-checklist* (hook 강제 아님 — v2.3.2 시점 discipline). 5 카테고리 중 비어 있는 카테고리는 *명시적으로 "N/A — <reason>"* 로 표기.
+
+> 향후 v2.4 carry: subagent prompt wrapper 가 5 heading 존재 여부 lint (실 강제 gate).
+
+### ARIA label imperative for Maestro
+
+Capacitor WKWebView 의 accessibility tree 가 nested `<span>` 내 textContent 를 button name 으로 indexing 안 함. button/clickable 요소에 *명시적 aria-label* 추가가 Maestro `tapOn: text:` 매칭의 prerequisite. starpin v0.17.2 profile-stars 사례 (V-CX-TEL-01 part).
+
+### precedent
+- v0.16 sensor scaffold (subagent 529) — coordinator 가 직접 6 file 작성 fallback
+- v0.17.0 wholesale (subagent socket close 80%) — CSS + Maestro flow 누락 → coordinator 보강
+- v0.17.3 detail-page (subagent v0.17.0 잔재) — CSS 완전 누락 → 시각 검증 실패 → coordinator race fix + CSS 추가
+
+---
+
+## §modal-overlay-race — DOM cleanup vs navigation 분리 (v2.3.2)
+
+v0.17.3 V-CX-TEL-01 root cause 분석에서 발견한 패턴. modal/overlay 의 `close()` 함수가 *DOM cleanup* 과 *route navigation* 둘 다 담당하면, *re-render path* 가 close 호출 시 의도치 않은 navigation 발생.
+
+### 안티 패턴
+
+```ts
+function closeModal() {
+  if (activeOverlay) activeOverlay.remove();
+  window.location.hash = '#default';  // ← navigation
+}
+
+function renderModal(model) {
+  closeModal();  // ← intent: remove old DOM before re-render
+                 //   side-effect: navigation fires hashchange → app-shell renders default
+                 //   → new overlay rendered under default route
+  const overlay = ...;
+  host.appendChild(overlay);
+}
+```
+
+### 올바른 패턴
+
+```ts
+function _removeOverlayDom() {       // DOM-only — caller-internal
+  if (activeOverlay) activeOverlay.remove();
+}
+
+function closeModal() {              // public — DOM + navigation
+  _removeOverlayDom();
+  window.location.hash = '#default';
+}
+
+function renderModal(model) {
+  _removeOverlayDom();               // ✓ no nav side-effect
+  const overlay = ...;
+  host.appendChild(overlay);
+}
+```
+
+### 감지
+
+- 증상: modal/overlay 가 render 되었어야 할 시점에 *default route* (newsletter / index) 가 visible
+- 디버깅: console log 에서 hashchange 가 *연속 2회* 발생 (intended + side-effect)
+- e2e: Maestro screenshot 가 modal 대신 default tab 보여줌
+
+### 적용 대상
+
+- 어떤 component 라도 close handler 가 hash/state navigation 트리거 시 같은 분리 적용
+- starpin: sky-detail-page (v0.17.3 fix), news-modal (이미 hash 안 건드림 — OK), profile-stars (이미 분리 — OK)
+
+---
+
 ## §scope-chunking — Ship 단위 chunking discipline (v2.3.1)
 
 사용자 directive 2026-05-28: "ship 단위 너무 잘게 쪼개지 말기. base 하니스의 분할 원칙은 *필요할 때만*". feedback memory: [[feedback-ship-chunking]].

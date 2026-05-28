@@ -18,6 +18,38 @@
 
 ---
 
+## ADR-032 — Hara v2.3.2: subagent deliverable category template + modal race pattern
+
+**Date**: 2026-05-28 (밤 11pm 추가 autonomous round) · **Status**: accepted
+
+**Context**: v2.3.1 ship 이후 starpin v0.17.1/0.17.2/0.17.3 진행 동안 *아직 미코드화* lesson 2개 발견:
+
+1. **Subagent deliverable 누락 패턴** — v0.16/v0.17.0 background subagent 가 lib code 는 잘 쓰지만 `style.css` / `tests/.../*.yaml` / `impl-review.md` / fixture 누락이 반복. v0.17.3 V-CX-TEL-01 root cause 의 50% 가 v0.17.0 subagent 의 `.sky-detail-page-*` CSS 누락.
+2. **Modal/overlay race condition** — v0.17.3 detail-page 가 `renderPage → closeDetailPage → hash flip → newsletter rendered above overlay` 식의 silent race. 일반화 가능 패턴.
+
+### A. PATTERNS.md additions
+
+- **§deliverable-categories**: subagent prompt 의 *Deliverables* 섹션을 5 카테고리 (Code / Styling / Tests / Fixture / impl-review) 로 explicit list. coordinator 의 *self-checklist* (hook 강제 아님 — v2.3.2 discipline). 비어 있는 카테고리는 명시적 "N/A — reason" 표기. z-index core overlay convention (modal 1000, overlay 1010, banner 950, FAB 50; profile-dropdown 999 같은 기존 예외 존중). 향후 wrapper lint = v2.4 carry.
+- **§modal-overlay-race**: `_removeOverlayDom()` (DOM-only cleanup, no nav) + `closeModal()` (public, DOM + nav) 분리. re-render path 에서는 internal helper 만 호출. anti-pattern → correct pattern 코드 예시 포함.
+- **ARIA imperative for Maestro**: Capacitor WKWebView accessibility tree 가 nested `<span>` textContent 를 button name 으로 indexing 안 함. 모든 interactive button 에 명시적 `aria-label` 부여 imperative.
+
+### B. HARNESS.md addition
+
+- title v2.3.1 → v2.3.2
+- §11 version history row 추가 (v2.3.2 → ADR-032)
+
+### C. dogfood validation 계획
+
+v2.3.2 ship 직후 **starpin v0.18 wholesale ship** 진행 — subagent prompt 에 5-카테고리 deliverables template 처음 적용. 측정:
+- subagent 가 CSS / Maestro / impl-review 모두 작성하는지
+- coordinator 가 후처리해야 할 양 감소 폭
+
+### D. Approval
+
+자율 (사용자 overnight directive — 4-ship + 추가 진행 명시).
+
+---
+
 ## ADR-031 — starpin v0.17.1 carry close + Hara v2.3.1 first dogfood validation
 
 **Date**: 2026-05-28 · **Status**: accepted (autonomous overnight)

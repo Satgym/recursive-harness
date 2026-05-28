@@ -7,15 +7,18 @@
 | 항목 | 값 |
 |---|---|
 | Project | Hara 메타 부트스트랩 (이 레포) + starpin dogfood (`examples/starpin/`) |
-| Harness version | **v2.3.1** SHIPPED (`c4200ca`) — HC-13 dogfood carry consolidation. parser robustness + round suffix + skill v0.3 + PATTERNS §subagent-recovery + §scope-chunking + chunking discipline 헌법. **First dogfood VALIDATION via starpin v0.17.1 PASS — zero manual canonical patch** |
-| Last ship | (pending) `note(starpin-v0.17.3)` — V-CX-TEL-01 FULL close: detail-page race bug fix (_removeOverlayDom split from closeDetailPage navigation) + CSS overlay + friendly-name title pattern (V-CX-TEL-02 in detail-page surface 동시 close). 12 PNG Maestro coverage. 직전: `78e7b52` note(starpin-v0.17.2). |
-| Strictness | autonomous (overnight session continues — Hara v2.3.1 self-validated, starpin v0.18 optional next) |
-| Last updated | 2026-05-28 by Claude (starpin v0.17.1 ship 준비; Hara v2.3.1 pipeline validation 성공) |
+| Harness version | **v2.3.2** (pending) — v2.3.1 + PATTERNS §deliverable-categories (subagent 5-카테고리 책임 template) + §modal-overlay-race (DOM cleanup vs nav 분리) + ARIA imperative for Maestro. v2.3.1 의 4-ship dogfood 자체로 발견된 lesson 의 codification. v2.3.2 직후 starpin v0.18 wholesale 으로 dogfood validation. |
+| Last ship | (pending) `harness(v2.3.2)` — subagent deliverable template + modal race pattern + ARIA imperative (ADR-032). 직전: `cb59b6d` note(starpin-v0.17.3). |
+| Strictness | autonomous (overnight session continues — Hara v2.3.2 r1 PASS 후 ship 대기, starpin v0.18 wholesale 다음 round) |
+| Last updated | 2026-05-28 11pm round by Claude (Hara v2.3.2 ship 준비 — codex r1 PASS 2 minor) |
 
 ## Active gate
 
 - starpin v0.14 / v0.15 / v0.16 / v0.17 ✓ shipped — UI.md 전체 scope 완료.
-- **Hara v2.3.1 ship 준비 (ADR-030)** — HC-13 dogfood carry consolidation. 6 surface (parser robustness / round suffix / strict prompt / skill v0.3 / PATTERNS §subagent-recovery / §scope-chunking + 헌법 chunking 안내). 자율 진행 (사용자 overnight directive).
+- starpin v0.17.1 / v0.17.2 / v0.17.3 ✓ shipped — codex carry close + Hara v2.3.1 dogfood validation (manual canonical patch 0회).
+- Hara v2.3.1 ✓ shipped (`c4200ca`) — HC-13 dogfood carry consolidation.
+- **Hara v2.3.2 ship 준비 (ADR-032)** — 4-ship dogfood 추가 codification. PATTERNS §deliverable-categories (subagent 5-카테고리 책임 *prompt checklist* — hook 강제 아님) + §modal-overlay-race (DOM cleanup vs nav 분리) + ARIA imperative for Maestro. codex r1 PASS (0 blocker / 0 major / 2 minor — minor patch 적용 후 ship).
+- **starpin v0.18 wholesale 준비 (intake-content-enrichment.md)** — image proxy (local SVG cosmos illustrations) + messaging full real POST + Maestro flow 확장. v2.3.2 의 5-카테고리 deliverables template 첫 dogfood.
   - functional smoke pass + 6 screenshots + Claude/Codex visual review = canonical `ui_review` evidence
   - r1: 1 blocker (telescope blank CSP frame-ancestors) + 2 major (news image broken) → patched
   - r2: codex disputed Claude r2 close on V-VR-03 (news-modal symmetric pattern broken) → reopened major → r3 patched (news-modal.ts now mirrors newsletter.ts)
@@ -44,7 +47,8 @@
 
 | commit | scope | 내용 |
 |---|---|---|
-| (pending) | note(starpin-v0.17.3) | V-CX-TEL-01 FULL close — detail-page race fix (_removeOverlayDom split) + missing CSS + friendly-name title (V-CX-TEL-02 in detail-page surface). 12 PNG |
+| (pending) | harness(v2.3.2) | subagent 5-카테고리 deliverable template + modal-overlay-race 패턴 + ARIA imperative (ADR-032). v2.3.1 dogfood lesson 추가 codification |
+| cb59b6d | note(starpin-v0.17.3) | V-CX-TEL-01 FULL close — detail-page race fix (_removeOverlayDom split) + missing CSS + friendly-name title (V-CX-TEL-02 in detail-page surface). 12 PNG |
 | 78e7b52 | note(starpin-v0.17.2) | profile-stars aria-label a11y win (Maestro WKWebView nested span 한계 우회) + V-CX-TEL-01 partial close + Hara v2.3.1 round-suffix r2 dogfood |
 | ba4360e | note(starpin-v0.17.1) | v0.17.0 codex carry close (V-CX-TEL-03/05) + Hara v2.3.1 첫 dogfood validation PASS (ADR-031). 0 manual canonical patch |
 | c4200ca | harness(v2.3.1) | HC-13 dogfood carry 정리 (ADR-030) — parser robustness + round suffix + skill v0.3 + PATTERNS §subagent-recovery + §scope-chunking + chunking 헌법 |

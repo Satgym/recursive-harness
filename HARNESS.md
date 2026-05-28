@@ -1,4 +1,4 @@
-# HARNESS.md — Hara 헌법 (v2.1)
+# HARNESS.md — Hara 헌법 (v2.2)
 
 > Claude+Codex 협업의 **절대 규칙**과 **워크플로우 정의**.
 > 변경은 §10 절차. 버전 이력은 §11.
@@ -30,7 +30,7 @@
 | HC-9 | **Destructive-Confirmed** | Destructive 작업(rm/drop/truncate/force-push/branch -D/reset --hard 등)은 **모든 모드에서 사용자 승인** |
 | HC-10 | **Local-Extends-Only** | Project-local layer(`.harness/skills/`, `.harness/roles/`, `.harness/capabilities.md`)는 base HC-1~9를 약화·재정의·우회할 수 없다. extension·specialization만 허용. **base phase Exit 기준의 결정 권한은 항상 base에 있음** (local skill이 phase Exit을 자체 판단으로 통과시킬 수 없다) |
 | HC-11 | **Codex-Cadence** | 모든 ship-style 커밋(`code|harness|note(...vN.N.N)`)은 r1+r2 codex 리뷰 통과 필수. **pre-push hook이 enforce** (직전 20 커밋 내 review file 부재 시 push 차단) |
-| HC-12 | **User-Flow-Verified** | web UI surface (tracked `public/` or `frontend/`) 프로젝트는 ship 전 첫 사용자 흐름 happy-path 자동 검증 필수. 증거 = `.harness/runs/e2e-<date>-<slug>.json` (`status: pass`, `exit_code: 0`, `test_count ≥ 1`, `ran_at` ≤ 24h). **pre-push hook이 enforce**. Scope: first-flow composition만 — 다중 flow / 성능 / 크로스브라우저 / a11y / security는 별도 gate. 트리거 + 상세: ADR-017. |
+| HC-12 | **User-Flow-Verified** | UI surface (tracked `public/` / `frontend/` / `capacitor.config.{json,ts,js}` / `ios/App/` / `android/app/build.gradle{,.kts}`) 프로젝트는 ship 전 첫 사용자 흐름 happy-path 자동 검증 필수. 증거: web → `.harness/runs/e2e-<date>-<slug>.json`; mobile → `.harness/runs/mobile-e2e-<date>-<platform>-<slug>.json` (`platform: ios` 의무, `android` best-effort). 공통 필드 = `status: pass`, `exit_code: 0`, `test_count ≥ 1`, `ran_at` ≤ 24h. **pre-push hook이 enforce** (web/mobile 각각 독립 lane). Scope: first-flow composition만. 트리거 + 상세: ADR-017 (web) + ADR-023 (mobile). |
 
 HC-7/HC-8/HC-9는 strictness 모드 무관 항상 적용. HC-6/HC-11/HC-12는 hook으로 자동 enforce — 잊어버려도 못 빠져나감.
 
@@ -173,6 +173,7 @@ stranger (다음 세션 / 다른 사람)가 STATUS.md만 보고 "지금 무엇�
 
 | 버전 | 변경 | ADR |
 |---|---|---|
+| v2.2 | HC-12 mobile equivalent extension — surface 감지에 `capacitor.config.*` / `ios/App/` / `android/app/build.gradle` 추가, mobile evidence lane `mobile-e2e-*.json` (`platform: ios` 의무, `android` best-effort), validator helper 공유 | ADR-023 |
 | v2.1 | enforcement gap 메우기 — pre-push slug-matching 완화 (scope/version 독립 + r1 default-round 인정), pre-review-gate monorepo subdir 인식 (F42 close), HC-6 carveout 명시 (root vs project-local), §6 3-질문 documentation theater 삭제 | ADR-022 |
 | v2.0 | trim discipline — STATUS/HARNESS bloat 제거, HC-12 row 압축, 운영 원칙 명시 | ADR-020 |
 | v1.9 | HC-12 User-Flow-Verified (Playwright E2E smoke + pre-push enforce) | ADR-017 |

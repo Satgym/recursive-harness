@@ -8,16 +8,17 @@
 |---|---|
 | Project | Hara 메타 부트스트랩 (이 레포) + starpin dogfood (`examples/starpin/`) |
 | Harness version | **v2.10** SHIPPED (`2703b2d`) — jsdom infra + renderInbox real-DOM contract test (ADR-050). |
-| Last ship | (pending) `note(starpin-v0.28.0)` — today widget ISS next-pass line (closes v0.27 carry, ADR-052). 직전: `d1877b3` note(starpin-v0.27.0). |
-| Strictness | autonomous (user "2시간동안 알아서 진행" 18:40~20:40 KST — 15 ship 누적) |
-| Last updated | 2026-05-29 20:05 by Claude — v0.28 + 2-round codex (r1 major 3 → r2 major 1 + 2 minor) — 519 pass / 0 regression. ship 임박. |
+| Last ship | `e9e3ba6` note(starpin-v0.28.0) — today widget ISS next-pass line (closes v0.27 carry, ADR-052). 2hr autonomous window 종료 (15 ships today). |
+| Strictness | autonomous (user "2시간 알아서 진행" 18:40~20:40 KST — completed 15 ships in 1h16m, 44min buffer for stable handoff) |
+| Last updated | 2026-05-29 19:56 by Claude — v0.28 SHIPPED. 519 tests pass / 0 regression. 2hr window wind-down. |
 
 ## Active gate
 
-- **Hara v2.9 codex r1/r2** — dotenv extension + subagent Mode 4. very small surface (1 starpin script + 3 root docs).
-- Open findings: 0 blocker / 0 major. INBOX: 0 unread.
-- Hara v2.10+ cumulative carry: (1) Maestro system overlay (Siri 받아쓰기) auto-dismiss handler, (2) pre-Agent hook automation, (3) jsdom 도입 → claim-message.test.ts 의 DOM-simulator → real DOM migration.
-- Starpin v0.26+ carry: (1) ISS TLE 일일 refresh script, (2) sky-canvas fetches /v1/iss with observer for accurate overlay (v0.25 deferred), (3) ISS pass time 예측 (today widget), (4) per-second WebSocket animated ISS overlay, (5) Maestro direct-touch row tap 재검증, (6) E2E "tap 관심 등록 → see canvas highlight" (needs backend dev server restart on ngrok).
+- **2hr autonomous window 종료** (18:40~20:40 KST, 사용 1h16m / buffer 44m). 사용자 다음 directive 대기.
+- **15 ships today**: v0.21~v0.28 (8 starpin) + v2.6~v2.10 (5 Hara) + 1 status reconcile + v0.25 multi-round patches in single ship.
+- All planned carry from 2hr window closed: UI.md feature-complete + observer-aware ISS overlay + ISS pass calendar + today widget integration + jsdom test infra + dotenv 3-file + DOM grep enforce + Mode 4 subagent recovery.
+- Open findings: 0 blocker / 0 major. INBOX: 0 unread. **519 jest pass / 0 regression**.
+- Remaining v0.29+ / v2.11+ carry: (1) "ISS Today" modal (all 24h passes), (2) ISS visibility filter (sun-below-horizon + earth-shadow), (3) per-pass direction labels ("북동→남서"), (4) ISS TLE daily refresh script, (5) WebSocket animated ISS overlay, (6) full claim-message StubNode → jsdom migration, (7) Maestro direct row tap reliability (post-anchor→button), (8) E2E "관심 등록 → canvas highlight" (needs ngrok backend restart — user action).
 
 ## Required reads (세션 시작 시)
 
@@ -35,7 +36,7 @@
 
 | commit | scope | 내용 |
 |---|---|---|
-| (pending) | note(starpin-v0.28.0) | today widget ISS next-pass line — closes v0.27 carry (ADR-052). today/service.ts iss_next_pass field + today-route observer query params + today-widget Line 5 "🛰️ 다음 ISS 패스: HH:MM (NN분간 최고 N°)" + getObserverPosition cache reuse (no double-prompt). 6 NEW jest tests / 512 pass / 0 regression |
+| e9e3ba6 | note(starpin-v0.28.0) | today widget ISS next-pass line — closes v0.27 carry (ADR-052). today/service.ts iss_next_pass + today-route observer query + today-widget peekObserverPosition + Line 5 "🛰️ 다음 ISS 패스: HH:MM (NN분간 최고 NN°)" + per-key cache TTL (5min observer / 1h none) + freshness gate. 2-round codex (r1 major 3 → r2 major 1+minor 2 → ship). 13 NEW tests / 519 pass / 0 regression |
 | d1877b3 | note(starpin-v0.27.0) | ISS pass calendar `/v1/iss/passes` (ADR-051). 2-round codex iteration (r1 major 3 → r2 pass nit). 506 pass |
 | 2703b2d | harness(v2.10) | jest-environment-jsdom dep + NEW claim-message-real-dom.test.ts (6 jsdom tests) — production renderInbox 직접 import via real DOM (ADR-050). 3-round codex iteration (r1 minor / r2 minor wrong-cwd catch / r3 pass). 494 pass / 0 regression |
 | 1ecb746 | note(starpin-v0.26.0) | sky-canvas observer-aware ISS topocentric overlay + HC-7 apiCall log redaction (ADR-049). NEW `iss-observer.ts` (geolocation cache + redaction) + `enrichIssTopocentric()` + `safeLogPath()` strip query params. 16 NEW jest tests (488 pass / 0 regression). v0.25 codex r1 blocker carry close + r1 codex HC-7 leak found-and-fixed inline |

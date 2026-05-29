@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# check-subagent-prompt.sh — Hara v2.4 helper (v2.4.1: --mode flag added).
+# check-subagent-prompt.sh — Hara v2.4 helper (v2.4.1: --mode flag added;
+#                            v2.4.2: ARIA grep; v2.6: DOM mutation order grep).
 #
 # SCOPE: This lint is for *implementer* subagent prompts (Phase 03 work). It is
 # NOT meant for codex *review* prompts — reviewers don't produce deliverables,
@@ -27,6 +28,13 @@
 #                      stays review-mode by default).
 #   impl              — enforce 5/5 (use for any new implementer prompt)
 #   review            — skip lint, exit 0 (for codex/peer review prompts)
+#
+# --strict (impl mode only) adds three extra requirements:
+#   1. Explicit `.harness/reviews/...-impl.md` destination path (v2.4)
+#   2. `aria-label` imperative anywhere in the prompt (v2.4.2)
+#   3. PATTERNS §dom-mutation-order imperative if the prompt mentions any
+#      frontend `public/lib/` path or DOM mutation API
+#      (`removeChild`/`firstChild`/`appendChild`/`innerHTML`) — v2.6.
 #
 # Exit codes:
 #   0  all 5 headings present (or explicit N/A), OR mode=review
@@ -127,6 +135,24 @@ if [[ $STRICT -eq 1 ]]; then
     echo "[check-subagent-prompt]   all interactive button/input MUST have aria-label." >&2
     echo "[check-subagent-prompt]   add an ARIA imperative section to your subagent prompt." >&2
     exit 1
+  fi
+  # v2.6 DOM mutation order enforcement — starpin v0.20 dogfood: subagent 가
+  # container `while (firstChild) removeChild` cleanup 와 child mount 순서
+  # 헷갈리면 pre-clear mount 된 widget 이 cleanup 에 의해 지워짐.
+  # Trigger: prompt 가 frontend lib path 또는 DOM mutation API 를 언급 시
+  # imperative 키워드 의무. backend-only prompt 가 *path 와 DOM API 둘 다*
+  # 언급 안 하면 trigger 안 함 (pure frontend helper 처럼 `public/lib/` 만
+  # 언급해도 trigger — 이 경우 prompt 에 짧은 imperative 한 줄로 통과 가능).
+  # v2.6.1 carry: API set 확장 (replaceChildren / insertBefore / textContent 등).
+  if grep -qE '(public/lib/|removeChild|firstChild|appendChild|innerHTML)' "$PROMPT"; then
+    if ! grep -qiE '\b(DOM mutation|mutation order|dom-mutation-order|mount AFTER|mount after clear|clear before mount|after cleanup)\b' "$PROMPT"; then
+      echo "[check-subagent-prompt] FAIL (--strict): DOM-touching prompt missing mutation-order imperative" >&2
+      echo "[check-subagent-prompt]   prompt mentions frontend lib path or DOM API but lacks" >&2
+      echo "[check-subagent-prompt]   PATTERNS §dom-mutation-order imperative — required since v2.6." >&2
+      echo "[check-subagent-prompt]   add a 'DOM mutation order' section quoting the rule" >&2
+      echo "[check-subagent-prompt]   ('mount child AFTER while-firstChild-removeChild clear')." >&2
+      exit 1
+    fi
   fi
 fi
 

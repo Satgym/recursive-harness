@@ -18,6 +18,45 @@
 
 ---
 
+## ADR-041 — Hara v2.6 check-subagent-prompt.sh §dom-mutation-order grep enforcement
+
+**Date**: 2026-05-29 · **Status**: accepted (autonomous overnight)
+
+**Context**: v2.5 가 PATTERNS §dom-mutation-order 를 codify 했으나 enforcement 는 prompt author 자율에 위임 (sentence: "향후 v2.6 carry: check-subagent-prompt.sh 가 grep 으로 enforce"). v0.20 today-widget bug 가 그 lesson 의 원천이었고, v0.21 prompt 는 imperative 직접 포함 → dogfood VALIDATED (DOM 0 bug). v2.6 는 그 imperative 를 grep-enforce 하여 다음 frontend impl 부터 자동 차단.
+
+**Decision**: `scripts/check-subagent-prompt.sh --strict` 에 DOM mutation grep 추가:
+
+- **Trigger**: prompt 가 `public/lib/` (frontend lib path) 또는 DOM API 키워드 (`removeChild`/`firstChild`/`appendChild`/`innerHTML`) 언급 시
+- **Required**: imperative 키워드 (`DOM mutation` / `mutation order` / `dom-mutation-order` / `mount AFTER` / `mount after clear` / `clear before mount` / `after cleanup`) 중 최소 1개 등장
+- **No-trigger case**: prompt 가 lib path *없이* 그리고 DOM API *없이* 작성 (pure backend / schema / spec) → fire 안 함
+- **Possible false-fire**: `backend/public/lib/` substring match + pure frontend helper (mutation 없는 helper export). 양쪽 모두 imperative 한 줄 추가로 통과 → cost ≤ 30s
+- **Exit code**: 누락 시 exit 1 (기존 ARIA / 5-카테고리 path 와 동일 패턴)
+- **--help**: script header docstring 에 strict 추가 검사 3개 (impl-review path / ARIA / DOM mutation) 명시
+
+PATTERNS.md §dom-mutation-order 의 "v2.6 carry" 문장은 enforcement 활성화 안내로 교체. §smoke-setup 의 carry 참조 parenthetical 삭제.
+
+### Self-test 검증
+
+```
+v0.19 (pre-v2.5):                          FAIL  (ARIA 가 먼저 catch — DOM 도 fail 할 prompt)
+v0.20 (the bug origin):                    FAIL  (DOM grep — 정확히 prevent 의도한 case)
+v0.21 (post-v2.5 imperative present):      PASS
+synthetic backend-only (no DOM, no lib):   PASS  (false-fire 0)
+```
+
+**Consequences**:
+
+(+) 다음 frontend impl prompt 가 의도치 않게 DOM mutation imperative 누락하는 case lint-level 에서 reject. v0.20 같은 today-widget mount-order bug 0회.
+(+) Backend-only prompt 영향 0 (lib path + DOM API 둘 다 없으면 trigger 안 함).
+(+) v2.4 (5-카테고리) + v2.4.2 (ARIA) + v2.6 (DOM) 세 grep 이 같은 `--strict` 플래그 하에 합쳐져 단일 lint pass — coordinator overhead 0.
+(-) Imperative 동의어가 향후 진화하면 grep 패턴 동기화 필요 (r1 codex 피드백 반영해 4종 → 7종으로 확장; v2.6 dogfood 가 sufficiency 검증).
+(-) `public/lib/` substring match 라 `backend/public/lib/` 언급 prompt 또는 mutation 없는 pure frontend helper 가 false-fire 가능 (cost: imperative 한 줄 추가).
+(-) v2.6.1 carry — trigger API set 확장 (`replaceChildren` / `insertBefore` / `replaceWith` / `textContent = ''` 등): v0.20-class bug 가 새 API 로 재발 시 patch.
+
+**Approval**: user (overnight autonomous directive 2026-05-28).
+
+---
+
 ## ADR-040 — starpin v0.21 friend highlight backend wire + search corpus expansion + telescope unmount cleanup
 
 **Date**: 2026-05-29 · **Status**: accepted (autonomous overnight)

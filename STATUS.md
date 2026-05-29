@@ -7,16 +7,16 @@
 | 항목 | 값 |
 |---|---|
 | Project | Hara 메타 부트스트랩 (이 레포) + starpin dogfood (`examples/starpin/`) |
-| Harness version | **v2.5** SHIPPED (`9f4ce21`) — PATTERNS dom-mutation + smoke-setup + SMOKE_FRESH_SIM. v0.21 dogfood 가 두 패턴 모두 자율 준수 검증. |
-| Last ship | `7b8f048` note(starpin-v0.21.0) — friend highlight backend wire + Gaia 646 search corpus + telescope-iframe sky-canvas-reset unmount cleanup (ADR-040). Hara v2.5 두 번째 dogfood VALIDATED. |
-| Strictness | autonomous (overnight session 종료 — 7am target 통과; Hara v2.3.1→v2.5 + starpin v0.17.1→v0.21 모두 ship 완료) |
-| Last updated | 2026-05-29 08:41 by Claude — overnight 자율 세션 완료 (Hara 6 ship + starpin 7 ship). 다음 액션 user 결정. |
+| Harness version | **v2.6** (pending) — check-subagent-prompt.sh `--strict` 에 §dom-mutation-order grep 추가 (ADR-041). v2.5 codified imperative 의 enforcement 활성화. |
+| Last ship | (pending) `harness(v2.6)` — DOM mutation grep enforce (ADR-041). 직전: `7b8f048` note(starpin-v0.21.0). |
+| Strictness | autonomous (user 추가 directive "계속 알아서 진행해" 2026-05-29 09am) |
+| Last updated | 2026-05-29 09:00 by Claude — v2.6 in-progress (self-test 4/4 verified). |
 
 ## Active gate
 
-- **자율 세션 종료** — 7am target 통과 (08:41 종료 시점). 다음 ship 결정은 user 깨어난 후.
+- **Hara v2.6 r1/r2 verify 단계** — codex review 진행 예정 (DOM grep + docs 변경 small surface).
 - Open findings: 0 blocker / 0 major. INBOX: 0 unread.
-- Hara cumulative carry: v2.6 후보 — (1) `check-subagent-prompt.sh §dom-mutation-order grep`, (2) Maestro system overlay (Siri 받아쓰기) auto-dismiss handler, (3) pre-Agent hook automation.
+- Hara cumulative carry: (1) Maestro system overlay (Siri 받아쓰기) auto-dismiss handler, (2) pre-Agent hook automation.
 - Starpin v0.22 후보 — (1) telescope-iframe FAB navigation back-button 안정화, (2) search-jump result-row tap Maestro consistency.
 
 ## Required reads (세션 시작 시)
@@ -35,6 +35,7 @@
 
 | commit | scope | 내용 |
 |---|---|---|
+| (pending) | harness(v2.6) | check-subagent-prompt.sh `--strict` 에 §dom-mutation-order grep 추가 (ADR-041) — v2.5 codified imperative enforcement 활성화. self-test 4/4 (v019/v020 fail / v021 pass / backend-only pass) |
 | 7b8f048 | note(starpin-v0.21.0) | friend highlight backend wire + Gaia 646 search corpus + telescope-iframe sky-canvas-reset cleanup (ADR-040). Hara v2.5 두 번째 dogfood (DOM/ARIA 자율 준수). 384 jest pass / 0 regression |
 | 9f4ce21 | harness(v2.5) | PATTERNS §dom-mutation-order + §smoke-setup + SMOKE_FRESH_SIM env (ADR-039) — v0.20 2 lesson codify |
 | 2ba7b8f | note(starpin-v0.20.0) | today widget (월령 + 일몰 + 행성) + 천체 검색 (Connect 축 보강, ADR-038). astronomy-engine VSOP87. Hara v2.4.2 첫 dogfood |

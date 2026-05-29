@@ -368,7 +368,19 @@ Subagent prompts that touch existing files with `while (host.firstChild) removeC
 > a `while (firstChild) removeChild` clear step (loading → data swap), mount
 > child AFTER the clear, not before. Pre-clear mounted children get destroyed.
 
-향후 v2.6 carry: check-subagent-prompt.sh 가 "DOM mutation" / "removeChild" 키워드 grep 으로 enforce.
+v2.6 부터 `scripts/check-subagent-prompt.sh --strict` 가 enforce:
+prompt 가 `public/lib/` 또는 DOM API (`removeChild` / `firstChild` / `appendChild` /
+`innerHTML`) 를 언급하면 imperative 키워드 (`DOM mutation` / `mutation order` /
+`dom-mutation-order` / `mount AFTER` / `mount after clear` / `clear before mount` /
+`after cleanup`) 중 최소 1개 등장 의무. 누락 시 exit 1.
+
+**Trigger 가 fire 안 하는 case**: prompt 가 frontend lib path *없이* 그리고
+DOM API *없이* 작성된 경우 (예: 순수 backend impl, schema migration, ADR draft).
+*Fire 가능 한* false-positive case: `backend/public/lib/` 처럼 frontend path 가
+들어간 경우 + pure frontend helper 가 mutation 없이 helper 만 export 하는 경우.
+두 case 모두 prompt 에 짧은 imperative 한 줄 추가로 통과 → cost ≤ 30s.
+v2.6.1 carry — API set 확장 (`replaceChildren` / `insertBefore` / `replaceWith`
+/ `textContent = ''` 등) + trigger / imperative regex 정밀화.
 
 ---
 
@@ -397,7 +409,6 @@ fi
 
 호출: `SMOKE_FRESH_SIM=1 bash examples/<proj>/scripts/run-mobile-smoke.sh ios <slug>`
 
-(v2.6 carry — DOM mutation grep enforcement — §dom-mutation-order 안 표시; 본 §smoke-setup 에는 미반복.)
 
 ### Maestro flow level (immediate)
 

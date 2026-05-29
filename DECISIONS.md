@@ -18,6 +18,67 @@
 
 ---
 
+## ADR-045 — Hara v2.8 jest tsconfig rootDir override unlocks public/lib/ frontend test imports
+
+**Date**: 2026-05-29 · **Status**: accepted (autonomous overnight + morning + continuation)
+
+**Context**: starpin/backend tsconfig.json 의 `rootDir: './src'` 가 frontend code (`public/lib/`) 를 production build scope 밖으로 둔다 (의도적 — backend tsc 가 frontend 까지 함께 compile 하지 않음; tsconfig.web.json 이 별도). 그러나 ts-jest 가 같은 rootDir 를 상속해서 test 가 `import from '../../../public/lib/...'` 시 TS6059 발생.
+
+이전 우회책:
+- `shell-escape-html.test.ts` — production code 의 byte-equivalent duplicate 를 test file 안에 재정의
+- `claim-message.test.ts` — DOM simulation (`StubNode`) + byte-equivalent helpers (다음 ship 의 DOM 도입 전까지 유지 필요)
+- `sky-highlight-cache-only.test.ts` (v0.23) — `@ts-nocheck` pragma 로 TS6059 bypass
+
+Duplicate 가 production code 와 silent divergence 가능. `@ts-nocheck` 는 type safety 손실. **v2.8 carry from v0.23**.
+
+**Decision**:
+
+### A. starpin/backend/jest.config.mjs
+
+ts-jest inline tsconfig 에 `rootDir: '.'` 추가 (backend/ 기준). production build 의 tsconfig.json + tsconfig.web.json 은 영향 없음 — jest transform 만 widened rootDir 사용.
+
+```diff
+  tsconfig: {
+    target: 'ES2023',
+    module: 'ES2022',
+    moduleResolution: 'bundler',
++   // v2.8 (Hara) — widen rootDir from project tsconfig's './src' to '.'
++   // (backend/) so tests can `import from '../../../public/lib/...'`
++   // without TS6059. Production build (tsconfig.json + tsconfig.web.json)
++   // is unaffected; this override applies only to ts-jest transforms.
++   rootDir: '.',
+    strict: false,
+    esModuleInterop: true,
+    allowJs: true,
+  },
+```
+
+### B. 두 test file migration
+
+- `tests/unit/web/shell-escape-html.test.ts` — 30-line duplicate `ESCAPE_MAP` + `escapeHtml()` 제거. `import { escapeHtml } from '../../../public/lib/shell.js'` 직접 사용.
+- `tests/unit/web/sky-highlight-cache-only.test.ts` (v0.23) — `@ts-nocheck` pragma 제거. import 는 이미 직접 형태였음.
+
+### C. claim-message.test.ts 제외
+
+`renderInbox` test 는 `StubNode` DOM simulator 를 통과 — production `renderInbox(container: HTMLElement, ...)` 와 signature 가 다름. 직접 import 하려면 jsdom 도입이 필요한데 이는 별도 ship. v2.8 헤더 코멘트만 갱신 ("jsdom 도입 시 migrate 가능").
+
+**Test results**:
+- `npm --prefix backend run build`: clean (production build 영향 없음 확인)
+- `npm --prefix backend test`: **435 pass / 3 skip / 0 fail / 0 regression**
+
+**Consequences**:
+
+(+) Frontend test 가 production code 와 silent divergence 위험 0. Refactor 시 test 가 즉시 fail → contract-드리프트 catch.
+(+) `@ts-nocheck` type-safety 손실 제거 (1 file).
+(+) 다음 frontend impl 에서 unit test 작성 친화적 — `import` 한 줄.
+(+) Production build (tsc -p tsconfig.json + tsconfig.web.json) 영향 0 — jest 전용 override.
+(-) claim-message DOM-simulator test 는 v2.8 으로 unlock 안 됨 (jsdom 별도). carry: jsdom 도입 ship (v2.9+ 후보).
+(-) rootDir 가 backend/ 로 widened — test 가 `backend/src/` 외부 file 도 import 가능 (e.g., `node_modules` 깊은 path). 의도적 위반은 codex/PR review 가 catch.
+
+**Approval**: user (autonomous overnight directive + 후속 "알아서 진행해").
+
+---
+
 ## ADR-044 — starpin v0.23 interest modal duplicate-DELETE race close
 
 **Date**: 2026-05-29 · **Status**: accepted (autonomous overnight + morning + post-v0.22)

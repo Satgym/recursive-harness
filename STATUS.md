@@ -7,17 +7,17 @@
 | 항목 | 값 |
 |---|---|
 | Project | Hara 메타 부트스트랩 (이 레포) + starpin dogfood (`examples/starpin/`) |
-| Harness version | **v2.8** SHIPPED (`995e858`) — jest tsconfig `rootDir: '.'` override + 2 frontend test direct-import migration (ADR-045). v2.8 첫 dogfood (v0.24) 가 fetch spy 작성 활용. |
-| Last ship | (pending) `note(starpin-v0.24.0)` — interests-modal `<a>` → `<button>` migration (CC-1 carry close) + fetch spy hardening for cache-only contract (ADR-046). 직전: `995e858` harness(v2.8). |
-| Strictness | autonomous (user "뭔가 완벽한게 나올 때 까지 ㄱㄱ" — 9 ship 누적: v0.21 → v2.6 → v0.22 → v2.7 → v0.23 → v2.8 → v0.24) |
-| Last updated | 2026-05-29 12:00 by Claude — v0.24 anchor → button + fetch spy 3 tests / 438 pass / 0 regression. codex review 진입. |
+| Harness version | **v2.8** SHIPPED (`995e858`) — jest tsconfig `rootDir: '.'` override + 2 frontend test direct-import migration (ADR-045). |
+| Last ship | (pending) `note(starpin-v0.25.0)` — ISS (국제우주정거장) tracking, UI.md §4.5 마지막 spec gap close (ADR-047). 직전: `08c96fd` note(starpin-v0.24.0). |
+| Strictness | autonomous (user "뭔가 완벽한게 나올 때 까지 ㄱㄱ" — 10 ship 누적: v0.21 → v2.6 → v0.22 → v2.7 → v0.23 → v2.8 → v0.24 → v0.25) |
+| Last updated | 2026-05-29 12:35 by Claude — v0.25 ISS SGP4 + 20 new tests / 458 pass / 0 regression. subagent 30% rate-limit → coordinator 70% direct. |
 
 ## Active gate
 
-- **starpin v0.24 codex r1/r2** — interests-modal anchor → button + 3 fetch spy tests. small frontend surface.
+- **starpin v0.25 codex r1/r2** — ISS tracking (SGP4 backend + frontend kind extension). 8 file change. UI.md spec gap close.
 - Open findings: 0 blocker / 0 major. INBOX: 0 unread.
 - Hara v2.9 cumulative carry: (1) Maestro system overlay (Siri 받아쓰기) auto-dismiss handler, (2) pre-Agent hook automation, (3) `.env` / `.env.production` 추가 detect, (4) jsdom 도입 → claim-message.test.ts 의 DOM-simulator → real DOM migration.
-- Starpin v0.25 carry: (1) Maestro direct-touch row tap reliability (v0.24 anchor→button 후 재검증), (2) E2E "tap 관심 등록 → see canvas highlight" path (needs backend dev server restart on ngrok).
+- Starpin v0.26+ carry: (1) ISS TLE 일일 refresh script (현재 bundled epoch), (2) ISS pass time 예측 (today widget), (3) sky-canvas real-time ISS overlay (per-second polling/WebSocket), (4) Maestro direct-touch row tap 재검증, (5) E2E "tap 관심 등록 → see canvas highlight" (needs backend dev server restart on ngrok).
 
 ## Required reads (세션 시작 시)
 
@@ -35,7 +35,8 @@
 
 | commit | scope | 내용 |
 |---|---|---|
-| (pending) | note(starpin-v0.24.0) | interests-modal `<a>` → `<button>` migration (CC-1 carry) + fetch spy hardening for cache-only contract (ADR-046). v2.8 unlock 활용한 첫 dogfood — 3 NEW fetch spy tests (438 pass / 0 regression) |
+| (pending) | note(starpin-v0.25.0) | ISS (국제우주정거장) tracking, UI.md §4.5 마지막 spec gap close (ADR-047). SGP4 propagation backend (satellite.js, bundled TLE) + GET /v1/iss + /v1/highlights kind='iss' + sky-highlight 'iss' kind (color lime #39ff14, priority lowest). 4 NEW jest files / 20 new tests / 458 pass / 0 regression |
+| 08c96fd | note(starpin-v0.24.0) | interests-modal `<a>` → `<button>` migration (CC-1 carry) + fetch spy hardening for cache-only contract (ADR-046). v2.8 unlock 활용한 첫 dogfood — 3 NEW fetch spy tests (438 pass / 0 regression) |
 | 995e858 | harness(v2.8) | jest tsconfig `rootDir: '.'` override + 2 frontend test direct-import migration (ADR-045) — `@ts-nocheck` workaround + escape-html duplicate 패턴 모두 제거 / 435 pass / 0 regression |
 | 42f4bc2 | note(starpin-v0.23.0) | interest modal duplicate-DELETE race close (ADR-044) — `sky-highlight.removeInterest` split. 4 NEW jest tests / 435 pass / 0 regression |
 | 3556939 | harness(v2.7) | PATTERNS §smoke-setup "CAPACITOR_SERVER_URL trap" + smoke detect block + 15-case redact self-test (ADR-043). 4-round codex iteration — v0.22 9-rerun silent failure codification |

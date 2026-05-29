@@ -18,6 +18,81 @@
 
 ---
 
+## ADR-047 — starpin v0.25 ISS (국제우주정거장) tracking — UI.md §4.5 마지막 spec gap close
+
+**Date**: 2026-05-29 · **Status**: accepted (autonomous overnight + morning + "뭔가 완벽한게 나올 때 까지")
+
+**Context**: UI.md §4.5 specs: "주요 천체들 (태양, 태양계 행성들, 대표적인 위성들, *위치가 공개된 인공위성이나 우주정거장*, 관심 등록한 천체, 내 천체, 친구 등록한 천체 등)은 거리나 밝기에 상관없이 해당 화면을 바라보고 있으면 하이라이트되어..."
+
+v0.17~v0.24 누적으로 self / friend / interest / system (sun + 8 planets) 모두 wired. **남은 spec gap = ISS (국제우주정거장)** — 가장 user-recognizable 인공위성 (mag ≈ -3 at favorable passes). v0.25 가 마지막 한 조각 → app feature-complete per UI.md.
+
+**Decision**: SGP4 propagation (satellite.js v7.0.1) + bundled TLE + 5-layer wire (backend service/route/highlights + frontend kind/CSS).
+
+### A. Backend (4 NEW + 2 MODIFY)
+
+- `iss/tle.ts` — bundled ISS TLE constant (epoch 2026-05-29 12:00 UTC, syntactically valid + SGP4-propagatable). Refresh procedure documented in file header for v0.26+ daily script.
+- `iss/service.ts` — IssService class. `position(observerDate?)` returns `{ ra_deg, dec_deg, alt_km, lat_deg, lon_deg, epoch }`. ECI Cartesian → equatorial RA/Dec via closed-form atan2 + asin (Vallado §4.4.3). Subpoint lat/lon/alt via eciToGeodetic. Deterministic.
+- `iss/types.ts` — IssPosition type
+- `routes/iss-routes.ts` — GET /v1/iss public (no auth, like /v1/today). 200 OK + position; 503 on SGP4 fail.
+- `routes/highlights-routes.ts` — kind union 확장 ('iss'); `issService` deps optional; single entry `{ object_id:'iss', kind:'iss', name:'ISS (국제우주정거장)' }` pushed after SYSTEM_OBJECTS; graceful try/catch.
+- `server.ts` — IssService DI + registerIssRoutes 호출 + issService passed to highlightsRoutes deps.
+
+### B. Frontend (1 MODIFY + 1 CSS)
+
+- `sky-highlight.ts` — HighlightKind += 'iss'; KIND_PRIORITY.iss = 5 (lowest priority — user data always wins over ISS overlay); KIND_COLORS.iss = `{ fill: '#39ff14' (lime), ring: rgba(57,255,20,0.45), label: '🛰️ ISS' }` (NASA SVS convention).
+- `style.css` — `.sky-highlight-label[data-kind="iss"]` chip (bg/border/color RGBA palette match).
+
+### C. Tests (4 NEW jest files / 20 tests)
+
+- `tests/unit/iss/service.test.ts` (8 tests) — construction, payload shape, RA/Dec range, altitude 380-460km, determinism, custom TLE constructor, epoch
+- `tests/unit/routes/iss-routes.test.ts` (5 tests) — 200 + payload, no auth, 503 on SGP4 fail, range sanity, HC-7
+- `tests/unit/routes/highlights-iss.test.ts` (4 tests) — ISS entry shape, propagate-fail degradation, undefined-deps backward compat, HC-7
+- `tests/unit/web/sky-highlight-iss.test.ts` (3 tests, v2.8 unlock direct-import) — regression addInterest + cache, buildHighlightMap handles 'iss', self wins over iss
+
+### D. Subagent partial recovery
+
+Subagent rate-limited at ~30% (iss/* + iss-routes.ts only). Coordinator picked up remaining 70%: server wiring + highlights extension + frontend + 4 tests + impl review. Pattern matches starpin v0.17 "subagent socket close → coordinator finish" precedent.
+
+**r1 codex patch (v0.25.1 — 3 findings resolved)**:
+
+- **blocker #1 — ISS never rendered on canvas**: `/v1/highlights` emitted `{object_id:'iss', kind:'iss', name}` but no coords. `drawHighlightOverlay` projector looks objectId up in stars/planets — 'iss' isn't there → silently no-op. Fix: extended `HighlightEntry` with optional `ra_deg/dec_deg`; `ProjectFn` signature: `(entry) => {x,y}|null`; sky-canvas project: if entry has coords, use them directly. Backend includes geocentric ra/dec on the ISS entry.
+- **blocker #2 — observer-naive geocentric for LEO**: ISS at 408km altitude has up to 70° parallax at horizon — geocentric placement significantly wrong. Fix: `IssService.position(date, observer?)` returns optional `topocentric: {alt_deg, az_deg, range_km, ra_deg, dec_deg}` block when observer supplied. `/v1/iss?lat=&lon=&alt=` query params; 400 validation (range checks). Geocentric kept in highlight as rough indicator (documented limitation, v0.26 carry for sky-canvas to fetch /v1/iss directly with observer).
+- **major #3 — synthetic TLE**: replaced "plausible representative" values with real Celestrak fetch (NORAD 25544 / 2026-05-28 18:37 UT epoch). File header documents source + refresh procedure.
+
+**13 new tests** for r2 (6 topocentric + 6 route observer + 1 frontend coord field).
+
+**r2 codex patch (v0.25.2 — 1 major + 1 minor closed)**:
+
+- **major — observer ECF basis mismatch**: r1 used `ecfToLookAngles` (WGS84 geodetic) for alt/az but hand-rolled spherical observer ECF for topocentric RA/Dec → 1-2.5° divergence in measured Seoul/CapeCanaveral/Sydney passes. Fix: switched to `satellite.js geodeticToEcf` for BOTH paths → basis aligned. 1 new basis-consistency test (Dec ≤ observer_lat + zenith_distance + 1° tolerance — physically required, would fail under r1 basis mismatch).
+- **minor — tle.ts header inconsistency**: r1's header still said "Bundled epoch: 2026-05-29 ... plausible representative ... synthetic" while constants below were the real Celestrak fetch. Fix: rewrote header to only describe the Celestrak source + epoch 2026-05-28 18:37 UT.
+
+**r3 codex patch (test strengthening)**:
+
+- **minor — basis-consistency test too loose**: r3 codex showed the physical-inequality regression passed under BOTH r1 (spherical) and r2 (WGS84) bases — too tolerant. Fix: replaced with fixed-fixture absolute-value assertion (`toBeCloseTo(2)` of `ra=211.532, dec=18.259` for 2026-05-29T10:40Z Seoul observer). r1 spherical revert would diverge `dec` by ~2.4° and fail. Codex r3 provided the reference values + reproduction.
+
+**Validation (final, v0.25.2 ship)**:
+- `npm --prefix backend run build`: clean
+- `npm --prefix backend test`: **472 pass / 3 skip / 0 fail / 0 regression** (baseline 438 → +34 cumulative for v0.25 + v0.25.1 + v0.25.2)
+- Codex review: r1 = block (3 findings) → r2 = major (basis mismatch) → r3 = minor (test strengthening only) — all addressed. Ship cleared at r3 fix.
+
+**New invariants**:
+- I-UI-28 (ISS highlight): kind='iss', color #39ff14, label "🛰️ ISS", priority 5
+- I-DATA-1 (TLE freshness): bundled epoch ±30 days accurate; manual refresh procedure; daily script = v0.26 carry
+
+**Consequences**:
+
+(+) UI.md §4.5 마지막 한 조각 완성 — app **feature-complete per spec**. 모든 highlight kind (self/friend/interest/system/iss) E2E wired.
+(+) satellite.js backend-only — frontend bundle 영향 0.
+(+) Graceful degradation pattern — ISS propagate fail 시 panel 나머지 (self/friend/interest/system) 정상 render. /v1/iss 와 /v1/highlights 둘 다 자체 try/catch.
+(+) 20 new tests + 0 regression — high coverage for new feature.
+(-) TLE bundled (epoch 2026-05-29). 60+ 일 경과 시 ISS reboost burns accumulate → position drift accelerate. v0.26 carry: daily refresh script (e.g., cron + celestrak fetch).
+(-) ISS dot 정적 — current frame position만 보여줌. ISS는 ~7.7 km/s 로 움직이므로 실시간 sky pan UI 에는 second-by-second update 가 더 자연스러움. v0.26+ carry: WebSocket/SSE 또는 client-side per-second polling.
+(-) Pass time prediction (오늘 밤 보이는가?) 미구현. today-widget 에 "ISS pass: HH:MM" 라인 추가는 SGP4 forward-search + observer lat/lon 필요. v0.26+ carry.
+
+**Approval**: user (autonomous overnight directive + "뭔가 완벽한게 나올 때 까지 ㄱㄱ" continuation).
+
+---
+
 ## ADR-046 — starpin v0.24 interests-modal anchor→button + fetch spy hardening for cache-only contract
 
 **Date**: 2026-05-29 · **Status**: accepted (autonomous overnight + morning + continuation)

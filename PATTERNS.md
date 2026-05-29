@@ -176,7 +176,7 @@ Codex finding에 Claude가 `disputed`로 응답하는 경우:
 
 ## §subagent-recovery — Background subagent partial-completion / 529 / socket close
 
-Phase 03 background subagent 가 작업 중 실패하는 3 가지 모드 + 대응:
+Phase 03 background subagent 가 작업 중 실패하는 4 가지 모드 + 대응:
 
 ### Mode 1: API 529 Overloaded (Anthropic API capacity)
 - **신호**: subagent completion notification result = `API Error: 529 Overloaded`, `total_tokens=0`, `tool_uses=0`
@@ -208,6 +208,23 @@ Phase 03 background subagent 가 작업 중 실패하는 3 가지 모드 + 대�
 - **대응**: coordinator 가 *prompt 강화* (다음 round 부터):
   - "implementation = code + styling + tests + fixture data — 4가지 모두 책임"
   - deliverable list 에 각 카테고리 explicit hard-coded
+
+### Mode 4: Server-side rate limit (Anthropic throttle mid-work) — v2.9 add
+- **신호**: completion notification result = `API Error: Server is temporarily
+  limiting requests (not your usage limit) · Rate limited` (or similar
+  classifier-unavailable + rate-limit combination), `total_tokens=0`,
+  `tool_uses>0` (so some work happened before throttle)
+- **현상**: Mode 2 (socket close) 와 유사하지만 transient — 단지 작업 throughput
+  throttle. partial 결과물 디스크에 commit 됨.
+- **대응**:
+  1. Mode 2 recovery 와 동일 — diagnose modified files + integrity check
+  2. coordinator 가 남은 deliverable 직접 작성 (재시도 시 같은 rate limit 재발생
+     위험 + 30% → 70% 정도면 직접이 더 빠름)
+  3. impl review 에 "subagent N% partial → coordinator (100-N)% direct"
+     명시 (audit trail)
+- **precedent**: starpin v0.25 ISS tracking — subagent 가 4 file (iss/* +
+  iss-routes.ts) 까지 작성 후 rate-limit. coordinator 가 server wiring +
+  highlights extension + frontend + 4 jest test + impl review 마무리 (ADR-047).
 
 ### 회복 절차 (recovery)
 
@@ -475,10 +492,22 @@ detect_capacitor_server_url() {
     env_was_set=1; from_env="${CAPACITOR_SERVER_URL}"
   fi
   local from_file=""
-  if [[ $env_was_set -eq 0 && -f "$ROOT/.env.local" ]]; then
-    from_file=$(grep -E '^CAPACITOR_SERVER_URL=' "$ROOT/.env.local" 2>/dev/null \
-      | head -1 | sed -E 's/^CAPACITOR_SERVER_URL=//' \
-      | sed -E 's/^"(.*)"$/\1/' | sed -E "s/^'(.*)'\$/\1/")
+  if [[ $env_was_set -eq 0 ]]; then
+    # v2.9 dotenv extension — check .env.local first (local overrides),
+    # then .env, then .env.production. Break on first FILE that defines
+    # the key (even with empty value) so we match dotenv's
+    # "first set wins, even if set-to-empty" rule. The final warning
+    # guard `[[ -n "$effective" ]]` filters empty values.
+    local f
+    for f in "$ROOT/.env.local" "$ROOT/.env" "$ROOT/.env.production"; do
+      [[ -f "$f" ]] || continue
+      if grep -qE '^CAPACITOR_SERVER_URL=' "$f" 2>/dev/null; then
+        from_file=$(grep -E '^CAPACITOR_SERVER_URL=' "$f" 2>/dev/null \
+          | head -1 | sed -E 's/^CAPACITOR_SERVER_URL=//' \
+          | sed -E 's/^"(.*)"$/\1/' | sed -E "s/^'(.*)'\$/\1/")
+        break
+      fi
+    done
   fi
   local effective="${from_env:-$from_file}"
   if [[ -n "$effective" ]]; then
@@ -495,7 +524,7 @@ detect_capacitor_server_url
 - `${VAR+x}` 로 set/unset 구분 — empty 가 force-local intent 인 점 보존 (r1 major)
 - Robust step-wise URL redaction with strict positive allowlist — single regex 는 no-scheme / file:// / `@`-in-path / IPv6 / control-char / backslash 등 누락. **15-case self-test PASS** (r2 + r3 + r4 blocker 모두 close)
 - 외부 remote freshness probe 안 함 — cross-origin probe / auth header / cache-busting hash 차이로 false alarm + permission classifier 마찰
-- v2.7.1 carry: `.env` / `.env.production` 추가 detect (현재 `.env.local` 만)
+- v2.9 dotenv extension: `.env.local` → `.env` → `.env.production` 순으로 첫 매치 사용 (dotenv 컨벤션 local-overrides)
 
 단순 warning 으로 future operator (Claude / human) 가 silent failure 를 30 초 안에 인지 가능.
 

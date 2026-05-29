@@ -1,4 +1,4 @@
-# HARNESS.md — Hara 헌법 (v2.8)
+# HARNESS.md — Hara 헌법 (v2.9)
 
 > Claude+Codex 협업의 **절대 규칙**과 **워크플로우 정의**.
 > 변경은 §10 절차. 버전 이력은 §11.
@@ -176,6 +176,7 @@ stranger (다음 세션 / 다른 사람)가 STATUS.md만 보고 "지금 무엇�
 
 | 버전 | 변경 | ADR |
 |---|---|---|
+| v2.9 | PATTERNS §smoke-setup CAPACITOR_SERVER_URL detect 가 `.env.local` 외 `.env` + `.env.production` 도 검사 (v2.7 carry close). + §subagent-recovery 에 Mode 4 (server-side rate-limit) 추가 — v0.25 ISS subagent 가 30% 후 throttle → coordinator 70% direct 의 패턴 codify | ADR-048 |
 | v2.8 | starpin/backend jest 의 inline tsconfig 에 `rootDir: '.'` (backend/) 추가 — public/lib/ frontend code 가 test 에서 직접 import 가능. v0.23 의 `@ts-nocheck` workaround + shell-escape-html 의 contract-duplicate 패턴 모두 제거 (435/0 regression). claim-message 는 DOM simulation strategy 때문에 duplicate 유지 (jsdom 도입 시 별도 ship 으로 migrate) | ADR-045 |
 | v2.7 | PATTERNS §smoke-setup 에 "CAPACITOR_SERVER_URL trap" subsection 추가 + starpin run-mobile-smoke.sh 가 `.env.local` 의 `CAPACITOR_SERVER_URL` detect 시 큰 warning 출력. v0.22 dogfood 의 9-rerun silent stale-asset failure 가 origin — future operator (Claude/human) 가 같은 silent failure mode 30s 내 인지 가능 | ADR-043 |
 | v2.6 | `check-subagent-prompt.sh --strict` 에 §dom-mutation-order grep 추가 — prompt 가 `public/lib/` 또는 DOM API (`removeChild`/`firstChild`/`appendChild`/`innerHTML`) 언급 시 imperative 키워드 의무. v0.20 today-widget bug 가 v0.21 prompt 에서 반복되지 않은 것을 self-test 로 검증 (v0.19/v0.20 fail, v0.21 pass, backend-only synthetic pass) | ADR-041 |

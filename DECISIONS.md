@@ -18,6 +18,92 @@
 
 ---
 
+## ADR-048 — Hara v2.9 dotenv detect extension + §subagent-recovery Mode 4 codify
+
+**Date**: 2026-05-29 · **Status**: accepted (autonomous overnight + morning + continuation)
+
+**Context**: 두 작은 carry close.
+
+### A. Dotenv detect extension (v2.7 carry)
+
+v2.7 codified `CAPACITOR_SERVER_URL` trap detection in starpin/scripts/run-mobile-smoke.sh — `.env.local` 만 검사. v2.7 ADR-043 마지막에 명시한 v2.7.1 carry: "`.env` / `.env.production` 추가 detect". v2.9 가 close.
+
+### B. §subagent-recovery Mode 4 (rate-limit) codification
+
+v0.25 ISS ship 에서 새로운 subagent failure mode 관찰: `API Error: Server is temporarily limiting requests · Rate limited` — 기존 §subagent-recovery 의 3개 mode (529 / socket close / spec-incomplete) 모두에 fit 안 함. v0.25 subagent 가 30% 후 throttle → coordinator 70% direct 가 정착된 패턴. 명시화.
+
+**Decision**:
+
+### A. starpin/scripts/run-mobile-smoke.sh
+
+`detect_capacitor_server_url()` 의 `.env.local` 단일 lookup 을 3-file priority loop 으로 교체:
+
+```diff
+- if [[ $env_was_set -eq 0 && -f "$ROOT/.env.local" ]]; then
+-   from_file=$(grep ... "$ROOT/.env.local" ...)
+- fi
++ if [[ $env_was_set -eq 0 ]]; then
++   for f in "$ROOT/.env.local" "$ROOT/.env" "$ROOT/.env.production"; do
++     [[ -f "$f" ]] || continue
++     from_file=$(grep ... "$f" ...)
++     [[ -n "$from_file" ]] && break
++   done
++ fi
+```
+
+순서: `.env.local` → `.env` → `.env.production` (dotenv 컨벤션 local-overrides). 첫 매치에서 stop. NODE_ENV-aware fallback 은 over-engineering 으로 skip (단일 starpin smoke 컨텍스트).
+
+Warning 본문도 "(full value redacted — see env or .env.local/.env/.env.production)" 으로 갱신.
+
+**4-case self-test** (synthetic):
+- no env file, unset env → no warning
+- .env.local has URL → warning
+- .env has URL (no .env.local) → warning
+- .env.production has URL → warning
+
+### B. PATTERNS.md §subagent-recovery Mode 4 추가
+
+Mode 4 = "Server-side rate limit (Anthropic throttle mid-work)":
+- 신호: completion result = rate-limit error, `total_tokens=0`, `tool_uses>0`
+- 현상: Mode 2 (socket close) 와 유사 transient — 단지 throughput throttle
+- 대응: Mode 2 recovery 동일 (diagnose modified files + integrity check) → coordinator 가 남은 deliverable 직접
+- impl review 에 "subagent N% partial → coordinator (100-N)% direct" 명시
+- precedent: starpin v0.25 ISS — subagent 4 file (iss/* + iss-routes.ts) 까지 → rate-limit → coordinator 가 server wiring + frontend + 4 jest test + impl review 마무리
+
+### C. PATTERNS.md §smoke-setup v2.7 subsection 의 bash snippet 도 동기화
+
+`.env.local` single-file → 3-file loop. v2.9 dotenv extension note 추가.
+
+**r1 codex patch (alignment fix)**:
+
+- **major** — r1 codex 가 찾음: detector 가 3-file 검사하지만 actual `capacitor.config.ts` 는 `.env.local` 한 파일만 dotenv 로드 → `.env`/`.env.production` 에 있는 값은 *실제 Capacitor 런타임에 영향 없음* → detector warning 이 false positive. v2.9 가 "carry close" 라고 주장하려면 detector 와 actual loader 가 동일해야 함. Fix: `capacitor.config.ts` 의 `loadEnv({path: '.env.local'})` 단일 호출을 3-file chain 으로 교체. dotenv 의 non-overwrite default 가 `.env.local` > `.env` > `.env.production` priority 보장.
+- **nit** — §subagent-recovery intro "3 가지 모드" → "4 가지 모드" (Mode 4 추가 반영).
+
+**r2 codex patch (empty-file edge case)**:
+
+- **minor** — `.env.local` 에 `CAPACITOR_SERVER_URL=` (empty) 또는 `CAPACITOR_SERVER_URL=""` 가 있고 `.env` 에 non-empty 값 있으면: dotenv 는 first-set-wins (empty 도 set 으로 인정) → Capacitor 실제로 `process.env.CAPACITOR_SERVER_URL` 가 empty → `server.url` 미설정. 그러나 r2 이전 detector 는 `[[ -n "$from_file" ]] && break` 라 empty 일 때 .env 로 falls-through 해서 warning 발생 → mismatch. Fix: loop break 조건을 "key 라인 존재 여부" 로 변경 (값 non-empty 무관). 최종 warning emit guard `[[ -n "$effective" ]]` 가 empty 인 경우 silent.
+- **7-case self-test PASS**: 4 original (no env / 3 file types with URL) + 2 empty-edge (empty + .env URL → no warn) + 1 fallthrough (.env.local non-CAPACITOR + .env URL → warn).
+
+**Validation (final, v2.9 ship)**:
+- starpin/scripts/run-mobile-smoke.sh `bash -n` clean
+- 7-case dotenv self-test PASS (4 r1 + 3 r2 edges)
+- `npm --prefix backend run build`: clean (capacitor.config.ts compile)
+- `npm --prefix backend test`: **472 pass / 3 skip / 0 fail / 0 regression**
+- `npx cap sync ios`: clean (config still produces valid capacitor.config.json)
+
+**Consequences**:
+
+(+) v2.7 carry list 1 item 닫음 — production starpin 환경에서 `.env.production` 사용 시 silent failure 방지
+(+) §subagent-recovery 가 4 modes 모두 커버 — future subagent failure 시 빠른 진단 (어느 mode 인지 즉시 분류 가능)
+(+) ADR + HARNESS history 가 v0.25 의 rate-limit 사례를 reference precedent 으로 보존
+(-) 3-file loop 가 1-file 보다 약간 비싸 (~3 fopen) — negligible
+(-) 향후 dotenv 가 `.env.development` / `.env.test` 등 추가 분기 도입 시 또 확장 필요 (defer to v2.9.x carry — 실제 그런 패턴 등장 시 추가)
+(-) Detector grep 는 `^CAPACITOR_SERVER_URL=` exact match — dotenv 가 추가로 인식하는 form (`CAPACITOR_SERVER_URL =` whitespace / `export CAPACITOR_SERVER_URL=` / `CAPACITOR_SERVER_URL= # comment`) 은 미커버 (r3 codex minor). starpin 의 실제 .env.local 패턴이 단순 `KEY=value` 만 사용 → realistic 위협 모델 cover. 향후 dotenv full grammar 필요 시 v2.9.x carry — Node `dotenv.parse()` 직접 사용 가능. ship 시점에 ADR-048 결정: r3 stop the recursion (v2.7 4-round iteration 의 user-aligned minimalism precedent).
+
+**Approval**: user (autonomous + "알아서 진행해" continuation).
+
+---
+
 ## ADR-047 — starpin v0.25 ISS (국제우주정거장) tracking — UI.md §4.5 마지막 spec gap close
 
 **Date**: 2026-05-29 · **Status**: accepted (autonomous overnight + morning + "뭔가 완벽한게 나올 때 까지")

@@ -18,6 +18,63 @@
 
 ---
 
+## ADR-050 — Hara v2.10 jsdom infra + claim-message renderInbox real-DOM contract test
+
+**Date**: 2026-05-29 · **Status**: accepted (autonomous + "2시간 알아서 진행")
+
+**Context**: v2.8 (ADR-045) widened jest tsconfig rootDir so frontend tests can `import from '../../../public/lib/...'` directly. claim-message.test.ts couldn't migrate because its 6 tests use a hand-rolled `StubNode` DOM simulator (node test env has no `document`). v2.8 carry: "jsdom 도입 → claim-message.test.ts DOM-simulator → real DOM migration".
+
+v2.10 adds the jest-environment-jsdom dep + a NEW test file as **proof-of-concept**: production `renderInbox` exercised against real jsdom HTMLElement. Existing claim-message.test.ts kept intact (StubNode contract still valid); full migration is v2.10.x carry.
+
+**Decision**:
+
+### A. `backend/package.json` — devDependency
+
+`jest-environment-jsdom@^30.4.1` added. No other config changes (per-file `@jest-environment jsdom` pragma is the chosen activation path — keeps node testEnv as default for the 47 other test suites that don't need a DOM).
+
+### B. NEW `backend/tests/unit/web/claim-message-real-dom.test.ts` (6 tests)
+
+`@jest-environment jsdom` pragma at top. Imports `renderInbox` + `Message` from production. Each test creates a real `<ul>` via `document.createElement` and exercises `renderInbox` against it.
+
+Coverage:
+1. empty inbox → "메시지 없음" placeholder
+2. INV-XSS: `<img src=x onerror=alert(1)>` body → no `<img>` actually created; text shows entity-escaped
+3. INV-XSS: `<script>steal()</script>` nickname → no `<script>` created; sender shows entity-escaped
+4. 3 messages render preserving order + `data-message-id` attribute
+5. delete button has `type=button` + `data-action="delete-message"` + `data-message-id`
+6. subsequent renders cleanly swap content (no stale old IDs)
+
+### C. claim-message.test.ts kept
+
+Existing 6 StubNode tests still pass; ~60% of that file is mappers (pure logic — no DOM needed). Full migration of the StubNode → real DOM is non-trivial (200+ LOC reshape) → v2.10.x carry.
+
+### D. v2.10.x carry: full claim-message migration
+
+When time permits, migrate the renderInbox/optimisticDelete sections of claim-message.test.ts to jsdom + production imports. Mappers (mapCreateClaimError, etc.) stay as pure unit tests.
+
+**r1 codex patches**:
+
+- **minor — jest version skew**: r1 dep install used `jest-environment-jsdom@^30.4.1` but jest/ts-jest are 29.x. r2 codex 가 catch: 첫 fix attempt 가 wrong cwd 에서 실행되어 root `/backend/` stub artifact 만 갱신 (real `examples/starpin/backend/` 영향 없음). r3: install from `examples/starpin/` cwd, target lockfile 갱신 + stub artifact 제거. Verified target `jest-environment-jsdom@^29.7.0`.
+- **minor — claim-message.ts bootstrap noise**: top-level auto-bootstrap (line 598) triggered `Not implemented: navigation` jsdom console.error on test import. Fix: added `_isClaimPage()` page-path guard so bootstrap only fires on actual `/claim.html`. 6 tests still pass + 0 navigation warnings.
+
+**Validation (final)**:
+- `npm --prefix backend run build`: clean
+- `npm --prefix backend test`: **494 pass / 3 skip / 0 fail / 0 regression** (baseline 488 → +6)
+- Coexistence: claim-message.test.ts (node env, StubNode) + claim-message-real-dom.test.ts (jsdom env, real DOM) both run in same suite without conflict.
+- jsdom test output clean (no "Not implemented: navigation" noise)
+
+**Consequences**:
+
+(+) v2.8 carry list 1 item closed — jsdom infrastructure in place. Future frontend tests can opt into real DOM with single-line pragma.
+(+) Production renderInbox now has contract test against actual HTMLElement semantics. Drift between StubNode approximation and real DOM caught.
+(+) Per-file pragma avoids global env switch — 47 other test files keep their fast node testEnv (jsdom startup cost ~50ms each).
+(-) `bootstrapClaimPage` (claim-message.ts) tries to call `document.location.assign` on import — jsdom env throws non-fatal log. Tests still pass (renderInbox is what we exercise). Could be guarded by feature-detecting test env, but adds runtime cost — defer.
+(-) Mappers in claim-message.test.ts still duplicates — not exercising real production code. Cleanup is v2.10.x.
+
+**Approval**: user (autonomous + "2시간 알아서 진행" continuation).
+
+---
+
 ## ADR-049 — starpin v0.26 sky-canvas observer-aware ISS topocentric overlay (closes v0.25 codex r1 carry)
 
 **Date**: 2026-05-29 · **Status**: accepted (autonomous overnight + morning + "2시간 알아서 진행")

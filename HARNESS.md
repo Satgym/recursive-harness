@@ -1,4 +1,4 @@
-# HARNESS.md — Hara 헌법 (v2.9)
+# HARNESS.md — Hara 헌법 (v2.10)
 
 > Claude+Codex 협업의 **절대 규칙**과 **워크플로우 정의**.
 > 변경은 §10 절차. 버전 이력은 §11.
@@ -176,6 +176,7 @@ stranger (다음 세션 / 다른 사람)가 STATUS.md만 보고 "지금 무엇�
 
 | 버전 | 변경 | ADR |
 |---|---|---|
+| v2.10 | `jest-environment-jsdom` dep 추가 + NEW `claim-message-real-dom.test.ts` (6 tests) — production `renderInbox` 직접 import via real DOM, INV-XSS regression. 기존 `claim-message.test.ts` (StubNode 패턴) 는 unchanged — partial migration. v2.10.x carry: 나머지 StubNode tests 전체 jsdom 으로 이전 | ADR-050 |
 | v2.9 | PATTERNS §smoke-setup CAPACITOR_SERVER_URL detect 가 `.env.local` 외 `.env` + `.env.production` 도 검사 (v2.7 carry close). + §subagent-recovery 에 Mode 4 (server-side rate-limit) 추가 — v0.25 ISS subagent 가 30% 후 throttle → coordinator 70% direct 의 패턴 codify | ADR-048 |
 | v2.8 | starpin/backend jest 의 inline tsconfig 에 `rootDir: '.'` (backend/) 추가 — public/lib/ frontend code 가 test 에서 직접 import 가능. v0.23 의 `@ts-nocheck` workaround + shell-escape-html 의 contract-duplicate 패턴 모두 제거 (435/0 regression). claim-message 는 DOM simulation strategy 때문에 duplicate 유지 (jsdom 도입 시 별도 ship 으로 migrate) | ADR-045 |
 | v2.7 | PATTERNS §smoke-setup 에 "CAPACITOR_SERVER_URL trap" subsection 추가 + starpin run-mobile-smoke.sh 가 `.env.local` 의 `CAPACITOR_SERVER_URL` detect 시 큰 warning 출력. v0.22 dogfood 의 9-rerun silent stale-asset failure 가 origin — future operator (Claude/human) 가 같은 silent failure mode 30s 내 인지 가능 | ADR-043 |

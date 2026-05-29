@@ -428,6 +428,77 @@ iOS Siri / dictation prompt 가 자주 발생하면 flow 시작에 `- clearState
 
 - v0.20 today-search-smoke: Siri 받아쓰기 prompt → "starpin" 안 보임 → sim restart 로 회복
 
+### v2.7 — CAPACITOR_SERVER_URL trap (silent stale-asset failure)
+
+starpin v0.22 dogfood lesson: Capacitor 의 `server.url` 설정 (또는 `CAPACITOR_SERVER_URL` env / `.env.local`) 이 켜져 있으면, iOS WKWebView 가 그 *remote* 에서 HTML/JS 를 로드하지 *local bundle 사용 안 함*. 만약 remote (e.g. ngrok-tunneled dev server) 가 stale code 를 serve 하면 Maestro 는 stale code 를 검증하면서 PASS/FAIL — **silent failure mode**:
+
+- 모든 build / `cap sync` / install / 시뮬 erase 가 정상 보임
+- 단 runtime accessibility tree 만 mismatch 노출
+- 진단 어려움: starpin v0.22 에서 9 Maestro reruns + 시뮬 erase + uninstall/reinstall 후 root cause 발견
+
+`<project>/scripts/run-mobile-smoke.sh` 가 boot 직후 detect + 큰 warning 출력. 핵심 두 함수:
+
+```bash
+# HC-7 redaction (r2 codex blocker fix — robust step-wise vs single regex):
+#   1. strip fragment / query
+#   2. require scheme://; else opaque marker (no leak)
+#   3. authority = chars after :// up to first /
+#   4. strip userinfo (user:pass@) from authority
+#   5. emit scheme://host (or scheme://<host-redacted> if authority empty)
+redact_url_for_log() {
+  local url="$1"
+  url="${url%%#*}"
+  url="${url%%\?*}"
+  if [[ ! "$url" =~ ^([a-zA-Z][a-zA-Z0-9+.-]*)://(.*)$ ]]; then
+    echo "<non-http-url-redacted>"; return
+  fi
+  local scheme="${BASH_REMATCH[1]}"
+  local rest="${BASH_REMATCH[2]}"
+  local authority="${rest%%/*}"
+  local host_port="${authority##*@}"
+  # r3+r4 codex blockers: strict positive allowlist for host chars only —
+  # alphanum + `.-:_[]` (FQDN + port + IPv6 brackets). ANY other char
+  # (control/whitespace/backslash/`?`/`&`/`;` etc.) → fully redact.
+  if [[ -z "$host_port" || ! "$host_port" =~ ^[]A-Za-z0-9.:_[-]+$ ]]; then
+    echo "${scheme}://<host-redacted>"
+  else
+    echo "${scheme}://${host_port}"
+  fi
+}
+
+detect_capacitor_server_url() {
+  # ${VAR+x} → "x" iff VAR is set (even empty); "" if unset.
+  # 이 구분이 없으면 force-local fix `CAPACITOR_SERVER_URL= bash $0 ...` 가
+  # 빈 string 으로 fall-through 해서 .env.local 을 다시 읽고 warning 재발생.
+  local env_was_set=0; local from_env=""
+  if [[ -n "${CAPACITOR_SERVER_URL+x}" ]]; then
+    env_was_set=1; from_env="${CAPACITOR_SERVER_URL}"
+  fi
+  local from_file=""
+  if [[ $env_was_set -eq 0 && -f "$ROOT/.env.local" ]]; then
+    from_file=$(grep -E '^CAPACITOR_SERVER_URL=' "$ROOT/.env.local" 2>/dev/null \
+      | head -1 | sed -E 's/^CAPACITOR_SERVER_URL=//' \
+      | sed -E 's/^"(.*)"$/\1/' | sed -E "s/^'(.*)'\$/\1/")
+  fi
+  local effective="${from_env:-$from_file}"
+  if [[ -n "$effective" ]]; then
+    local redacted; redacted=$(redact_url_for_log "$effective")
+    echo "[run-mobile-smoke] WARN: CAPACITOR_SERVER_URL set ($redacted)" >&2
+    echo "  → iOS WKWebView will load from THIS remote, not local bundle." >&2
+    echo "  → Fix (a) restart backend dev server; (b) 'CAPACITOR_SERVER_URL= bash $0 ...'" >&2
+  fi
+}
+detect_capacitor_server_url
+```
+
+설계 결정 (v2.7 r1+r2 codex 반영):
+- `${VAR+x}` 로 set/unset 구분 — empty 가 force-local intent 인 점 보존 (r1 major)
+- Robust step-wise URL redaction with strict positive allowlist — single regex 는 no-scheme / file:// / `@`-in-path / IPv6 / control-char / backslash 등 누락. **15-case self-test PASS** (r2 + r3 + r4 blocker 모두 close)
+- 외부 remote freshness probe 안 함 — cross-origin probe / auth header / cache-busting hash 차이로 false alarm + permission classifier 마찰
+- v2.7.1 carry: `.env` / `.env.production` 추가 detect (현재 `.env.local` 만)
+
+단순 warning 으로 future operator (Claude / human) 가 silent failure 를 30 초 안에 인지 가능.
+
 ---
 
 ## §modal-overlay-race — DOM cleanup vs navigation 분리 (v2.3.2)

@@ -1,4 +1,4 @@
-# HARNESS.md — Hara 헌법 (v2.6)
+# HARNESS.md — Hara 헌법 (v2.7)
 
 > Claude+Codex 협업의 **절대 규칙**과 **워크플로우 정의**.
 > 변경은 §10 절차. 버전 이력은 §11.
@@ -176,6 +176,7 @@ stranger (다음 세션 / 다른 사람)가 STATUS.md만 보고 "지금 무엇�
 
 | 버전 | 변경 | ADR |
 |---|---|---|
+| v2.7 | PATTERNS §smoke-setup 에 "CAPACITOR_SERVER_URL trap" subsection 추가 + starpin run-mobile-smoke.sh 가 `.env.local` 의 `CAPACITOR_SERVER_URL` detect 시 큰 warning 출력. v0.22 dogfood 의 9-rerun silent stale-asset failure 가 origin — future operator (Claude/human) 가 같은 silent failure mode 30s 내 인지 가능 | ADR-043 |
 | v2.6 | `check-subagent-prompt.sh --strict` 에 §dom-mutation-order grep 추가 — prompt 가 `public/lib/` 또는 DOM API (`removeChild`/`firstChild`/`appendChild`/`innerHTML`) 언급 시 imperative 키워드 의무. v0.20 today-widget bug 가 v0.21 prompt 에서 반복되지 않은 것을 self-test 로 검증 (v0.19/v0.20 fail, v0.21 pass, backend-only synthetic pass) | ADR-041 |
 | v2.5 | PATTERNS §dom-mutation-order (subagent DOM mount 순서 imperative — v0.20 today-widget 누락 case) + §smoke-setup (iOS sim Siri / share / push dialog 차단 mitigations) + `SMOKE_FRESH_SIM=1` env flag in run-mobile-smoke.sh | ADR-039 |
 | v2.4.2 | ARIA imperative grep (`--strict` 시 "aria-label" 단어 의무) + ui-visual-review.sh race retry (5×1s). v0.17.2 + v0.19 의 aria-label 누락 패턴 반복 → prompt-side 차단 | ADR-037 |

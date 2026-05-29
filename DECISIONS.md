@@ -18,6 +18,97 @@
 
 ---
 
+## ADR-043 — Hara v2.7 CAPACITOR_SERVER_URL trap detection in smoke script
+
+**Date**: 2026-05-29 · **Status**: accepted (autonomous overnight + morning continuation)
+
+**Context**: starpin v0.22 dogfood 에서 9 Maestro reruns + 시뮬 erase + uninstall/reinstall 후에야 silent failure root cause 발견 — `.env.local` 의 `CAPACITOR_SERVER_URL=https://...ngrok...` 가 iOS WKWebView 를 remote dev server 로 라우팅. 그 remote 가 pre-v0.22 build (stale assets) 를 serve 중이라 모든 local bundle update 가 무시됨. 시그널:
+
+- `cap sync` ok
+- `ios/App/App/public/` 최신 (timestamp + grep 모두 OK)
+- 시뮬 내 `kr.starpin-*.app/public/` 최신
+- 그러나 accessibility tree 는 stale (4 menu items vs 5 expected)
+
+진단 비용 큼; 패턴은 *명시 warning 으로 인지 가능* 하지만 detect 안 하면 매번 30분~1시간 debug. PATTERNS §smoke-setup 의 자연스러운 확장 (v2.5 가 시작한 mobile smoke environment hygiene 가 같은 spirit 이라).
+
+**Decision**:
+
+### A. starpin/scripts/run-mobile-smoke.sh detect block
+
+`SMOKE_FRESH_SIM` 처리 직후, sim boot 직전에 `detect_capacitor_server_url()` 호출. env 또는 `.env.local` 어느쪽이든 `CAPACITOR_SERVER_URL` 가 set 이면 6-line stderr warning 출력:
+
+- value 노출
+- iOS WKWebView 가 그 remote 로 라우팅된다는 사실
+- silent failure mode 위험 명시
+- Fix 2가지: (a) backend dev server restart (b) `CAPACITOR_SERVER_URL= bash $0 ...` 로 강제 local
+- PATTERNS reference
+
+### B. PATTERNS.md §smoke-setup 확장
+
+"v2.7 — CAPACITOR_SERVER_URL trap (silent stale-asset failure)" subsection 추가:
+- v0.22 origin 인용
+- 시그널 매트릭스 (build OK / sync OK / install OK / runtime stale)
+- detect 패턴 bash snippet
+- *probe 안 함* 결정 근거 (cross-origin probe + auth + classifier 위험)
+
+### C. HARNESS.md §11 row
+
+v2.7 row 추가; 본문 unchanged.
+
+### Non-decisions
+
+- **Remote probing**: 단순 warning 만. 이유:
+  - Cross-origin probe (`curl https://...`) 은 classifier 가 exfil scouting 으로 차단 가능
+  - Remote 의 auth header / cookie 가 필요할 수 있음
+  - Asset hash 비교 시 cache busting / minification 차이로 false alarm 위험
+  - 30s warning 으로 future operator 가 인지 → ROI 충분
+- **starpin-specific implementation, Hara-level documentation**: 다른 Capacitor 프로젝트도 동일 패턴 (smoke 스크립트 가 정확히 동일하지 않을 수 있으나 trap 자체는 generic). PATTERNS 가 codification, 각 프로젝트가 자체 script 에 detect block copy
+
+**r1 codex patches**:
+
+- **major** — `${CAPACITOR_SERVER_URL:-}` 는 "unset" vs "set to empty" 구분 못함. 문서화된 force-local fix `CAPACITOR_SERVER_URL= bash $0 ...` 가 detector 관점에서 `.env.local` 재읽기로 fall-through → false warning. Fix: `${VAR+x}` 로 명시 set 검사. 3-case self-test PASS (unset+file=warn / empty=silent / value=warn).
+- **minor (HC-7)** — full URL stderr 노출 시 userinfo (basic-auth) / query token / fragment 누출 위험. Fix: `sed` 로 scheme+host 만 남기고 redact.
+
+**r4 codex patch (backslash + strict allowlist)**:
+
+- **blocker** — `\` 가 authority 영역 path separator 로 처리 안 됨 (예: `https://example.com\api\secret-token?x=y` → 그대로 emit). r3 의 control/whitespace guard 만으로는 backslash 누락. Fix: positive **strict allowlist** `^[]A-Za-z0-9.:_[-]+$` 만 통과; 그 외 모든 char → `<host-redacted>` fallback. **15-case self-test PASS** (11 r3 regression + 2 r4 신규 backslash + 2 추가 `&`/`;`).
+
+**r3 codex patch (control-char log injection)**:
+
+- **blocker** — authority 영역에 newline / tab / space 포함 시 redacted output 이 multi-line / whitespace 유지 → log injection surface (예: `https://example.com\nX-Token: secret/path` → 그대로 emit). Fix: `host_port` 가 `[[:cntrl:][:space:]]` 매치 시 `<host-redacted>` fallback. **11-case self-test PASS** (8 r2 regression + 3 신규: newline / tab / space). v2.7 r4 에서 strict allowlist 로 흡수됨.
+
+**r2 codex patch**:
+
+- **blocker** — r1 의 single-regex redaction 이 edge case 누락 (codex 가 4개 case 명시):
+  - `example.com/foo?token=secret` — no scheme: regex no-op → full leak
+  - `user:pass@example.com/foo?token=secret` — no scheme: 마찬가지
+  - `file:///tmp/foo?token=secret` — empty authority: regex no-op
+  - `https://example.com/foo@bar?token=secret` — `@` in path: greedy match → `https://bar` (잘못된 host 노출)
+
+  Fix: `redact_url_for_log()` 함수로 robust step-wise:
+  1. fragment 제거 (`#`)
+  2. query 제거 (`?`)
+  3. scheme 매치 안 되면 `<non-http-url-redacted>` opaque marker
+  4. authority = `://` 이후 첫 `/` 이전
+  5. authority 에서 userinfo (`user:pass@`) 제거
+  6. emit `scheme://host[:port]` (authority 비면 `scheme://<host-redacted>`)
+
+  **8-case self-test PASS**: user:pass / no-scheme (2) / file:// / `@`-in-path / IPv6 `[::1]:3000` / 단순 https + plain IP host.
+
+**Consequences**:
+
+(+) 같은 silent failure 재발 시 boot 직후 즉시 인지 (9 reruns → 0)
+(+) Hara v2.5 §smoke-setup 의 자연 확장. starpin 외 다른 Capacitor dogfood 시 PATTERNS 참조
+(+) probe 안 함 결정으로 permission classifier 마찰 0
+(+) URL redaction 으로 HC-7 정합 — token-bearing URL 도 safe
+(-) Warning 만 emit 하고 PASS — operator 가 warning 무시 시 동일 silent failure 가능. 그러나 처음 만나는 사람도 7-line warning 무시 어려움 (stderr + Fix 명시)
+(-) `.env.local` 외 다른 dotenv 패턴 (e.g., `.env`, `.env.production`) 미커버. 현재 starpin 패턴은 `.env.local` 만 사용; v2.7.1 carry 시 확장
+(-) Codex 4-round iteration (r1 major / r2 r3 r4 blocker) — 매 round 새 edge case (no-scheme / control-char / backslash). r4 자체 명시: *"if scope reduced to RFC-valid URL strings → no leak"*. 현재 strict positive allowlist 는 모든 cited case 차단. 5+ round 진입 안 함 — user 의 *minimalism + chunking* 가이드 + r1+r2 minimum codex discipline 이미 met + 위협 모델 narrow (developer-controlled `.env.local`). 향후 새 surface 발견 시 redact 함수 확장.
+
+**Approval**: user (overnight autonomous directive 2026-05-28 + morning continuation 2026-05-29).
+
+---
+
 ## ADR-042 — starpin v0.22 interest watchlist E2E wire + v0.21 Maestro CC-1/CC-2 carry close
 
 **Date**: 2026-05-29 · **Status**: accepted (autonomous overnight + morning continuation)

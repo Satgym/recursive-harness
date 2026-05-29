@@ -18,6 +18,83 @@
 
 ---
 
+## ADR-044 — starpin v0.23 interest modal duplicate-DELETE race close
+
+**Date**: 2026-05-29 · **Status**: accepted (autonomous overnight + morning + post-v0.22)
+
+**Context**: v0.22 codex r2 minor identified a narrow concurrency race in the
+v0.22 interest-modal flow. `interests-modal.performRemove` did:
+
+```
+1. apiCall DELETE /v1/interests/:id   (modal owns this — succeeds 200)
+2. removeInterest(id)                 (sky-highlight helper, dual-purpose:
+                                       cache evict + best-effort backend DELETE)
+   → another DELETE goes out, idempotent server-side (404 tolerated)
+```
+
+Race window: between step 1 and step 2, if a concurrent surface (e.g. user
+taps "관심 등록" in a detail-page tab) re-adds the same object_id, step 2's
+late DELETE wipes the just-added entry → user-visible "added but immediately
+gone" inconsistency.
+
+v0.22 codex r2 carry: "split a pure cache-evict helper" → v0.23.
+
+**Decision**:
+
+### A. sky-highlight.ts split
+
+- `removeInterest(objectId)` — keeps existing dual-purpose semantics
+  (convenience for callers like sky-detail-page where the toggle button is
+  the source of truth + no prior server hit). Refactored internally to
+  delegate cache eviction to the new helper for DRY.
+- `removeInterestFromCacheOnly(objectId)` (NEW) — pure cache eviction, no
+  backend call. For callers that already mutated the server.
+
+JSDoc on each makes the seam explicit; comments cite the v0.22 race + v0.23
+fix path.
+
+### B. interests-modal.ts switch
+
+`performRemove` now imports `removeInterestFromCacheOnly` (renamed import
+removed — direct name) and calls it after the modal's own server DELETE
+succeeds OR returns 404. No second DELETE fires.
+
+### C. Frontend cache unit test
+
+`backend/tests/unit/web/sky-highlight-cache-only.test.ts` — 4 tests:
+1. exists as named export
+2. returns [] when cache has no matching entry
+3. evicts matching `kind: 'interest'` entry from memoryCache
+4. leaves non-matching entries intact
+
+`@ts-nocheck` pragma because public/lib/ is outside tsconfig.json rootDir
+'./src' (TS6059). Matches existing `shell-escape-html.test.ts` pattern.
+v2.8 carry: jest tsconfig override for clean public/lib/ test imports.
+
+**Test results**:
+- `npm --prefix backend run build`: clean
+- `npm --prefix backend test`: **435 pass / 3 skip / 0 fail / 0 regression** (baseline 431, +4)
+
+**Consequences**:
+
+(+) Race window closed: modal removal is now exactly 1 backend DELETE + 1
+cache eviction. Concurrent re-add from another surface no longer at risk.
+(+) The split makes the seam explicit — future callers can pick the right
+helper without reading internals. JSDoc + inline comments document the why.
+(+) Carry list v0.22 → v0.23 closure rate: 1 of 5 carry items closed (race);
+remaining v0.24 carry: Maestro direct-touch row tap reliability, anchor →
+button migration, E2E highlight path (needs ngrok backend restart).
+(-) Unit test uses `@ts-nocheck` workaround. Real fix is jest tsconfig
+override unlocking public/lib/ imports (Hara v2.8 carry).
+(-) The convenience `removeInterest` (full cycle) is still callable; if a
+future caller misuses it from a context where the server was already hit,
+the race could regress. Mitigation: JSDoc warning + the cache-only helper
+is the obviously-correct choice in modal/post-server contexts.
+
+**Approval**: user (autonomous overnight + morning + post-v0.22 continuation).
+
+---
+
 ## ADR-043 — Hara v2.7 CAPACITOR_SERVER_URL trap detection in smoke script
 
 **Date**: 2026-05-29 · **Status**: accepted (autonomous overnight + morning continuation)

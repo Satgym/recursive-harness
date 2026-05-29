@@ -7,17 +7,17 @@
 | 항목 | 값 |
 |---|---|
 | Project | Hara 메타 부트스트랩 (이 레포) + starpin dogfood (`examples/starpin/`) |
-| Harness version | **v2.7** (pending) — PATTERNS §smoke-setup "CAPACITOR_SERVER_URL trap" + starpin run-mobile-smoke.sh detect block (ADR-043). v0.22 9-rerun silent failure 의 codification. |
-| Last ship | (pending) `harness(v2.7)` — CAPACITOR_SERVER_URL trap detection (ADR-043). 직전: `615b271` note(starpin-v0.22.0). |
-| Strictness | autonomous (user "계속 진행해" 누적 — overnight + morning + post-v0.22 = 6 ship 가지 진행 중) |
-| Last updated | 2026-05-29 11:05 by Claude — v2.7 smoke detect + PATTERNS extension + ADR-043 작성, codex review 진입. |
+| Harness version | **v2.7** SHIPPED (`3556939`) — PATTERNS §smoke-setup "CAPACITOR_SERVER_URL trap" + smoke detect (ADR-043). 4-round codex iteration → 15-case redact self-test. |
+| Last ship | (pending) `note(starpin-v0.23.0)` — interest modal duplicate-DELETE race close (split sky-highlight.removeInterest → cache-only helper) + frontend cache unit test (ADR-044). 직전: `3556939` harness(v2.7). |
+| Strictness | autonomous (user "알아서 진행해" — 7 ship 누적: v0.21 → v2.6 → v0.22 → v2.7 → v0.23) |
+| Last updated | 2026-05-29 11:35 by Claude — v0.23 race fix code + 4-test PASS (435/0 regression). codex review 진입. |
 
 ## Active gate
 
-- **Hara v2.7 codex r1/r2** — smoke script detect block + PATTERNS subsection + ADR. small surface 3 files.
+- **starpin v0.23 codex r1/r2** — sky-highlight split + interests-modal patch + 1 NEW jest. very small surface (~30 LOC + 60 LOC test).
 - Open findings: 0 blocker / 0 major. INBOX: 0 unread.
-- Hara v2.8 cumulative carry: (1) Maestro system overlay (Siri 받아쓰기) auto-dismiss handler, (2) pre-Agent hook automation, (3) `.env` / `.env.production` 추가 detect (현재 `.env.local` 만).
-- Starpin v0.23 carry: (1) interest modal DELETE duplicate-call race (split cache-evict helper), (2) frontend modal cache-consistency unit test, (3) Maestro direct-touch row tap reliability, (4) interests-modal anchor → button migration, (5) E2E "tap 관심 등록 → see canvas highlight" path.
+- Hara v2.8 cumulative carry: (1) Maestro system overlay (Siri 받아쓰기) auto-dismiss handler, (2) pre-Agent hook automation, (3) `.env` / `.env.production` 추가 detect, (4) jest tsconfig override 로 public/lib/ frontend test unlock (현재 `@ts-nocheck` workaround).
+- Starpin v0.24 carry: (1) Maestro direct-touch row tap reliability, (2) interests-modal anchor → button migration, (3) E2E "tap 관심 등록 → see canvas highlight" path (needs backend dev server restart on ngrok).
 
 ## Required reads (세션 시작 시)
 
@@ -35,7 +35,8 @@
 
 | commit | scope | 내용 |
 |---|---|---|
-| (pending) | harness(v2.7) | PATTERNS §smoke-setup "CAPACITOR_SERVER_URL trap" subsection + starpin run-mobile-smoke.sh detect block (ADR-043). v0.22 dogfood 9-rerun silent failure 의 codification — future operator (Claude/human) 가 30s 내 인지 |
+| (pending) | note(starpin-v0.23.0) | interest modal duplicate-DELETE race close (ADR-044) — `sky-highlight.removeInterest` 를 `removeInterest` (full cycle) + `removeInterestFromCacheOnly` (cache-only) 로 split. interests-modal.performRemove 가 cache-only helper 사용 → 동시 re-add wipe race 닫음. 4 NEW jest tests (435 pass / 0 regression) |
+| 3556939 | harness(v2.7) | PATTERNS §smoke-setup "CAPACITOR_SERVER_URL trap" + smoke detect block + 15-case redact self-test (ADR-043). 4-round codex iteration — v0.22 9-rerun silent failure codification |
 | 615b271 | note(starpin-v0.22.0) | interest watchlist E2E (frontend scaffold → backend persistence) + v0.21 CC-1 (Enter-key search-jump) + CC-2 (FAB-back state recovery) Maestro carry close (ADR-042). 431 jest pass / 47 new tests / 0 regression. Hara v2.6 §dom-mutation-order grep 첫 dogfood — subagent 자율 준수 |
 | 704b0e3 | harness(v2.6) | check-subagent-prompt.sh `--strict` 에 §dom-mutation-order grep 추가 (ADR-041) — v2.5 codified imperative enforcement 활성화. self-test 5/5 (v019/v020 fail / v021 pass / backend-only pass / new-alias pass) |
 | 7b8f048 | note(starpin-v0.21.0) | friend highlight backend wire + Gaia 646 search corpus + telescope-iframe sky-canvas-reset cleanup (ADR-040). Hara v2.5 두 번째 dogfood (DOM/ARIA 자율 준수). 384 jest pass / 0 regression |

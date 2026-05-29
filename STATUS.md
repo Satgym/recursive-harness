@@ -7,10 +7,10 @@
 | 항목 | 값 |
 |---|---|
 | Project | Hara 메타 부트스트랩 (이 레포) + starpin dogfood (`examples/starpin/`) |
-| Harness version | **v2.9** (pending) — dotenv detect extension (.env + .env.production) + §subagent-recovery Mode 4 rate-limit codify (ADR-048). v2.7 carry close + v0.25 rate-limit precedent. |
-| Last ship | (pending) `harness(v2.9)` — dotenv extension + subagent rate-limit codify (ADR-048). 직전: `453d398` note(starpin-v0.25.0). |
-| Strictness | autonomous (user "알아서 진행해" — 11 ship 누적: v0.21 → v2.6 → v0.22 → v2.7 → v0.23 → v2.8 → v0.24 → v0.25 → v2.9) |
-| Last updated | 2026-05-29 13:25 by Claude — v2.9 small carry close (dotenv 3-file + subagent Mode 4). codex review 진입. |
+| Harness version | **v2.9** SHIPPED (`80f201d`) — dotenv 3-file detect + §subagent-recovery Mode 4 (ADR-048). |
+| Last ship | (pending) `note(starpin-v0.26.0)` — sky-canvas observer-aware ISS overlay (closes v0.25 codex r1 carry, ADR-049). 직전: `80f201d` harness(v2.9). |
+| Strictness | autonomous (user "2시간동안 알아서 진행" 18:40~20:40 KST — 12 ship 누적: v0.21 → ... → v2.9 → v0.26) |
+| Last updated | 2026-05-29 19:10 by Claude — v0.26 ISS topocentric + r1 HC-7 patch (safeLogPath) + 16 new tests / 488 pass / 0 regression. |
 
 ## Active gate
 
@@ -35,7 +35,8 @@
 
 | commit | scope | 내용 |
 |---|---|---|
-| (pending) | harness(v2.9) | starpin run-mobile-smoke.sh CAPACITOR_SERVER_URL detect 가 `.env.local` 외 `.env` + `.env.production` 추가 (v2.7 carry close) + PATTERNS §subagent-recovery 에 Mode 4 (server-side rate-limit) 추가 — v0.25 ISS 의 30% subagent partial → coordinator 70% direct 패턴 codify (ADR-048). 4-case dotenv self-test PASS |
+| (pending) | note(starpin-v0.26.0) | sky-canvas observer-aware ISS topocentric overlay + HC-7 apiCall log redaction (ADR-049). NEW `iss-observer.ts` (geolocation cache + redaction) + `enrichIssTopocentric()` + `safeLogPath()` strip query params. 16 NEW jest tests (488 pass / 0 regression). v0.25 codex r1 blocker carry close + r1 codex HC-7 leak found-and-fixed inline |
+| 80f201d | harness(v2.9) | dotenv 3-file detect + §subagent-recovery Mode 4 (ADR-048). 3-round codex (r1 major source mismatch → r2 minor empty-edge → r3 minor stop). 7-case self-test PASS |
 | 453d398 | note(starpin-v0.25.0) | ISS (국제우주정거장) tracking, UI.md §4.5 마지막 spec gap close (ADR-047). 3-round codex iteration (r1 block 3 → r2 major 1 → r3 minor 1). SGP4 + real Celestrak TLE + observer topocentric + coord-backed HighlightEntry. 4 NEW jest files / 34 cumulative new tests / 472 pass / 0 regression |
 | 08c96fd | note(starpin-v0.24.0) | interests-modal `<a>` → `<button>` migration (CC-1 carry) + fetch spy hardening for cache-only contract (ADR-046). v2.8 unlock 활용한 첫 dogfood — 3 NEW fetch spy tests (438 pass / 0 regression) |
 | 995e858 | harness(v2.8) | jest tsconfig `rootDir: '.'` override + 2 frontend test direct-import migration (ADR-045) — `@ts-nocheck` workaround + escape-html duplicate 패턴 모두 제거 / 435 pass / 0 regression |

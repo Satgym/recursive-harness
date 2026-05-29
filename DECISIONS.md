@@ -18,6 +18,69 @@
 
 ---
 
+## ADR-049 — starpin v0.26 sky-canvas observer-aware ISS topocentric overlay (closes v0.25 codex r1 carry)
+
+**Date**: 2026-05-29 · **Status**: accepted (autonomous overnight + morning + "2시간 알아서 진행")
+
+**Context**: v0.25 ADR-047 §Known limitations + ADR-047 r2 codex carry — sky-canvas projects ISS at geocentric ra/dec from /v1/highlights, but for LEO satellites at 408km altitude parallax at horizon = up to 70° (codex r1 blocker). Accurate observer-relative placement requires the topocentric block from `/v1/iss?lat=&lon=&alt=` (v0.25.1 r2 server fix). v0.26 wires the frontend.
+
+**Decision**:
+
+### A. `backend/public/lib/iss-observer.ts` (NEW, 100 LOC)
+
+- `getObserverPosition(force?)` async — uses `navigator.geolocation.getCurrentPosition` with 8s timeout. Caches positive AND negative results in module memory (5min TTL). Negative cache prevents re-prompting on every viewport tick.
+- `redactObserverPosition(p)` — HC-7 / I-UI-13: round lat/lon/alt to 2 dp (~1.1km) for any debug surface.
+- `_resetObserverCacheForTest()` — test seam.
+
+### B. `backend/public/lib/sky-highlight.ts` enrichIssTopocentric (NEW export)
+
+- `enrichIssTopocentric(entries, observer)` async helper:
+  - observer=null → passthrough (no fetch)
+  - entries without kind='iss' → passthrough (no fetch — early exit)
+  - else: GET /v1/iss?lat=&lon=&alt= via apiCall, replace iss entry's ra_deg/dec_deg with topocentric block
+  - fetch error / no topocentric in response → keep geocentric (graceful degrade)
+
+### C. sky-canvas.ts wire
+
+```typescript
+void refreshHighlightSet().then(async (set) => {
+  const observer = await getObserverPosition();
+  const enriched = await enrichIssTopocentric(set, observer);
+  highlightSet = enriched;
+  recomputeVisible();
+});
+```
+
+ISS dot now actually projects at observer-correct sky position (within arcmin scale at typical pass altitudes).
+
+### D. Tests (2 NEW files / 15 new tests)
+
+- `iss-observer.test.ts` (9): redaction, no-navigator path, positive/negative cache, force bypass, altitude null
+- `sky-highlight-enrich-iss.test.ts` (6): observer=null passthrough, no-iss passthrough, full happy path (URL params + ra/dec overwrite), no-topocentric block degrade, 503 degrade, non-iss entries passthrough
+
+**r1 codex patch (HC-7 leak in apiCall logging)**:
+
+- **blocker** — `/v1/iss?lat=37.5665&lon=126.978&alt=0.05` 가 `shell.apiCall` 의 `console.warn` 에 그대로 path 로 출력 → 원본 lat/lon 누출. v0.26 ISS 호출이 첫 query-param-bearing endpoint 라 이전엔 안 드러남.
+- Codex 직접 패치: `safeLogPath(path)` helper 추가 (path 의 `?` 이전만 emit) + network-error / non-ok 두 log site 모두 wrap. 신규 HC-7 regression test 추가 (`sky-highlight-enrich-iss.test.ts` 의 "network error log redacts observer query params"). 488 pass (+1 HC-7 test).
+
+**Validation (post-r1 patch)**:
+- `npm --prefix backend run build`: clean (exactOptionalPropertyTypes narrowing fixed via local numeric vars)
+- `npm --prefix backend test`: **488 pass / 3 skip / 0 fail / 0 regression** (baseline 472 → +16 cumulative)
+- shell.apiCall logs: query params redacted (regression test enforces)
+
+**Consequences**:
+
+(+) v0.25 codex r1 blocker carry (observer-naive geocentric) → fully closed end-to-end. ISS now overlays at correct sky position for the user.
+(+) Graceful degradation: geolocation permission denial → geocentric (still visible, just less accurate). Network error → geocentric.
+(+) HC-7 / I-UI-13 preserved — raw observer coords stay in memory only; redaction helper for debug paths.
+(+) v2.8 jest tsconfig unlock used directly — both new test files use direct production-code imports without `@ts-nocheck` workaround.
+(-) Geolocation API requires HTTPS in browser (not an issue for Capacitor app + ngrok HTTPS deploy).
+(-) Per-refresh-cycle /v1/iss fetch (every 5min via highlight refresh cadence). Acceptable — service-layer cost is microseconds + tiny payload. v0.27+ carry: SSE/WebSocket for real-time ISS motion if smoother overlay desired.
+
+**Approval**: user (autonomous + "2시간 알아서 진행" 18:40~20:40 KST).
+
+---
+
 ## ADR-048 — Hara v2.9 dotenv detect extension + §subagent-recovery Mode 4 codify
 
 **Date**: 2026-05-29 · **Status**: accepted (autonomous overnight + morning + continuation)

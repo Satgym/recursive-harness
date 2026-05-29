@@ -7,17 +7,17 @@
 | 항목 | 값 |
 |---|---|
 | Project | Hara 메타 부트스트랩 (이 레포) + starpin dogfood (`examples/starpin/`) |
-| Harness version | **v2.8** (pending) — jest tsconfig `rootDir: '.'` override + 2 frontend test direct-import migration (ADR-045). v0.23 carry close (`@ts-nocheck` 제거). |
-| Last ship | (pending) `harness(v2.8)` — jest tsconfig override unlocks public/lib/ frontend test imports (ADR-045). 직전: `42f4bc2` note(starpin-v0.23.0). |
-| Strictness | autonomous (user "뭔가 완벽한게 나올 때 까지 ㄱㄱ" — 8 ship 누적: v0.21 → v2.6 → v0.22 → v2.7 → v0.23 → v2.8) |
-| Last updated | 2026-05-29 11:45 by Claude — v2.8 jest config 1-line override + 2 file migration / 435 pass / 0 regression. codex review 진입. |
+| Harness version | **v2.8** SHIPPED (`995e858`) — jest tsconfig `rootDir: '.'` override + 2 frontend test direct-import migration (ADR-045). v2.8 첫 dogfood (v0.24) 가 fetch spy 작성 활용. |
+| Last ship | (pending) `note(starpin-v0.24.0)` — interests-modal `<a>` → `<button>` migration (CC-1 carry close) + fetch spy hardening for cache-only contract (ADR-046). 직전: `995e858` harness(v2.8). |
+| Strictness | autonomous (user "뭔가 완벽한게 나올 때 까지 ㄱㄱ" — 9 ship 누적: v0.21 → v2.6 → v0.22 → v2.7 → v0.23 → v2.8 → v0.24) |
+| Last updated | 2026-05-29 12:00 by Claude — v0.24 anchor → button + fetch spy 3 tests / 438 pass / 0 regression. codex review 진입. |
 
 ## Active gate
 
-- **Hara v2.8 codex r1/r2** — jest config + 2 file migration. very small surface (~10 lines net). production build 영향 0 확인.
+- **starpin v0.24 codex r1/r2** — interests-modal anchor → button + 3 fetch spy tests. small frontend surface.
 - Open findings: 0 blocker / 0 major. INBOX: 0 unread.
 - Hara v2.9 cumulative carry: (1) Maestro system overlay (Siri 받아쓰기) auto-dismiss handler, (2) pre-Agent hook automation, (3) `.env` / `.env.production` 추가 detect, (4) jsdom 도입 → claim-message.test.ts 의 DOM-simulator → real DOM migration.
-- Starpin v0.24 carry: (1) Maestro direct-touch row tap reliability, (2) interests-modal anchor → button migration, (3) E2E "tap 관심 등록 → see canvas highlight" path (needs backend dev server restart on ngrok), (4) fetch spy hardening for cache-only contract (v0.23 carry).
+- Starpin v0.25 carry: (1) Maestro direct-touch row tap reliability (v0.24 anchor→button 후 재검증), (2) E2E "tap 관심 등록 → see canvas highlight" path (needs backend dev server restart on ngrok).
 
 ## Required reads (세션 시작 시)
 
@@ -35,7 +35,8 @@
 
 | commit | scope | 내용 |
 |---|---|---|
-| (pending) | harness(v2.8) | jest tsconfig `rootDir: '.'` override + 2 frontend test direct-import migration (ADR-045) — `@ts-nocheck` workaround + escape-html duplicate 패턴 모두 제거. production build 영향 0 / 435 pass / 0 regression |
+| (pending) | note(starpin-v0.24.0) | interests-modal `<a>` → `<button>` migration (CC-1 carry) + fetch spy hardening for cache-only contract (ADR-046). v2.8 unlock 활용한 첫 dogfood — 3 NEW fetch spy tests (438 pass / 0 regression) |
+| 995e858 | harness(v2.8) | jest tsconfig `rootDir: '.'` override + 2 frontend test direct-import migration (ADR-045) — `@ts-nocheck` workaround + escape-html duplicate 패턴 모두 제거 / 435 pass / 0 regression |
 | 42f4bc2 | note(starpin-v0.23.0) | interest modal duplicate-DELETE race close (ADR-044) — `sky-highlight.removeInterest` split. 4 NEW jest tests / 435 pass / 0 regression |
 | 3556939 | harness(v2.7) | PATTERNS §smoke-setup "CAPACITOR_SERVER_URL trap" + smoke detect block + 15-case redact self-test (ADR-043). 4-round codex iteration — v0.22 9-rerun silent failure codification |
 | 615b271 | note(starpin-v0.22.0) | interest watchlist E2E (frontend scaffold → backend persistence) + v0.21 CC-1 (Enter-key search-jump) + CC-2 (FAB-back state recovery) Maestro carry close (ADR-042). 431 jest pass / 47 new tests / 0 regression. Hara v2.6 §dom-mutation-order grep 첫 dogfood — subagent 자율 준수 |

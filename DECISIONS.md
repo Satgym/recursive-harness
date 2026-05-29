@@ -18,6 +18,79 @@
 
 ---
 
+## ADR-046 — starpin v0.24 interests-modal anchor→button + fetch spy hardening for cache-only contract
+
+**Date**: 2026-05-29 · **Status**: accepted (autonomous overnight + morning + continuation)
+
+**Context**: 두 v0.22+v0.23 carry close.
+
+### v0.22 carry — interests-modal `<a>` → `<button>`
+
+v0.22 impl-review §Known limitations 에서: "interests-modal-detail-link uses `<a href='#detail/:id'>` instead of a button; hash navigation works but Maestro tap on anchor inside a flex row may be CC-1-style flaky". v0.24 미리 close 해서 v0.25 Maestro 재검증 시 직접 row 안의 자세히보기 button 이 안정적 dispatch 되도록.
+
+### v0.23 carry — fetch spy hardening for cache-only contract
+
+v0.23 codex r1 "future-hardening note": "cache-only" 가 v0.23 race-fix 의 핵심 contract — future refactor 가 실수로 backend call 재도입 시 race regression 가능. fetch spy 로 contract 강제. v2.8 (jest tsconfig unlock) 직후 라 작성 friction 0.
+
+**Decision**:
+
+### A. interests-modal.ts 마이그레이션
+
+```diff
+- const detailLink = document.createElement('a');
+- detailLink.href = `#detail/${encodeURIComponent(row.object_id)}`;
+- detailLink.addEventListener('click', () => closeInterestsModal());
++ const detailBtn = document.createElement('button');
++ detailBtn.type = 'button';
++ detailBtn.addEventListener('click', () => {
++   closeInterestsModal();
++   window.location.hash = `#detail/${encodeURIComponent(row.object_id)}`;
++ });
+  detailBtn.className = 'interests-modal-detail-link';
+  detailBtn.textContent = '자세히 보기';
+  detailBtn.setAttribute('aria-label', `${nameLabel(row)} 자세히 보기`);
+```
+
+기존 hash router 가 변경 감지 → 동일 detail flow. 차이: navigate 호출 순서가 modal close 직후로 보장됨 (anchor 시 default action 먼저, click handler 이후).
+
+CSS `.interests-modal-detail-link` 에 button default reset 추가: `background: transparent; border: 0; cursor: pointer; font: inherit`. 시각적 변화 0.
+
+### B. sky-highlight-cache-only.test.ts — fetch spy hardening (3 new tests)
+
+```typescript
+describe('removeInterestFromCacheOnly — fetch spy hardening', () => {
+  let originalFetch; let fetchSpy;
+  beforeEach(() => { originalFetch = globalThis.fetch; fetchSpy = jest.fn(...); globalThis.fetch = fetchSpy; });
+  afterEach(() => { globalThis.fetch = originalFetch; });
+  it('does NOT call fetch — backend untouched', () => { ... });
+  it('does NOT call fetch even when cache has the target entry', async () => { ... });
+  it('does NOT call fetch even when cache is empty', () => { ... });
+});
+```
+
+`jest.fn` global 은 ESM jest 에서 자동 inject 안 됨 → `import { jest, beforeEach, afterEach } from '@jest/globals'` 추가. 다른 mock-using tests (sky/service.test.ts 등) 가 같은 패턴.
+
+**r1 codex patch**:
+
+- **minor** — 3rd fetch spy test 이름 "even when cache is empty" 가 부정확 (prior tests 가 addInterest 로 cache 채워둠 → memoryCache 가 non-empty). Fix: rename to "does NOT call fetch when the target id is not in cache" + 주석으로 invariant 명시 ("cache-only invariant holds regardless of cache occupancy"). 함수 동작 검증은 동일.
+
+**Test results**:
+- `npm --prefix backend run build`: clean
+- `npm --prefix backend test`: **438 pass / 3 skip / 0 fail / 0 regression** (baseline 435, +3)
+
+**Consequences**:
+
+(+) anchor → button 으로 v0.25 의 Maestro direct-touch row tap 시 CC-1-style flakiness 차단. 시각/접근성 변화 0 (aria-label 유지).
+(+) fetch spy 가 cache-only contract 를 lock — future refactor 가 cache-only 함수에 fetch 도입 시 즉시 test fail. v0.23 race fix 의 contract regression 방지.
+(+) v2.8 unlock 활용 dogfood — direct import of `removeInterestFromCacheOnly` from `public/lib/sky-highlight.js` 가 자연스럽게 작동. `@ts-nocheck` workaround 불필요했음.
+(+) Spy infrastructure 이제 다른 frontend test 에도 재사용 가능 (template).
+(-) `<button>` 의 default styling reset 만으로 anchor 와 정확히 같은 비주얼 보장 안 됨 — focus ring / hover state 미세한 차이. v0.25 dogfood 에서 시각 검증 필요.
+(-) Anchor 의 `href` 가 keyboard navigation 지원 (Enter to follow) — button 으로 migrate 시 click handler 만 작동. tab navigation 자체는 두 element 모두 focus 가능하므로 큰 변화 없음.
+
+**Approval**: user (autonomous overnight directive + "뭔가 완벽한게 나올 때 까지" continuation).
+
+---
+
 ## ADR-045 — Hara v2.8 jest tsconfig rootDir override unlocks public/lib/ frontend test imports
 
 **Date**: 2026-05-29 · **Status**: accepted (autonomous overnight + morning + continuation)

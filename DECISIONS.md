@@ -18,6 +18,82 @@
 
 ---
 
+## ADR-051 — starpin v0.27 ISS pass calendar /v1/iss/passes
+
+**Date**: 2026-05-29 · **Status**: accepted (autonomous + "2시간 알아서 진행")
+
+**Context**: v0.26 wired observer-topocentric ISS overlay (current sky position). Natural extension: "다음 ISS 패스: HH:MM" calendar surface. v0.25 ADR-047 §Consequences named "ISS pass time prediction on today widget" as a v0.26+ carry. v0.27 ships the backend; v0.28 = today widget integration.
+
+**Decision**:
+
+### A. `backend/src/iss/types.ts` — IssPass type
+
+```typescript
+export type IssPass = {
+  rise_at: string;     // ISO-8601 UTC
+  peak_at: string;
+  set_at: string;
+  peak_alt_deg: number;  // 0..90
+  peak_az_deg: number;   // 0..360
+  duration_s: number;
+};
+```
+
+### B. `backend/src/iss/service.ts` — IssService.nextPasses(observer, options)
+
+- Coarse step (60s) — find rise (alt 0→+) + set (alt +→0) in `[startDate, +hoursAhead]`
+- Refine rise/set boundary at 5s for sub-minute accuracy
+- Find peak alt + az at 10s cadence between rise and set
+- Returns up to `maxPasses` passes (default 6)
+- All angles from same WGS84 `ecfToLookAngles` basis (v0.25.2 lesson applied)
+
+Time complexity: hoursAhead × 60 (coarse) + N × (12 refine + 30 peak) ≈ ~1500 SGP4 propagations for 24h × 5-pass — sub-second on modern node.
+
+### C. `backend/src/routes/iss-routes.ts` — GET /v1/iss/passes
+
+Query: `?lat=&lon=&alt=&hours=&max=` (lat/lon required; alt default 0; hours default 24 clamped [1,72]; max default 6 clamped [1,20]).
+
+400 errors:
+- `observer_required` (no lat/lon)
+- `observer_requires_lat_lon` (only one of lat/lon)
+- `invalid_lat` / `invalid_lon` / `invalid_alt` (range check)
+- `invalid_hours` / `invalid_max` (range check)
+
+200: `{ passes: IssPass[] }`. 503: `iss_passes_failed`.
+
+### D. Tests (3 service + 6 route = 9 new)
+
+- service: nextPasses returns array, rise < peak < set + plausible peak_alt + duration, maxPasses=1 cap
+- routes: 4 × 400 validation cases + 200 happy + HC-7 no-PII
+
+### E. v0.28+ carry
+
+- today-widget integration: "🛰️ 다음 ISS 패스: HH:MM (NN분간 최고 N°)"
+- visibility filtering (sun below horizon + ISS not in earth shadow)
+- per-pass az_label ("북동에서 남서로")
+
+**r1 codex patches (3 findings)**:
+
+- **major — mid-pass startDate contract**: if `startDate` falls inside a pass, the loop set `riseMs = startDate` (NOT an astronomical rise crossing). `rise_at = startDate` and could equal `peak_at`. Fix: leave `riseMs = null` when starting mid-pass — subsequent set boundary is ignored, next true rise is captured.
+- **major — empty-string observer = (0,0)**: `?lat=&lon=` → `Number('')===0` silently treated as Gulf of Guinea observer. Fix: `parseObserver` treats empty strings as "not supplied" → `observer_required` 400.
+- **minor — clamp/reject doc mismatch + max=1.5**: prompt said "clamp" but impl rejects; `max=1.5` slipped through `< 1.5` check. Fix: `Number.isInteger(max)` requirement + doc updated to "range-check".
+
+**Validation**:
+- `npm --prefix backend run build`: clean
+- `npm --prefix backend test`: **506 pass / 3 skip / 0 fail / 0 regression** (baseline 494 → +12 cumulative)
+
+**Consequences**:
+
+(+) Backend ready for "다음 ISS 패스" surface — today-widget integration deferred to v0.28 (~ 50 LOC frontend) under 2hr-window discipline.
+(+) WGS84 basis re-used from v0.25.2 — single source of truth for observer-relative geometry across all ISS routes (position + passes).
+(+) Tests + types cover the full contract; only frontend wire-up remains.
+(-) No visibility filtering yet — all above-horizon passes returned (some happen in daytime / earth shadow when ISS isn't actually visible). Honest limitation; visibility math = v0.27.x or v0.28+ carry.
+(-) Coarse 60s step may miss ultra-short grazing passes (peak_alt < 5°, dur < 60s). Rare for ISS.
+
+**Approval**: user (autonomous + "2시간 알아서 진행").
+
+---
+
 ## ADR-050 — Hara v2.10 jsdom infra + claim-message renderInbox real-DOM contract test
 
 **Date**: 2026-05-29 · **Status**: accepted (autonomous + "2시간 알아서 진행")

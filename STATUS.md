@@ -7,10 +7,10 @@
 | 항목 | 값 |
 |---|---|
 | Project | Hara 메타 부트스트랩 (이 레포) + starpin dogfood (`examples/starpin/`) |
-| Harness version | **v2.10** (pending) — jest-environment-jsdom dep + NEW claim-message-real-dom.test.ts (6 jsdom tests). v2.8 carry close (partial — v2.10.x = full StubNode migration). |
-| Last ship | (pending) `harness(v2.10)` — jsdom infra + renderInbox real-DOM contract test (ADR-050). 직전: `1ecb746` note(starpin-v0.26.0). |
-| Strictness | autonomous (user "2시간동안 알아서 진행" 18:40~20:40 KST — 13 ship 누적) |
-| Last updated | 2026-05-29 19:25 by Claude — v2.10 jsdom dep + 6 new real-DOM tests / 494 pass / 0 regression. |
+| Harness version | **v2.10** SHIPPED (`2703b2d`) — jsdom infra + renderInbox real-DOM contract test (ADR-050). |
+| Last ship | (pending) `note(starpin-v0.27.0)` — ISS pass calendar `/v1/iss/passes` backend (ADR-051). 직전: `2703b2d` harness(v2.10). |
+| Strictness | autonomous (user "2시간동안 알아서 진행" 18:40~20:40 KST — 14 ship 누적) |
+| Last updated | 2026-05-29 20:00 by Claude — v0.27 ISS pass forward-search SGP4 + 9 new tests / 503 pass / 0 regression. |
 
 ## Active gate
 
@@ -35,7 +35,8 @@
 
 | commit | scope | 내용 |
 |---|---|---|
-| (pending) | harness(v2.10) | jest-environment-jsdom dep + NEW claim-message-real-dom.test.ts (6 jsdom tests) — production renderInbox 직접 import via real DOM, INV-XSS regression (ADR-050). v2.8 carry partial close (full StubNode migration = v2.10.x). 494 pass / 0 regression |
+| (pending) | note(starpin-v0.27.0) | ISS pass calendar `/v1/iss/passes?lat=&lon=&hours=&max=` (ADR-051). IssService.nextPasses() forward-search SGP4 with 60s coarse + 5s refine + 10s peak. 6 fields per pass (rise/peak/set ISO + peak_alt/peak_az/duration_s). 9 NEW jest tests (503 pass / 0 regression). today-widget 통합 = v0.28 carry |
+| 2703b2d | harness(v2.10) | jest-environment-jsdom dep + NEW claim-message-real-dom.test.ts (6 jsdom tests) — production renderInbox 직접 import via real DOM (ADR-050). 3-round codex iteration (r1 minor / r2 minor wrong-cwd catch / r3 pass). 494 pass / 0 regression |
 | 1ecb746 | note(starpin-v0.26.0) | sky-canvas observer-aware ISS topocentric overlay + HC-7 apiCall log redaction (ADR-049). NEW `iss-observer.ts` (geolocation cache + redaction) + `enrichIssTopocentric()` + `safeLogPath()` strip query params. 16 NEW jest tests (488 pass / 0 regression). v0.25 codex r1 blocker carry close + r1 codex HC-7 leak found-and-fixed inline |
 | 80f201d | harness(v2.9) | dotenv 3-file detect + §subagent-recovery Mode 4 (ADR-048). 3-round codex (r1 major source mismatch → r2 minor empty-edge → r3 minor stop). 7-case self-test PASS |
 | 453d398 | note(starpin-v0.25.0) | ISS (국제우주정거장) tracking, UI.md §4.5 마지막 spec gap close (ADR-047). 3-round codex iteration (r1 block 3 → r2 major 1 → r3 minor 1). SGP4 + real Celestrak TLE + observer topocentric + coord-backed HighlightEntry. 4 NEW jest files / 34 cumulative new tests / 472 pass / 0 regression |

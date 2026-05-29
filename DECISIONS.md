@@ -18,6 +18,65 @@
 
 ---
 
+## ADR-052 — starpin v0.28 today widget ISS next-pass integration (closes v0.27 carry)
+
+**Date**: 2026-05-29 · **Status**: accepted (autonomous + "2시간 알아서 진행")
+
+**Context**: v0.27 ADR-051 §v0.28+ carry: "today-widget integration: '🛰️ 다음 ISS 패스: HH:MM'". v0.28 ships end-to-end.
+
+**Decision**:
+
+### A. `today/service.ts`
+- `TodaySkyModel.iss_next_pass?` optional field added (6 fields matching IssPass shape)
+- `computeTodaySky(now, options)` accepts `{observer, iss}` — both required to populate; either missing → field absent
+- Graceful degrade on iss.nextPasses() throw
+
+### B. `today-route.ts`
+- `?lat=&lon=&alt=` observer-flavored response, validated; bypasses per-process 1h public cache (private + max-age=300 — per-user freshness, prevents shared cache leaking other users' pass forecasts)
+- Observer-less response keeps existing 1h public cache
+
+### C. `public/lib/today-widget.ts`
+- `fetchToday()` calls `getObserverPosition(false)` — cache-only, NEVER prompts (avoids double-prompt with v0.26 sky-canvas observer fetch)
+- If observer cached → append `?lat=&lon=&alt=` to /v1/today
+- `renderModel` adds Line 5: `🛰️ 다음 ISS 패스: HH:MM (NN분간 최고 NN°)` when present (KST time + min + deg, 3-piece minimal)
+
+### D. server.ts wire
+`registerTodayRoute(app, { issService })` — same `IssService` instance as ISS routes + highlights.
+
+### Tests (6 new in today/service.test.ts)
+- iss_next_pass omitted when observer absent / iss dep absent
+- included when both present
+- correct hoursAhead=24 + maxPasses=1
+- omitted when iss returns empty / throws (graceful)
+
+**r1 codex patches (3 findings — 2 major + 1 minor)**:
+
+- **major** — `getObserverPosition(false)` 가 cache-only 아님 (cache miss 시 prompt 발생). v0.28 widget "never prompt" 계약 깨짐. Fix: `iss-observer.ts` 에 `peekObserverPosition()` (pure cache read, no probe) NEW; today-widget 이 이 API 사용.
+- **major** — widget cache key 가 observer state 무시 → no-observer cached response 가 observer 생긴 후에도 stale. Fix: cache 에 `key` 추가 ('none' 또는 `lat,lon,alt` 3-dp). observer state 변화 시 자동 miss.
+- **minor** — today-route 가 partial observer query (lat 만 / empty / alt 만) 를 400 안 던지고 observer-less public 으로 silent serve. Fix: `anyObserverPresent` 검사 → 하나라도 있으면 full validation path (`observer_requires_lat_lon` / `invalid_lat|lon|alt`).
+
+**r2 codex patches (3 findings — 1 major + 2 minor)**:
+
+- **major** — observer-flavored client cache reuses 1h TTL despite server `private/max-age=300`. `iss_next_pass.set_at` can be in the past after 5min → "next pass" 가 already-set pass 가 됨. Fix: per-key TTL (1h for `none`, 5min for observer) + freshness gate (force miss if `cachedSet < now()`).
+- **minor** — `peekObserverPosition` ignores cache TTL → stale-after-travel risk. Fix: respect 5min CACHE_TTL_MS (여전히 navigator probe 없음).
+- **minor** — today-route partial-observer regression test missing. Fix: 5 new tests (`?lat=37` / `?alt=0.1` / `?lat=&lon=` / out-of-range lat / valid observer no-iss-dep).
+
+**Validation (post-r2 — final ship)**:
+- `npm --prefix backend run build`: clean
+- `npm --prefix backend test`: **519 pass / 3 skip / 0 fail / 0 regression** (baseline 506 → +13)
+- Ship at r2 per minimum codex discipline (r1+r2 met) + v2.7 minimalism precedent.
+
+**Consequences**:
+(+) v0.27 carry fully closed — user sees ISS line on newsletter after granting geolocation (single prompt via sky-canvas's earlier fetch).
+(+) Double-prompt avoided — peekObserverPosition is pure cache read, never probes.
+(+) Private cache for observer-flavored response prevents leaking other users' pass forecasts.
+(-) Pre-login surface (no observer) shows widget without ISS line — acceptable.
+(-) Only first pass surfaced; v0.29+ carry: "ISS Today" modal with all 24h passes.
+
+**Approval**: user (autonomous + "2시간 알아서 진행").
+
+---
+
 ## ADR-051 — starpin v0.27 ISS pass calendar /v1/iss/passes
 
 **Date**: 2026-05-29 · **Status**: accepted (autonomous + "2시간 알아서 진행")

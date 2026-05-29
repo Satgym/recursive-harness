@@ -7,17 +7,17 @@
 | 항목 | 값 |
 |---|---|
 | Project | Hara 메타 부트스트랩 (이 레포) + starpin dogfood (`examples/starpin/`) |
-| Harness version | **v2.6** (pending) — check-subagent-prompt.sh `--strict` 에 §dom-mutation-order grep 추가 (ADR-041). v2.5 codified imperative 의 enforcement 활성화. |
-| Last ship | (pending) `harness(v2.6)` — DOM mutation grep enforce (ADR-041). 직전: `7b8f048` note(starpin-v0.21.0). |
-| Strictness | autonomous (user 추가 directive "계속 알아서 진행해" 2026-05-29 09am) |
-| Last updated | 2026-05-29 09:00 by Claude — v2.6 in-progress (self-test 4/4 verified). |
+| Harness version | **v2.6** SHIPPED (`704b0e3`) — check-subagent-prompt.sh `--strict` §dom-mutation-order grep (ADR-041). v2.6 첫 dogfood (v0.22 interest watchlist) imperative 자율 준수 확인. |
+| Last ship | (pending) `note(starpin-v0.22.0)` — interest watchlist E2E wire + v0.21 CC-1/CC-2 Maestro carry close (ADR-042). 직전: `704b0e3` harness(v2.6). |
+| Strictness | autonomous (user "계속 알아서 진행해" directive 2026-05-29 09am 이후 누적 — Hara v2.6 + starpin v0.22 모두 ship 단계) |
+| Last updated | 2026-05-29 10:50 by Claude — v0.22 codex r1 major closed by r2 minor patches. ship 임박. |
 
 ## Active gate
 
-- **Hara v2.6 r1/r2 verify 단계** — codex review 진행 예정 (DOM grep + docs 변경 small surface).
+- **starpin v0.22 ship 단계** — codex r1=major (modal DELETE cache invalidation bug) → 3 패치 적용 → r2=minor (race carry to v0.23). 431 jest pass / CC-1·CC-2 Maestro PASS / interest dropdown surface assertVisible PASS.
 - Open findings: 0 blocker / 0 major. INBOX: 0 unread.
-- Hara cumulative carry: (1) Maestro system overlay (Siri 받아쓰기) auto-dismiss handler, (2) pre-Agent hook automation.
-- Starpin v0.22 후보 — (1) telescope-iframe FAB navigation back-button 안정화, (2) search-jump result-row tap Maestro consistency.
+- Hara v2.7 cumulative carry: (1) Maestro system overlay (Siri 받아쓰기) auto-dismiss handler, (2) pre-Agent hook automation, (3) Capacitor `CAPACITOR_SERVER_URL` 와 local bundle 차이 detection / smoke-script 가 dev server 상태 자동 점검.
+- Starpin v0.23 carry: (1) interest modal DELETE duplicate-call race (split cache-evict helper), (2) frontend modal cache-consistency unit test, (3) Maestro direct-touch row tap reliability, (4) interests-modal anchor → button migration, (5) E2E "tap 관심 등록 → see canvas highlight" path.
 
 ## Required reads (세션 시작 시)
 
@@ -35,7 +35,8 @@
 
 | commit | scope | 내용 |
 |---|---|---|
-| (pending) | harness(v2.6) | check-subagent-prompt.sh `--strict` 에 §dom-mutation-order grep 추가 (ADR-041) — v2.5 codified imperative enforcement 활성화. self-test 4/4 (v019/v020 fail / v021 pass / backend-only pass) |
+| (pending) | note(starpin-v0.22.0) | interest watchlist E2E (frontend scaffold → backend persistence) + v0.21 CC-1 (Enter-key search-jump) + CC-2 (FAB-back state recovery) Maestro carry close (ADR-042). 431 jest pass / 47 new tests / 0 regression. Hara v2.6 §dom-mutation-order grep 첫 dogfood — subagent 자율 준수 |
+| 704b0e3 | harness(v2.6) | check-subagent-prompt.sh `--strict` 에 §dom-mutation-order grep 추가 (ADR-041) — v2.5 codified imperative enforcement 활성화. self-test 5/5 (v019/v020 fail / v021 pass / backend-only pass / new-alias pass) |
 | 7b8f048 | note(starpin-v0.21.0) | friend highlight backend wire + Gaia 646 search corpus + telescope-iframe sky-canvas-reset cleanup (ADR-040). Hara v2.5 두 번째 dogfood (DOM/ARIA 자율 준수). 384 jest pass / 0 regression |
 | 9f4ce21 | harness(v2.5) | PATTERNS §dom-mutation-order + §smoke-setup + SMOKE_FRESH_SIM env (ADR-039) — v0.20 2 lesson codify |
 | 2ba7b8f | note(starpin-v0.20.0) | today widget (월령 + 일몰 + 행성) + 천체 검색 (Connect 축 보강, ADR-038). astronomy-engine VSOP87. Hara v2.4.2 첫 dogfood |

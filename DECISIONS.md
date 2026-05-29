@@ -18,6 +18,56 @@
 
 ---
 
+## ADR-042 — starpin v0.22 interest watchlist E2E wire + v0.21 Maestro CC-1/CC-2 carry close
+
+**Date**: 2026-05-29 · **Status**: accepted (autonomous overnight + morning continuation)
+
+**Context**: v0.17 부터 `sky-highlight.ts` 의 `HighlightKind` union 에 `'interest'` 가 frontend-side scaffold (color #9fbcff, label '관심', priority 2 in KIND_PRIORITY) 만 있고 backend wire 0. UI.md §4.5 specs: "관심 등록한 천체" 가 거리/밝기 상관없이 하이라이트되어야 함 — 핵심 spec gap. 추가로 v0.21 Maestro carry 2 건:
+
+- **CC-1**: 검색 결과 row tap 이 iOS WKWebView nested `<span>` swallowing 으로 click event miss → modal 우회 (X button)
+- **CC-2**: search-jump 후 FAB-back 의 sky-canvas state recovery 가 Maestro 으로 미검증 (v0.21 sky-canvas-reset postMessage 만 단위 검증)
+
+**Decision**: 3 deliverable bundle (Hara v2.6 의 5-카테고리 lint 첫 dogfood, DOM mutation order imperative 자율 준수 검증):
+
+### A. Interest watchlist backend persistence
+- Migration 0034: `user_interests(user_id UUID REFERENCES users(id) ON DELETE CASCADE, object_id text, added_at timestamptz, PK(user_id, object_id))` — claims/user_friends pattern aligned (codex r1 minor #3 fix)
+- 3 routes: POST/DELETE/GET /v1/interests (verify.user_id scoped — I-CAP-6)
+- `/v1/highlights` extended with `kind='interest'` entries (degrades gracefully if interestsService throws)
+
+### B. Frontend integration
+- sky-detail-page 에 관심 등록/해제 toggle button (spec labels + aria-label per state)
+- profile-dropdown 에 "관심 천체" menu item
+- interests-modal (NEW) — clear-before-mount pattern, modal delete routes through sky-highlight.removeInterest (r1 major fix — cache invalidation)
+- sky-search.ts: nested span 에 inline `pointer-events: none` (I-UI-27)
+
+### C. Carry close (CC-1/CC-2)
+- CC-1: Maestro yaml 가 `pressKey: Enter` 로 search-jump trigger (sky-search 의 기존 Enter handler → firstRow.click). real-touch row tap reliability 는 I-UI-27 pointer-events 가 처리; carry: direct row tap Maestro 검증 → v0.23
+- CC-2: yaml 에 FAB-back step 추가 + "오늘의 하늘" assertion. v0.21 sky-canvas-reset 의 E2E 검증
+
+**Codex 평가**:
+- r1 = **major** (modal DELETE cache invalidation bug — interest 해제 후 canvas/detail toggle 가 stale highlight 유지) + 2 minor
+- r1 → r2 패치: (a) modal performRemove 가 sky-highlight.removeInterest 경유 → cache evict + 백엔드 idempotent DELETE / (b) migration UUID+FK / (c) impl review 정확화
+- r2 = **minor** (major closed; race carry + 1 doc drift)
+- r2 → ship: race 와 frontend cache-consistency unit test 는 v0.23 carry. ship 진행.
+
+### New invariants
+- I-UI-26 (interest highlight color #9fbcff; KIND_PRIORITY self=0 < friend=1 < interest=2 = client-side dedup)
+- I-CAP-6 (interest privacy: server uses verify.user_id, never body-supplied id)
+- I-UI-27 (search result row tap target: nested `<span>` inline `pointer-events: none` + Enter-key Maestro substitute)
+
+**Consequences**:
+
+(+) UI.md §4.5 spec 마지막 한 조각 완성 — interest watchlist now end-to-end. Cross-device sync via DB. Profile 에서 관심 천체 list 표시 + 자세히보기 → unregister.
+(+) v0.21 carry 2 건 close — search-jump + FAB-back 가 자동 검증. 다음 ship 부터 회귀 catch.
+(+) Hara v2.6 §dom-mutation-order grep 첫 dogfood VALIDATED — subagent 가 imperative 자율 포함 (interests-modal 의 clear-before-mount 패턴 + 명시 주석).
+(-) Modal DELETE duplicate-call race (r2 carry) — narrow concurrency window, 2+ surface 동시 mutation 필요. v0.23 split 예정.
+(-) Maestro interest modal opening (PNG 23 modal 내부) 검증 deferred — `.env.local` 의 `CAPACITOR_SERVER_URL=...ngrok...` 가 iOS WKWebView 를 stale remote assets 로 라우팅. user 가 backend dev server restart 시 즉시 활성화 (yaml 변경 없음).
+(-) Carry 5 항목 v0.23 (race / frontend cache unit test / direct row tap / anchor migration / E2E highlight path).
+
+**Approval**: user (overnight autonomous directive 2026-05-28 + morning continuation 2026-05-29).
+
+---
+
 ## ADR-041 — Hara v2.6 check-subagent-prompt.sh §dom-mutation-order grep enforcement
 
 **Date**: 2026-05-29 · **Status**: accepted (autonomous overnight)
